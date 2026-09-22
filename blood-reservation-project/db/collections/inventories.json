@@ -1,0 +1,1 @@
+{"_id":{"$oid":"6ab1f665c1737b61e3f4b4eb"},"inventoryID":"I00001","facilityID":"F00001","blootType":"O+","component":"Packed RBC","availQuantity":1,"availStatus":"Limited","lastUpdated":{"$date":"2026-09-22T03:30:45.441Z"},"updatedBy":"U00001"}
