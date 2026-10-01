@@ -4,26 +4,63 @@ const Inventories = require('../../db/models/inventories.cjs');
 
 const router = express.Router();
 
-// handle reqs to get /api/inventories
+// GET /api/inventories
 router.get('/', async (req, res) => {
     try{
-<<<<<<< Updated upstream
-        const collection = mongoose.connection.db.collection('inventories');
-        const inventories = await collection.find({}).toArray();
-        res.json(inventories);
-=======
         const inventories = await Inventories.find();
         res.json({
             success: true,
             inventories: inventories
         });
->>>>>>> Stashed changes
     } catch (err) {
         console.error('Error fetching inventories:', err);
-        res.status(500).json({ message: 'Failed to fetch inventories.'});
+        res.status(500).json({ 
+            success: false,
+            message: 'Failed to fetch inventories.'});
 
     }
 
 });
+
+// PATCH /api/inventories for updating inventory records
+router.patch('/:id', async (req, res) => {
+    try {
+        const { availQuantity } = req.body;
+
+        // for testing. update later after asking prc for threshold
+            let availStatus;
+            if (availQuantity === 0) {
+                availStatus = 'Out of Stock';
+            } else if (availQuantity <= 5) {
+                availStatus = 'Limited';
+            } else {
+                availStatus = 'Available';
+            }
+
+        const inventory = await Inventories.findByIdAndUpdate(
+            req.params.id,
+            {
+                availQuantity: availQuantity,
+                availStatus: availStatus,
+                lastUpdated: new Date()
+            },
+            { new: true }
+        );
+
+        res.json({
+            success: true,
+            inventory: inventory
+        });
+
+    } catch (err) {
+        console.error('Error updating inventory:', err);
+
+        res.status(500).json({
+            success: false,
+            message: 'Failed to update inventory.'
+        });
+    }
+});
+
 
 module.exports = router;
