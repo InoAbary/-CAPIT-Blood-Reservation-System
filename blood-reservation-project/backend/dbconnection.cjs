@@ -1,8 +1,11 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
+
+const uri = process.env.MONGODB_LINK
 
 async function connectDB() {
     try {
-        await mongoose.connect('mongodb://127.0.0.1:27017/blood-reservation-system');
+        await mongoose.connect(uri);
         console.log('MongoDB connected');
     } catch (err) {
         console.error('MongoDB connection error:', err);
@@ -11,3 +14,4 @@ async function connectDB() {
 }
 
 module.exports = connectDB;
+
