@@ -1,0 +1,195 @@
+/* Top Navigation Header matching Screenshot 1 */
+
+.navbar-container {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.navbar-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+/* Left Brand */
+.navbar-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.prc-redcross-box {
+  width: 32px;
+  height: 32px;
+  background: #dc2626;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
+}
+
+.prc-plus-symbol {
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.prc-brand-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+/* Middle Navigation Links */
+.navbar-links-group {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 100%;
+}
+
+.nav-tab-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0.85rem;
+  height: 64px;
+  color: #475569;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s ease;
+  background: none;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.nav-tab-item:hover {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.nav-tab-item.active {
+  color: #dc2626;
+  border-bottom-color: #dc2626;
+}
+
+.nav-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0.75rem;
+  height: 64px;
+  color: #475569;
+  font-size: 0.88rem;
+  font-weight: 600;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.nav-tab-btn:hover {
+  color: #0f172a;
+  background: #f8fafc;
+}
+
+.nav-sync-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.4rem 0.85rem;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.nav-sync-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+/* Right Role Controls */
+.navbar-role-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.role-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.role-pill-btn:hover {
+  background: #f8fafc;
+}
+
+.role-pill-btn.active {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.role-check-icon {
+  color: #16a34a;
+  font-weight: 800;
+}
+
+@media (max-width: 1024px) {
+  .navbar-inner {
+    padding: 0 1rem;
+    height: auto;
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .navbar-links-group {
+    order: 3;
+    width: 100%;
+    overflow-x: auto;
+    height: 48px;
+  }
+  .nav-tab-item,
+  .nav-tab-btn {
+    height: 48px;
+    font-size: 0.82rem;
+  }
+}
