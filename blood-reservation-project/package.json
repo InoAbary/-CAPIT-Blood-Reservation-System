@@ -11,9 +11,11 @@
   },
   "dependencies": {
     "@vis.gl/react-google-maps": "^1.10.0",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.5",
     "express": "^5.2.1",
     "maplibre-gl": "^6.10.0",
-    "mongoose": "^9.10.1",
+    "mongoose": "^9.10.3",
     "react": "^19.2.8",
     "react-dom": "^19.3.0",
     "react-map-gl": "^8.1.3",
