@@ -1,6 +1,9 @@
 const express = require('express');
 const exceljs = require('exceljs');
 
+const {ChartJSNodeCanvas} = require('chartjs-node-canvas')
+
+
 const mongoose = require ('mongoose');
 const Inventories = require('../../db/models/inventories.cjs')
 const BloodReport = require('../../db/models/bloodReports.cjs')
@@ -10,6 +13,8 @@ const router = express.Router();
 
 
 // handle reqs to get /api/inventories
+
+
 router.get('/', async (req, res) => {
     try {
         const inventories = await Inventories.find({}).lean();
@@ -91,6 +96,48 @@ router.post('/create-utilization-report', async (req, res) => {
         });
 
         sheet.getRow(1).font = { bold: true };
+
+        const statusCounts = reports.reduce((acc, r) => {
+            const key = r.status || 'Unknown';
+            acc[key] = (acc[key] || 0) + 1;
+            return acc
+        }, {})
+
+        const labels = Object.keys(statusCounts)
+        const values = Object.values(statusCounts)
+
+        const width = 600;
+        const height = 400;
+
+        const chartJSNodeCanvas = new ChartJSNodeCanvas({width, height})
+        
+        const chartBuffer = await chartJSNodeCanvas.renderToBuffer({
+            type: 'pie',
+            data: {
+                labels,
+                datasets: [{
+                    data: values,
+                    backgroundColor: [
+                        '#4CAF50', '#2196F3', '#F44336',
+                        '#FFC107', '#9C27B0', '#795548'
+                    ]
+                }]
+            },
+            options: {
+                plugins: {
+                    title: {display: true, text: 'Blood Unit Status Distribution'},
+                    legend: {position: 'right'}
+                }
+            }
+        });
+
+        const imageId = workbook.addImage({
+            buffer: chartBuffer,
+            extension: 'png'
+        })
+
+        const chartSheet = workbook.addWorksheet('Status Distribution');
+        chartSheet.addImage(imageId, 'A1:J25')
 
         res.setHeader(
             'Content-Type',
