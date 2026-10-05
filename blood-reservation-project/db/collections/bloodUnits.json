@@ -1,10 +1,10 @@
 {
-    "_id":{"$oid":"6ab1f310c1737b61e3f4b4e8"},
-    "userID":"U000001",
-    "facilityID":"F00001",
-    "firstName":"Juan",
-    "lastName":"Dela Cruz",
-    "email":"juandelacruz@prc.com.ph",
-    "role":"PRC Staff sample role",
-    "isActive":true
+    "_id":{"$oid":"6ab1f5c6c1737b61e3f4b4ea"},
+    "bloodUnitID":"BU00000001","donorID":"D0000001",
+    "facilityID":"F00001","bloodType":"O+",
+    "component":"Packed RBC",
+    "collectionDate":{"$date":"2026-09-22T03:28:06.442Z"},
+    "expiryDate":{"$date":"2026-11-03T03:28:06.442Z"},
+    "status":"in-stock","dateAdded":{"$date":"2026-09-22T03:28:06.442Z"},
+    "lastUpdated":{"$date":"2026-09-22T03:28:06.442Z"}
 }
