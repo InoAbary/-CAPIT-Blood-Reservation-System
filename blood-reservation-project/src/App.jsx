@@ -9,6 +9,7 @@ import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
 import Utilization from './pages/Utilization';
 
+
 function App() {
   const [count, setCount] = useState(0)
 
@@ -17,6 +18,7 @@ function App() {
         <Route path="/BloodBankMap" element = {<BloodBankMap />} />
         <Route path="/Inventory" element={<Inventory />} />
         <Route path="/Utilization" element={<Utilization />} />
+
     </Routes>
     
   );
