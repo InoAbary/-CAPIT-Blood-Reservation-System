@@ -7,7 +7,7 @@ const bloodUnitsSchema = new mongoose.Schema({
         required: true
     },
     donorID: {
-        type:String.
+        type: String,
         required: true
     },
     facilityID: {

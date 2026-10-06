@@ -7,5 +7,5 @@
     "availQuantity":1
     ,"availStatus":"Limited",
     "lastUpdated": {"$date":"2026-09-22T03:30:45.441Z"},
-    "updatedBy":"U00001"
+    "updatedBy":{"$oid":"6ab1f310c1737b61e3f4b4e8"}
 }
