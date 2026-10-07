@@ -332,4 +332,87 @@
     .inventory-table td {
         padding: 0.625rem 0.5rem;
     }
+
+}
+
+/* Header action buttons */
+.header-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Report status badge colors */
+.status-badge.used {
+    background-color: #e6f4ea;
+    color: #137333;
+}
+
+.status-badge.wasted {
+    background-color: #fce8e6;
+    color: #a50e0e;
+}
+
+.status-badge.expired {
+    background-color: #fef7e0;
+    color: #b06000;
+}
+
+.status-badge.unused {
+    background-color: #e8eaed;
+    color: #5f6368;
+}
+
+/* Form inside the modal */
+.report-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.report-form label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #444;
+    gap: 6px;
+}
+
+.report-form select,
+.report-form textarea {
+    padding: 8px 10px;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+}
+
+.report-form select:focus,
+.report-form textarea:focus {
+    outline: none;
+    border-color: #c0392b;
+    box-shadow: 0 0 0 2px rgba(192, 57, 43, 0.15);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.btn-secondary {
+    padding: 8px 16px;
+    background: #f5f5f5;
+    color: #444;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.btn-secondary:hover {
+    background: #eaeaea;
+
 }
