@@ -26,22 +26,6 @@ function Utilization() {
 
     const loadData = async () => {
         setIsLoading(true);
-        try {
-            const resp = await fetch('/api/inventories');
-
-            if (resp.ok) {
-                const data = await resp.json();
-                if (data.success) {
-                    setBloodInventory(data.inventories);
-                } else {
-                    setError(data.message || 'Failed to load data');
-                }
-            } else {
-                setError('Server responded with an error');
-            }
-        } catch (error) {
-            console.error('Error loading blood inventory:', error);
-
 
         setError(null);
         try {
@@ -68,6 +52,7 @@ function Utilization() {
         } finally {
             setIsLoading(false);
         }
+    
     };
 
 
@@ -380,6 +365,6 @@ function Utilization() {
     );
 }
 
-}
+
 
 export default Utilization;
