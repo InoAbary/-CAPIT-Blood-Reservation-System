@@ -2,10 +2,21 @@ const mongoose = require('mongoose');
 
 const bloodReportSchema = new mongoose.Schema({
 
-    facilityID: {
+    bsfFacilityID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Facilities',
         required: true
+    },
+    
+    hospitalFacilityID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Facilities',
+        required: true
+    },
+
+    bloodRequestID: {
+        type: String,
+        default: null
     },
 
     bloodUnitID: {
@@ -45,7 +56,8 @@ const bloodReportSchema = new mongoose.Schema({
         enum: [
             'Used',
             'Wasted',
-            'Expired'
+            'Expired',
+            'Unused'
         ]
     },
 
@@ -76,9 +88,13 @@ const bloodReportSchema = new mongoose.Schema({
     }
 });
 
+bloodReportSchema.index({
+    bsfFacilityID: 1,
+    utilizationDate: -1
+});
 
 bloodReportSchema.index({
-    facilityID: 1,
+    hospitalFacilityID: 1,
     utilizationDate: -1
 });
 
