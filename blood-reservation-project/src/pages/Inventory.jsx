@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import BloodUnitsTab from './BloodUnitsTab';
+import BloodUnitsTab from '../components/inventory/BloodUnitsTab';
 import InventoryOverview from '../components/inventory/InventoryOverview';
 import './Inventory.css';
 
@@ -235,7 +235,7 @@ function Inventory() {
                 )}
                     {activeTab === 'update' &&
                 (
-                    <BloodUnitsTab />
+                    <BloodUnitsTab facilityID={selectedId}/>
                 )
                  }
 

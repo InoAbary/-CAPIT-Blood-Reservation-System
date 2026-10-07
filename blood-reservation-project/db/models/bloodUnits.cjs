@@ -52,3 +52,13 @@ const bloodUnitsSchema = new mongoose.Schema({
 })
 
 module.exports = mongoose.model('BloodUnits', bloodUnitsSchema);
+
+
+bloodUnitsSchema.index({ bloodUnitID: 1 }, { unique: true });
+
+bloodUnitsSchema.pre('save', function (next) {
+    if (!this.isNew) {
+        this.lastUpdated = new Date();
+    }
+    next();
+});
