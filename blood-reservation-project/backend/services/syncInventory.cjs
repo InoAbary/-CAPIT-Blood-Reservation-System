@@ -1,5 +1,5 @@
-const BloodUnits = require('../models/BloodUnits'); // adjust paths to your model files
-const Inventory = require('../models/Inventory');
+const BloodUnits = require('../../db/models/bloodUnits.cjs'); // adjust paths to your model files
+const Inventory = require('../../db/models/inventories.cjs');
 
 // Quantity at or below this (but above 0) is reported as "Limited"
 const LIMITED_THRESHOLD = 5;
