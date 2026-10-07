@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import BloodUnitsTab from './BloodUnitsTab';
-import InventoryUpdate from '../components/inventory/InventoryUpdate';
 import InventoryOverview from '../components/inventory/InventoryOverview';
 import './Inventory.css';
 
@@ -236,9 +235,7 @@ function Inventory() {
                 )}
                     {activeTab === 'update' &&
                 (
-                 <InventoryUpdate 
-                    inventory={inventory}
-                    onInventoryUpdated={handleInventoryUpdated} />
+                    <BloodUnitsTab />
                 )
                  }
 
