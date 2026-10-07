@@ -15,7 +15,7 @@ const inventorySchema = new mongoose.Schema({
     component: {
         type: String,
         required: true,
-        enum: ['Packed RBC', 'Whole Blood', 'Plasma', 'Platelets', 'Cryoprecipitate']
+        enum: ['Packed RBC', 'Whole Blood', 'Plasma', 'Platelets']
     },
     availQuantity: {
         type: Number,

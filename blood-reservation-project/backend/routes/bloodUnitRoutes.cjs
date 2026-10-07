@@ -151,6 +151,55 @@ router.get('/:id/blood-units', validateFacilityId, async (req, res) => {
     }
 });
 
+// GET /api/facilities/:id/blood-unit-history
+router.get(
+    '/:id/blood-unit-history',
+    validateFacilityId,
+    async (req, res) => {
+
+        try {
+
+            const facility = await getFacility(req.params.id);
+
+            if (!facility) {
+                return res.status(404).json({
+                    message: 'Facility not found.'
+                });
+            }
+
+
+            const history = await BloodUnitHistory
+                .find({
+                    facilityID: facility._id
+                })
+                .populate(
+                    'performedBy',
+                    'firstName lastName email role'
+                )
+                .sort({
+                    date: -1
+                })
+                .lean();
+
+
+            res.json(history);
+
+        } catch (err) {
+
+            console.error(
+                'Load blood unit history:',
+                err
+            );
+
+            res.status(500).json({
+                message:
+                    'Failed to load blood unit history.'
+            });
+        }
+    }
+);
+
+
 // POST /api/facilities/:id/blood-units
 router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
     try {
@@ -341,6 +390,8 @@ router.delete(
     validateFacilityId,
     async (req, res) => {
         try {
+
+            const performedBy = null; // will replace later
             //TODO: const performedBy = getActorId(req);
 
             /*

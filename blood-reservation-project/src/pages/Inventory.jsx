@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import BloodUnitsTab from '../components/inventory/BloodUnitsTab';
 import InventoryOverview from '../components/inventory/InventoryOverview';
+import InventoryHistory from '../components/inventory/InventoryHistory';
 import './Inventory.css';
 
 // Set REACT_APP_API_URL (CRA) or VITE_API_URL (Vite) if the API is somewhere else.
@@ -240,7 +241,12 @@ function Inventory() {
                  }
 
 
-                {activeTab === 'history' && <p className="inv-placeholder">Update History coming soon.</p>}
+                {activeTab === 'history' && (
+                    <InventoryHistory
+                        facilityID={facility._id}
+                    />
+                )}
+
                 </div>
                 </div>
             )}
