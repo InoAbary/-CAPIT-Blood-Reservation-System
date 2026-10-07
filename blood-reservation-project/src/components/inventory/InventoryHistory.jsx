@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import {
+    MOCK_INVENTORY_HISTORY
+} from './mockInventoryHistory';
 
+const USE_MOCK_DATA = true;
 
 const API_URL =
     (typeof process !== 'undefined' &&
@@ -159,11 +163,19 @@ function InventoryHistory({ facilityID }) {
 
     useEffect(() => {
 
-        if (!facilityID) {
+        // TODO: Remove this later. For mock data tetsting only
+        if (!facilityID && !USE_MOCK_DATA) {
             setHistory([]);
             setLoading(false);
             return;
         }
+
+        /*
+        if (!facilityID) {
+            setHistory([]);
+            setLoading(false);
+            return;
+        } */
 
 
         const controller = new AbortController();
@@ -173,6 +185,13 @@ function InventoryHistory({ facilityID }) {
 
             setLoading(true);
             setError('');
+
+            // TODO: Remove later. for mock data testing only
+            if (USE_MOCK_DATA) {
+                setHistory(MOCK_INVENTORY_HISTORY);
+                setLoading(false);
+                return;
+            }
 
             try {
 
