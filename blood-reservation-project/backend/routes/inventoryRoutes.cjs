@@ -7,7 +7,7 @@ const {ChartJSNodeCanvas} = require('chartjs-node-canvas')
 const mongoose = require ('mongoose');
 const Inventories = require('../../db/models/inventories.cjs')
 const BloodReport = require('../../db/models/bloodReports.cjs')
-
+const BloodUnits = require('../../db/models/bloodUnits.cjs')
 const router = express.Router();
 
 
@@ -25,14 +25,79 @@ router.get('/', async (req, res) => {
     }
 });
 
+router.get('/bloodUnits', async (req, res) => {
+    try {
+        const bUnits = await BloodUnits.find({}).lean();
+        res.json({ success: true, bUnits });
+    } catch (err) {
+        console.error('Error fetching blood units:', err);
+        res.status(500).json({ success: false, message: 'Failed to fetch blood units.' });
+    }
+});
+
 router.get('/reports', async(req, res)=>{
+    try {
+
+        const {bloodType, component, status} = req.query;
+
+        const matchStage = {}
+
+        if (bloodType && bloodType !== 'all'){
+            matchStage['bloodUnitID.bloodType'] = bloodType;
+        }
+        if (component && component !== 'all') {
+            matchStage['bloodUnitID.component'] = component;
+        }
+        if (status && status !== 'all'){
+            matchStage['status'] = status;
+        }
+
+        const pipeline = [
+            {
+                $lookup: {
+                    from: BloodUnits.collection.name, 
+                    localField: 'bloodUnitID',
+                    foreignField: '_id',
+                    as: 'bloodUnitID'
+                }
+            },
+            { $unwind: '$bloodUnitID' },
+        ];
+
+        // Only add $match if there's something to filter on
+        if (Object.keys(matchStage).length > 0) {
+            pipeline.push({ $match: matchStage });
+        }
+
+        pipeline.push({ $sort: { dateCreated: -1 } });
+
+        const reports = await BloodReport.aggregate(pipeline);
+
+        res.json({ success: true, reports });
+    } catch (err) {
+        console.error('Error fetching reports:', err);
+        res.status(500).json({success: false, message: 'Failed to fetch reports.'})
+    }
+})
+
+router.get('/reports/:bloodType', async(req, res)=>{
     try {
         const reports = await BloodReport
             .find({})
-            .populate('inventoryId')
-            .sort({dateCreated: -1})
-            .lean();
+            .aggregate([
+                {
+                    $lookup: {
+                        from: 'BloodUnits',
+                        localField: 'bloodUnitID',
+                        foreignField: '_id',
+                        as: 'bloodUnitID'
+                    }
+                },
+                {$unwind: '$bloodUnitID'},
+                { match: {'bloodUnitID.bloodType': bloodType}},
+                {sort: { dateCreated: -1}}
 
+            ])
         res.json({success: true, reports})
     } catch (err) {
         console.error('Error fetching reports:', err);
@@ -42,8 +107,8 @@ router.get('/reports', async(req, res)=>{
 
 router.post('/reports', async(req, res)=>{
     try {
-        const {inventoryId, status, description } = req.body
-        if (!inventoryId || !status) {
+        const {bloodUnitID, status, description } = req.body
+        if (!bloodUnitID || !status) {
             return res.status(500).json({
                 success: false,
                 message: 'Inventory ID and Status are required.'
@@ -51,7 +116,7 @@ router.post('/reports', async(req, res)=>{
         }
 
         const report = await BloodReport.create({
-            inventoryId,
+            bloodUnitID,
             status,
             description,
             dateCreate: new Date()
@@ -68,7 +133,7 @@ router.post('/create-utilization-report', async (req, res) => {
     try {
         const reports = await BloodReport
             .find({})
-            .populate('inventoryId')
+            .populate('bloodUnitID')
             .sort({ dateCreated: -1 })
             .lean();
 
@@ -87,8 +152,8 @@ router.post('/create-utilization-report', async (req, res) => {
         reports.forEach((r) => {
             sheet.addRow({
                 _id: r._id.toString(),
-                bloodType: r.inventoryId?.bloodType || 'N/A',
-                component: r.inventoryId?.component || 'N/A',
+                bloodType: r.bloodUnitID?.bloodType || 'N/A',
+                component: r.bloodUnitID?.component || 'N/A',
                 status: r.status,
                 description: r.description || '',
                 dateCreated: new Date(r.dateCreated).toLocaleString()

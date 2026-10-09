@@ -1,60 +1,98 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import './Utilization.css';
 
 function Utilization() {
     const [reports, setReports] = useState([]);
-    const [inventory, setInventory] = useState([]);
+    const [bloodUnits, setBloodUnits] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [showReportModal, setShowReportModal] = useState(false);
     const [showCreateModal, setShowCreateModal] = useState(false);
 
+    // Filter state
+    const [filters, setFilters] = useState({
+        bloodType: 'all',
+        component: 'all',
+        status: 'all'
+    });
+
     // form state for new report
     const [formData, setFormData] = useState({
-        inventoryId: '',
+        bloodUnitID: '',
         status: 'Used',
         description: ''
     });
     const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        loadData();
-    }, []);
-
-
-    const loadData = async () => {
-        setIsLoading(true);
-
-        setError(null);
+    // Fetch reports from the server, applying filters via query string
+    const fetchReports = useCallback(async (currentFilters) => {
         try {
-            const [reportsResp, invResp] = await Promise.all([
-                fetch('/api/inventories/reports'),
-                fetch('/api/inventories')
-            ]);
+            const params = new URLSearchParams();
+            if (currentFilters.bloodType !== 'all') {
+                params.append('bloodType', currentFilters.bloodType);
+            }
+            if (currentFilters.component !== 'all') {
+                params.append('component', currentFilters.component);
+            }
 
-            const reportsData = await reportsResp.json();
-            const invData = await invResp.json();
+            if (currentFilters.status !== 'all') {
+                params.append('status', currentFilters.status);
+            }
 
-            if (reportsData.success) setReports(reportsData.reports);
-            else setError(reportsData.message || 'Failed to load reports');
+            const qs = params.toString();
+            const url = `/api/inventories/reports${qs ? `?${qs}` : ''}`;
 
-            
+            const resp = await fetch(url);
+            const data = await resp.json();
 
-            if (invData.success) {
-                console.log('First inventory item:', invData.inventories[0]);
-                setInventory(invData.inventories);
+            if (data.success) {
+                setReports(data.reports);
+                setError(null);
+            } else {
+                setError(data.message || 'Failed to load reports');
             }
         } catch (err) {
-            console.error('Error loading data:', err);
+            console.error('Error fetching reports:', err);
             setError('Network error occurred');
-        } finally {
-            setIsLoading(false);
         }
-    
-    };
+    }, []);
 
+    // Fetch blood units once (for the Log Usage dropdown)
+    const fetchBloodUnits = useCallback(async () => {
+        try {
+            const resp = await fetch('/api/inventories/bloodUnits');
+            const data = await resp.json();
+            if (data.success) {
+                setBloodUnits(data.bUnits);
+            }
+        } catch (err) {
+            console.error('Error fetching blood units:', err);
+        }
+    }, []);
+
+    // Initial load
+    useEffect(() => {
+        (async () => {
+            setIsLoading(true);
+            await Promise.all([fetchReports(filters), fetchBloodUnits()]);
+            setIsLoading(false);
+        })();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // Re-fetch whenever filters change (but skip the very first render,
+    // since the mount effect already fetched)
+    const [didMount, setDidMount] = useState(false);
+    useEffect(() => {
+        if (!didMount) {
+            setDidMount(true);
+            return;
+        }
+        fetchReports(filters);
+    }, [filters, fetchReports, didMount]);
 
     const handleGenerateReport = () => setShowReportModal(true);
+
     const handleDownloadReport = async (format) => {
         if (format === 'excel') {
             try {
@@ -81,8 +119,8 @@ function Utilization() {
 
     const handleCreateReport = async (e) => {
         e.preventDefault();
-        if (!formData.inventoryId || !formData.status) {
-            alert('Please select an inventory item and a status.');
+        if (!formData.bloodUnitID || !formData.status) {
+            alert('Please select a blood unit and a status.');
             return;
         }
 
@@ -96,8 +134,10 @@ function Utilization() {
             const data = await resp.json();
             if (data.success) {
                 setShowCreateModal(false);
-                setFormData({ inventoryId: '', status: 'Used', description: '' });
-                await loadData();
+                setFormData({ bloodUnitID: '', status: 'Used', description: '' });
+                // Re-fetch with current filters
+                await fetchReports(filters);
+                await fetchBloodUnits();
             } else {
                 alert(data.message || 'Failed to create report.');
             }
@@ -118,12 +158,20 @@ function Utilization() {
     const getStatusClass = (status) =>
         (status || '').toLowerCase().replace(/\s+/g, '-');
 
+    // Static option lists (they come from the BloodUnits enum, so we can hardcode)
+    const bloodTypeOptions = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
+    const componentOptions = ['Packed RBC', 'Plasma', 'Platelets', 'Whole Blood'];
+    const statusOptions = ['Used', 'Wasted', 'Expired', 'Unused'];
+
+    const resetFilters = () => setFilters({ bloodType: 'all', component: 'all' });
+
+    const hasActiveFilters =
+        filters.bloodType !== 'all' || filters.component !== 'all';
+
     if (isLoading) return <div className="loading-state">Loading utilization reports...</div>;
     if (error) return <div className="error-state">Error: {error}</div>;
 
-
     return (
-
         <div className="utilization-container">
             {/* Header */}
             <div className="utilization-header">
@@ -151,7 +199,69 @@ function Utilization() {
                 </div>
             </div>
 
-            {/* Summary cards */}
+            {/* Filters */}
+            <div className="filters-bar">
+                <div className="filter-group">
+                    <label htmlFor="filter-blood-type">Blood Type</label>
+                    <select
+                        id="filter-blood-type"
+                        value={filters.bloodType}
+                        onChange={(e) =>
+                            setFilters((f) => ({ ...f, bloodType: e.target.value }))
+                        }
+                    >
+                        <option value="all">All</option>
+                        {bloodTypeOptions.map((bt) => (
+                            <option key={bt} value={bt}>{bt}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="filter-group">
+                    <label htmlFor="filter-component">Component</label>
+                    <select
+                        id="filter-component"
+                        value={filters.component}
+                        onChange={(e) =>
+                            setFilters((f) => ({ ...f, component: e.target.value }))
+                        }
+                    >
+                        <option value="all">All</option>
+                        {componentOptions.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="filter-group">
+                    <label htmlFor="filter-status">Status</label>
+                    <select
+                        id="filter-status"
+                        value={filters.status}
+                        onChange={(e) =>
+                            setFilters((f) => ({ ...f, status: e.target.value }))
+                        }
+                    >
+                        <option value="all">All</option>
+                        {statusOptions.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="filter-group filter-group-actions">
+                    <button
+                        type="button"
+                        className="btn-secondary"
+                        onClick={resetFilters}
+                        disabled={!hasActiveFilters}
+                    >
+                        Reset
+                    </button>
+                </div>
+            </div>
+
+            {/* Summary cards (reflect filtered data) */}
             {reports.length > 0 && (
                 <div className="summary-cards">
                     <div className="summary-card">
@@ -181,13 +291,18 @@ function Utilization() {
 
             {/* Reports table */}
             {reports.length === 0 ? (
-                <p className="empty-state">No utilization reports have been created yet.</p>
+                <p className="empty-state">
+                    {hasActiveFilters
+                        ? 'No reports match the selected filters.'
+                        : 'No utilization reports have been created yet.'}
+                </p>
             ) : (
                 <div className="table-wrapper">
                     <table className="inventory-table">
                         <thead>
                             <tr>
                                 <th>Report ID</th>
+                                <th>Blood Unit ID</th>
                                 <th>Blood Type</th>
                                 <th>Component</th>
                                 <th>Status</th>
@@ -199,16 +314,17 @@ function Utilization() {
                             {reports.map((r) => (
                                 <tr key={r._id?.$oid || r._id}>
                                     <td>{r._id?.$oid || r._id}</td>
+                                    <td>{r.bloodUnitID?.bloodUnitID || 'N/A'}</td>
                                     <td>
-                                        {r.inventoryId?.bloodType ? (
+                                        {r.bloodUnitID?.bloodType ? (
                                             <span className="blood-type-badge">
-                                                {r.inventoryId.bloodType}
+                                                {r.bloodUnitID.bloodType}
                                             </span>
                                         ) : (
                                             'N/A'
                                         )}
                                     </td>
-                                    <td>{r.inventoryId?.component || 'N/A'}</td>
+                                    <td>{r.bloodUnitID?.component || 'N/A'}</td>
                                     <td>
                                         <span className={`status-badge ${getStatusClass(r.status)}`}>
                                             {r.status}
@@ -264,7 +380,6 @@ function Utilization() {
                         </div>
                     </div>
                 </div>
-
             )}
 
             {/* Create Report modal */}
@@ -283,29 +398,28 @@ function Utilization() {
                         <div className="modal-body">
                             <form onSubmit={handleCreateReport} className="report-form">
                                 <label>
-                                    Inventory Item
+                                    Blood Unit
                                     <select
-                                        value={formData.inventoryId}
+                                        value={formData.bloodUnitID}
                                         onChange={(e) =>
-                                            setFormData({ ...formData, inventoryId: e.target.value })
+                                            setFormData({ ...formData, bloodUnitID: e.target.value })
                                         }
                                         required
                                     >
-                                        <option value="">Select an inventory item…</option>
-                                        {inventory.map((item, index) => {
-                                            
+                                        <option value="">Select a blood unit…</option>
+                                        {bloodUnits.map((unit, index) => {
                                             const id =
-                                                typeof item._id === 'string' ? item._id :
-                                                item._id?.$oid ? item._id.$oid :
-                                                item.inventoryID || null;
-                                
-                                            return(
+                                                typeof unit._id === 'string' ? unit._id :
+                                                unit._id?.$oid ? unit._id.$oid :
+                                                null;
+
+                                            return (
                                                 <option
-                                                    key={id || `inv-${index}`}
+                                                    key={id || `unit-${index}`}
                                                     value={id || ''}
                                                     disabled={!id}
                                                 >
-                                                    {item.bloodType} — {item.component} (Qty: {item.availQuantity})
+                                                    {unit.bloodUnitID} — {unit.bloodType} {unit.component} (Status: {unit.status})
                                                 </option>
                                             );
                                         })}
@@ -361,8 +475,7 @@ function Utilization() {
                 </div>
             )}
         </div>
-    )
-
+    );
 }
 
 export default Utilization;
