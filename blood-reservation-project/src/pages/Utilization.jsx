@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import './Utilization.css';
+import '../styles/Utilization.css';
 
 function Utilization() {
     const [reports, setReports] = useState([]);
