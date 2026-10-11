@@ -38,7 +38,7 @@ router.get('/bloodUnits', async (req, res) => {
 router.get('/reports', async(req, res)=>{
     try {
 
-        const {bloodType, component, status} = req.query;
+        const {bloodType, component, status, fromDate, toDate} = req.query;
 
         const matchStage = {}
 
@@ -50,6 +50,12 @@ router.get('/reports', async(req, res)=>{
         }
         if (status && status !== 'all'){
             matchStage['status'] = status;
+        }
+
+        if (fromDate || toDate) {
+            matchStage['dateCreated'] = {};
+            if (fromDate) matchStage['dateCreated'].$gte = new Date(`${fromDate}T00:00:00`);
+            if (toDate) matchStage['dateCreated'].$lte = new Date(`${toDate}T23:59:59.999`);
         }
 
         const pipeline = [
@@ -80,30 +86,7 @@ router.get('/reports', async(req, res)=>{
     }
 })
 
-router.get('/reports/:bloodType', async(req, res)=>{
-    try {
-        const reports = await BloodReport
-            .find({})
-            .aggregate([
-                {
-                    $lookup: {
-                        from: 'BloodUnits',
-                        localField: 'bloodUnitID',
-                        foreignField: '_id',
-                        as: 'bloodUnitID'
-                    }
-                },
-                {$unwind: '$bloodUnitID'},
-                { match: {'bloodUnitID.bloodType': bloodType}},
-                {sort: { dateCreated: -1}}
 
-            ])
-        res.json({success: true, reports})
-    } catch (err) {
-        console.error('Error fetching reports:', err);
-        res.status(500).json({success: false, message: 'Failed to fetch reports.'})
-    }
-})
 
 router.post('/reports', async(req, res)=>{
     try {

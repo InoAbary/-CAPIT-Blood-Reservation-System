@@ -13,7 +13,9 @@ function Utilization() {
     const [filters, setFilters] = useState({
         bloodType: 'all',
         component: 'all',
-        status: 'all'
+        status: 'all',
+        fromDate: '',
+        toDate: ''
     });
 
     // form state for new report
@@ -37,6 +39,13 @@ function Utilization() {
 
             if (currentFilters.status !== 'all') {
                 params.append('status', currentFilters.status);
+            }
+
+            if (currentFilters.fromDate) {
+                params.append('fromDate', currentFilters.fromDate);
+            }
+            if (currentFilters.toDate) {
+                params.append('toDate', currentFilters.toDate);
             }
 
             const qs = params.toString();
@@ -163,10 +172,21 @@ function Utilization() {
     const componentOptions = ['Packed RBC', 'Plasma', 'Platelets', 'Whole Blood'];
     const statusOptions = ['Used', 'Wasted', 'Expired', 'Unused'];
 
-    const resetFilters = () => setFilters({ bloodType: 'all', component: 'all' });
+    const resetFilters = () =>
+    setFilters({
+        bloodType: 'all',
+        component: 'all',
+        status: 'all',
+        fromDate: '',
+        toDate: ''
+    });
 
     const hasActiveFilters =
-        filters.bloodType !== 'all' || filters.component !== 'all';
+        filters.bloodType !== 'all' || 
+        filters.component !== 'all' || 
+        filters.status !== 'all' ||
+        !!filters.fromDate ||
+        !!filters.toDate;
 
     if (isLoading) return <div className="loading-state">Loading utilization reports...</div>;
     if (error) return <div className="error-state">Error: {error}</div>;
@@ -247,6 +267,32 @@ function Utilization() {
                             <option key={c} value={c}>{c}</option>
                         ))}
                     </select>
+                </div>
+
+                <div className="filter-group">
+                    <label htmlFor="filter-from-date">From Date</label>
+                    <input
+                        id="filter-from-date"
+                        type="date"
+                        value={filters.fromDate}
+                        max={filters.toDate || undefined}
+                        onChange={(e) =>
+                            setFilters((f) => ({ ...f, fromDate: e.target.value }))
+                        }
+                    />
+                </div>
+
+                <div className="filter-group">
+                    <label htmlFor="filter-to-date">To Date</label>
+                    <input
+                        id="filter-to-date"
+                        type="date"
+                        value={filters.toDate}
+                        min={filters.fromDate || undefined}
+                        onChange={(e) =>
+                            setFilters((f) => ({ ...f, toDate: e.target.value }))
+                        }
+                    />
                 </div>
 
                 <div className="filter-group filter-group-actions">
