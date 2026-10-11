@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import './Utilization.css';
+import '../styles/Utilization.css';
 
 function Utilization() {
     const [reports, setReports] = useState([]);
