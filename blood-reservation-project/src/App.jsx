@@ -4,11 +4,12 @@ import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
+import './i18n.cjs'
 
 import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
 import Utilization from './pages/Utilization';
-
+import BloodDonorForm from './pages/BloodDonorForm';
 
 function App() {
   const [count, setCount] = useState(0)
@@ -18,7 +19,7 @@ function App() {
         <Route path="/BloodBankMap" element = {<BloodBankMap />} />
         <Route path="/Inventory" element={<Inventory />} />
         <Route path="/Utilization" element={<Utilization />} />
-
+        <Route path="/BloodDonorForm" element={<BloodDonorForm />} />
     </Routes>
     
   );
