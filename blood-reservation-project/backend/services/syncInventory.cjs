@@ -25,8 +25,8 @@ async function syncInventory(facility) {
     const counts = await BloodUnits.aggregate([
         {
             $match: {
-                facilityID: facility.facilityID, // bloodUnits store the custom ID, e.g. 'F00001'
-                status: /^in-stock$/i,
+                facilityID: facility._id.toString(), // bloodUnits store the custom ID, e.g. 'F00001'
+                status: /^In-stock$/i,
                 expiryDate: { $gt: now },
             },
         },
@@ -70,8 +70,8 @@ async function syncInventory(facility) {
                     updateOne: {
                         filter: { facilityID: facility._id, bloodType, component },
                         update: {
-                            $set: { availQuantity: qty, availStatus: status, lastUpdated: now },
-                            $setOnInsert: { updatedBy: 'SYSTEM' }, // only applied when a new entry is created
+                            $set: { availQuantity: qty, availStatus: status, lastUpdated: now } //,
+                            //TODO $setOnInsert: { updatedBy: 'SYSTEM' }, only applied when a new entry is created
                         },
                         upsert: true,
                     },

@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 
 const Facility = require('../../db/models/facilities.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
+const Inventory = require('../../db/models/inventories.cjs');
 //const BloodUnitHistory = require('../../db/models/bloodUnitsHistory.cjs');
 const Counter = require('../../db/models/counters.cjs');
 
@@ -199,6 +200,9 @@ router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
 
         await unit.save();
 
+        await Inventory.updateOne({facilityID: facility._id}, {$inc: {availQuantity: 1}});
+
+        /*
         try {
             await BloodUnitHistory.logCreate(unit, {
                 facilityID: facility._id
@@ -207,7 +211,7 @@ router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
         } catch (historyError) {
             await BloodUnits.deleteOne({ _id: unit._id });
             throw historyError;
-        }
+        } */
 
         res.status(201).json(unit);
     } catch (err) {
@@ -320,10 +324,11 @@ router.put(
 
             await unit.save();
 
+            /* TODO:
             await BloodUnitHistory.logUpdate(before, unit, {
                 facilityID: facility._id,
                 performedBy
-            });
+            }); */
 
             res.json(unit);
         } catch (err) {
@@ -368,11 +373,11 @@ router.delete(
                     message: 'Blood unit not found in this facility.'
                 });
             }
-
+            /* TODO:
             await BloodUnitHistory.logDelete(unit, {
                 facilityID: facility._id,
                 performedBy
-            });
+            }); */
 
             await unit.deleteOne();
 

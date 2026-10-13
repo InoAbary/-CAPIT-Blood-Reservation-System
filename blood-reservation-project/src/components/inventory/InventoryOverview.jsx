@@ -17,8 +17,8 @@ const COMPONENTS = [
     'Packed RBC',
     'Plasma',
     'Platelets',
-    'Whole Blood',
-    'Cryoprecipitate',
+    'Whole Blood'
+    //'Cryoprecipitate',
 ];
 
 

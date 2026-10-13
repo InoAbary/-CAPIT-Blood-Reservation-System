@@ -55,7 +55,7 @@ router.get('/:id/inventory', validateId, async (req, res) => {
             .json({ message: 'This facility has no facilityID, so its blood units cannot be counted.' });
         }
 
-        //await syncInventory(facility);
+        await syncInventory(facility);
 
         const items = await Inventory.find({ facilityID: facility._id })
         .select('bloodType component availQuantity availStatus lastUpdated')
