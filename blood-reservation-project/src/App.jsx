@@ -8,6 +8,8 @@ import './App.css'
 import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
 import Utilization from './pages/Utilization';
+import BloodRequestForm from './pages/Bloodrequestform';
+import BloodRequestsAdmin from './components/BloodRequestsAdmin';
 
 
 function App() {
@@ -18,6 +20,8 @@ function App() {
         <Route path="/BloodBankMap" element = {<BloodBankMap />} />
         <Route path="/Inventory" element={<Inventory />} />
         <Route path="/Utilization" element={<Utilization />} />
+        <Route path="/Request" element={<BloodRequestForm />}/>
+        <Route path="/Request-admin" element={<BloodRequestsAdmin />} />
 
     </Routes>
     
