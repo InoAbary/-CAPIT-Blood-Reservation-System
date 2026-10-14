@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom'
 import '../styles/BloodDonorForm.css';
+
+const DATE_ONLY = [34,37]
 
 const QUESTION_LIST = [
     { key: 'q1',  id: 1  },
@@ -42,6 +45,20 @@ const QUESTION_LIST = [
     { key: 'q37', id: 37 },
 ]
 
+const DENY_YES = new Set([5, 33, 36])
+const DENY_NO = new Set([1])
+
+function ShouldDeny(questions){
+
+    return questions.some(q => {
+        if (DATE_ONLY.includes(q.id)) return false
+        const ans = String(q.answer ?? '').toLowerCase()
+        if (DENY_YES.has(q.id) && ans === 'yes') return true
+        if (DENY_NO.has(q.id) && ans === 'no') return true
+        return false
+    })
+}
+
 function BloodDonorForm(){
 
     const {t, i18n } = useTranslation();
@@ -49,6 +66,8 @@ function BloodDonorForm(){
     const [questions, setQuestions] = useState(
         QUESTION_LIST.map(q=>({...q, answer: '', remark: '', date: ''}))
     )
+
+    const navigate = useNavigate();
 
     const updateQuestion = (id, field, value) => {
         setQuestions(prev=>
@@ -87,7 +106,56 @@ function BloodDonorForm(){
 
     const handleFormSubmission = async(e) => {
         e.preventDefault()
+        setSubmitting(true)
 
+        try{
+
+            
+            const detailRes = await fetch('/api/bloodForm/form-details', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(formData)
+            })
+            if (!detailRes.ok) throw new Error('Failed to save form details')
+            const savedDetails = await detailRes.json()
+
+            const answersPayload = {
+                formDetails: savedDetails._id,
+                answers: questions.map(q => {
+                    if (DATE_ONLY.includes(q.id)) {
+                        return {qId: q.id, date: q.date ? new Date(q.date) : null}
+                    }
+                    return {
+                        qId: q.id,
+                        result: q.answer === 'yes' ? true
+                                : q.answer === 'no' ? false
+                                : undefined,
+                        remarks: q.remark || undefined
+                    }
+                })
+            }
+
+            const answersRes = await fetch('/api/bloodForm/form-answers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json'},
+                body: JSON.stringify(answersPayload)
+            })
+
+            if (!answersRes.ok) throw new Error('Failed to save form answers')
+
+            if (ShouldDeny(questions)){
+                navigate('/FormDeny')
+            } else {
+                navigate('/FormPending')
+            }
+
+
+        } catch(err) {
+            console.error(err)
+            alert(err.message)
+        } finally {
+            setSubmitting(false)
+        }
     }
 
 
@@ -146,9 +214,9 @@ function BloodDonorForm(){
                     <label>
                         {t('formData.age', "Age")}
                         <input type="number" 
-                            value = {formData.birthDate}
+                            value = {formData.age}
                             onChange = {(e) => 
-                                setFormData({...formData, birthDate: e.target.value})
+                                setFormData({...formData, age: e.target.value})
                             }
                             min = "16"
                             max = "65"
@@ -451,7 +519,7 @@ function BloodDonorForm(){
                                         placeholder={t('common.remarks', 'Remarks')}
                                         value={q.remark}
                                         onChange={(e) => updateQuestion(q.id, 'remark', e.target.value)}
-                                        disabled={q.answer !== 'yes'}
+                                        
                                     />
                                     
                                     </>

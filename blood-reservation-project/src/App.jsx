@@ -10,6 +10,8 @@ import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
 import Utilization from './pages/Utilization';
 import BloodDonorForm from './pages/BloodDonorForm';
+import FormDeny from './pages/FormDeny';
+import FormPending from './pages/FormPending';
 
 function App() {
   const [count, setCount] = useState(0)
@@ -20,6 +22,8 @@ function App() {
         <Route path="/Inventory" element={<Inventory />} />
         <Route path="/Utilization" element={<Utilization />} />
         <Route path="/BloodDonorForm" element={<BloodDonorForm />} />
+        <Route path="/FormDeny" element={<FormDeny />} />
+        <Route path="/FormPending" element={<FormPending />} />
     </Routes>
     
   );
