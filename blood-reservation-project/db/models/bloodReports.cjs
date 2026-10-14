@@ -2,9 +2,9 @@ const mongoose = require('mongoose');
 
 const bloodReportSchema = new mongoose.Schema({
 
-    inventoryId: {
+    bloodUnitID: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'inventories'
+        ref: 'BloodUnits'
     },
     dateCreated: {
         type: Date,
