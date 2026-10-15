@@ -4,6 +4,24 @@ const Inventory = require('../../db/models/inventories.cjs');
 // Quantity at or below this (but above 0) is reported as "Limited"
 const LIMITED_THRESHOLD = 5;
 
+const BLOOD_TYPES = [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'O+',
+    'O-',
+    'AB+',
+    'AB-'
+];
+
+const COMPONENTS = [
+    'Packed RBC',
+    'Plasma',
+    'Platelets',
+    'Whole Blood'
+];
+
 const statusFor = (qty) => {
     if (qty <= 0) return 'Out of Stock';
     if (qty <= LIMITED_THRESHOLD) return 'Limited';
@@ -19,14 +37,18 @@ const keyOf = (bloodType, component) => `${bloodType}|${component}`;
  * `facility` is a lean Facility document (needs _id and the custom facilityID string).
  */
 async function syncInventory(facility) {
+    if (!facility || !facility._id) {
+        throw new Error('A valid facility with an _id is required to sync inventory.');
+    }
+
     const now = new Date();
 
     // 1. Count in-stock, unexpired units per blood type + component
     const counts = await BloodUnits.aggregate([
         {
             $match: {
-                facilityID: facility.facilityID, // bloodUnits store the custom ID, e.g. 'F00001'
-                status: /^in-stock$/i,
+                facilityID: facility._id, // bloodUnits store the custom ID, e.g. 'F00001'
+                status: 'In-stock',
                 expiryDate: { $gt: now },
             },
         },
@@ -38,9 +60,26 @@ async function syncInventory(facility) {
         },
     ]);
 
-    const countMap = new Map(
-        counts.map((c) => [keyOf(c._id.bloodType, c._id.component), c.count])
-    );
+    const countMap = new Map();
+
+    BLOOD_TYPES.forEach((bloodType) => {
+        COMPONENTS.forEach((component) => {
+            countMap.set(
+                keyOf(bloodType, component),
+                0
+            );
+        });
+    });
+    
+    counts.forEach((item) => {
+        countMap.set(
+            keyOf(
+                item._id.bloodType,
+                item._id.component
+            ),
+            item.count
+        );
+    });
 
     // 2. Current inventory entries for this facility
     const existing = await Inventory.find({ facilityID: facility._id })
@@ -52,10 +91,7 @@ async function syncInventory(facility) {
         if (e.bloodType && e.component) existingMap.set(keyOf(e.bloodType, e.component), e);
     });
 
-        // Entries with no matching units anymore drop to zero
-        existingMap.forEach((_, key) => {
-            if (!countMap.has(key)) countMap.set(key, 0);
-        });
+       
 
             // 3. Write only what changed (or is new)
             const ops = [];
@@ -70,8 +106,14 @@ async function syncInventory(facility) {
                     updateOne: {
                         filter: { facilityID: facility._id, bloodType, component },
                         update: {
-                            $set: { availQuantity: qty, availStatus: status, lastUpdated: now },
-                            $setOnInsert: { updatedBy: 'SYSTEM' }, // only applied when a new entry is created
+                            $set: {
+                                availQuantity: qty,
+                                availStatus: status,
+                                lastUpdated: now
+                            },
+                            $setOnInsert: {
+                                updatedBy: null
+                            }
                         },
                         upsert: true,
                     },

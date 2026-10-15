@@ -5,40 +5,46 @@ const COMPONENTS = ['Packed RBC', 'Plasma', 'Platelets', 'Whole Blood'];
 const STATUSES = ['In-stock', 'Expired', 'Removed'];
 const PAGE_SIZE = 8;
 
-// TODO: replace with data from the API once the backend exists
-const SAMPLE_UNITS = [
-    { bloodUnitID: 'BU00000001', donorID: 'D0000001', bloodType: 'O+', component: 'Packed RBC', collectionDate: '2026-09-22', expiryDate: '2026-11-03', status: 'In-stock' },
-{ bloodUnitID: 'BU00000002', donorID: 'D0000002', bloodType: 'A+', component: 'Plasma', collectionDate: '2026-09-10', expiryDate: '2027-09-10', status: 'In-stock' },
-{ bloodUnitID: 'BU00000003', donorID: 'D0000003', bloodType: 'B+', component: 'Platelets', collectionDate: '2026-09-28', expiryDate: '2026-10-03', status: 'Expired' },
-{ bloodUnitID: 'BU00000004', donorID: 'D0000004', bloodType: 'AB-', component: 'Whole Blood', collectionDate: '2026-09-15', expiryDate: '2026-10-20', status: 'In-stock' },
-{ bloodUnitID: 'BU00000005', donorID: 'D0000005', bloodType: 'O-', component: 'Packed RBC', collectionDate: '2026-08-30', expiryDate: '2026-10-11', status: 'In-stock' },
-{ bloodUnitID: 'BU00000006', donorID: 'D0000006', bloodType: 'A-', component: 'Packed RBC', collectionDate: '2026-09-01', expiryDate: '2026-10-13', status: 'Removed' },
-{ bloodUnitID: 'BU00000007', donorID: 'D0000007', bloodType: 'B-', component: 'Plasma', collectionDate: '2026-07-14', expiryDate: '2027-07-14', status: 'In-stock' },
-{ bloodUnitID: 'BU00000008', donorID: 'D0000008', bloodType: 'O+', component: 'Whole Blood', collectionDate: '2026-09-30', expiryDate: '2026-11-01', status: 'In-stock' },
-{ bloodUnitID: 'BU00000009', donorID: 'D0000009', bloodType: 'AB+', component: 'Platelets', collectionDate: '2026-10-02', expiryDate: '2026-10-07', status: 'In-stock' },
-{ bloodUnitID: 'BU00000010', donorID: 'D0000010', bloodType: 'A+', component: 'Packed RBC', collectionDate: '2026-09-05', expiryDate: '2026-10-17', status: 'In-stock' },
-];
+const API_URL =
+    (
+        typeof process !== 'undefined' &&
+        process.env &&
+        process.env.REACT_APP_API_URL
+    ) ||
+    (
+        typeof import.meta !== 'undefined' &&
+        import.meta.env &&
+        import.meta.env.VITE_API_URL
+    ) ||
+    'http://localhost:3000';
 
 const toISODate = (d) => {
     const pad = (n) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-const formatDate = (iso) =>
-new Date(`${iso}T00:00:00`).toLocaleDateString('en-PH', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-});
+const toInputDate = (value) => {
+    if (!value) return '';
 
-const nextUnitId = (units) => {
-    const max = units.reduce(
-        (m, u) => Math.max(m, parseInt(u.bloodUnitID.replace(/\D/g, ''), 10) || 0),
-                             0
-    );
-    return `BU${String(max + 1).padStart(8, '0')}`;
+    return String(value).slice(0, 10);
 };
 
+
+const formatDate = (value) => {
+    if (!value) return '—';
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        return '—';
+    }
+
+    return date.toLocaleDateString('en-PH', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+};
 const statusClass = (status) => `bu-pill bu-pill-${status.toLowerCase().replace(/[^a-z]/g, '')}`;
 
 /* ---------- Icons ---------- */
@@ -288,67 +294,424 @@ function FilterSelect({ label, value, onChange, allLabel, options }) {
 }
 
 /* ---------- Tab ---------- */
-function BloodUnitsTab() {
-    // Local state only: nothing is saved until the backend exists
-    const [units, setUnits] = useState(SAMPLE_UNITS);
+
+function BloodUnitsTab({
+    facilityID,
+    onInventoryChanged
+}) {
+
+    const [units, setUnits] = useState([]);
+
     const [query, setQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all');
-    const [componentFilter, setComponentFilter] = useState('all');
-    const [typeFilter, setTypeFilter] = useState('all');
+
+    const [statusFilter, setStatusFilter] =
+        useState('all');
+
+    const [componentFilter, setComponentFilter] =
+        useState('all');
+
+    const [typeFilter, setTypeFilter] =
+        useState('all');
+
     const [page, setPage] = useState(1);
-    const [modal, setModal] = useState(null); // { mode: 'add' } | { mode: 'edit', unit }
+
+    const [modal, setModal] = useState(null);
+
+    const [loading, setLoading] = useState(true);
+
+    const [error, setError] = useState('');
+
+
+    /*
+     * Load the blood units belonging to the
+     * currently selected facility.
+     */
+    useEffect(() => {
+
+        if (!facilityID) {
+
+            setUnits([]);
+            setLoading(false);
+
+            return;
+        }
+
+
+        const controller =
+            new AbortController();
+
+
+        const loadBloodUnits = async () => {
+
+            setLoading(true);
+            setError('');
+
+
+            try {
+
+                const response = await fetch(
+                    `${API_URL}/api/facilities/${facilityID}/blood-units`,
+                    {
+                        signal:
+                            controller.signal
+                    }
+                );
+
+
+                const body =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        body.message ||
+                        'Could not load blood units.'
+                    );
+                }
+
+
+                setUnits(
+                    Array.isArray(body)
+                        ? body
+                        : []
+                );
+
+
+            } catch (err) {
+
+                if (err.name !== 'AbortError') {
+
+                    setError(
+                        err.message
+                    );
+                }
+
+            } finally {
+
+                if (!controller.signal.aborted) {
+
+                    setLoading(false);
+                }
+            }
+        };
+
+
+        loadBloodUnits();
+
+
+        return () => {
+
+            controller.abort();
+        };
+
+    }, [facilityID]);
+
 
     const filtered = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        return units.filter((u) => {
-            if (statusFilter !== 'all' && u.status !== statusFilter) return false;
-            if (componentFilter !== 'all' && u.component !== componentFilter) return false;
-            if (typeFilter !== 'all' && u.bloodType !== typeFilter) return false;
-            if (!q) return true;
-            return [u.bloodUnitID, u.donorID, u.bloodType, u.component].some((v) =>
-            v.toLowerCase().includes(q)
+
+        const q =
+            query.trim().toLowerCase();
+
+
+        return units.filter((unit) => {
+
+            if (
+                statusFilter !== 'all' &&
+                unit.status !== statusFilter
+            ) {
+                return false;
+            }
+
+
+            if (
+                componentFilter !== 'all' &&
+                unit.component !== componentFilter
+            ) {
+                return false;
+            }
+
+
+            if (
+                typeFilter !== 'all' &&
+                unit.bloodType !== typeFilter
+            ) {
+                return false;
+            }
+
+
+            if (!q) {
+                return true;
+            }
+
+
+            return [
+                unit.bloodUnitID,
+                unit.donorID,
+                unit.bloodType,
+                unit.component
+            ].some(
+                (value) =>
+                    String(value || '')
+                        .toLowerCase()
+                        .includes(q)
             );
         });
-    }, [units, query, statusFilter, componentFilter, typeFilter]);
 
-    const total = filtered.length;
-    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-    const safePage = Math.min(page, totalPages);
-    const pageRows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-    const rangeStart = total === 0 ? 0 : (safePage - 1) * PAGE_SIZE + 1;
-    const rangeEnd = Math.min(safePage * PAGE_SIZE, total);
+    }, [
+        units,
+        query,
+        statusFilter,
+        componentFilter,
+        typeFilter
+    ]);
 
-    const onFilter = (setter) => (value) => {
-        setter(value);
-        setPage(1);
-    };
 
-    const handleDelete = () => {
-        setUnits((prev) => prev.filter((u) => u.bloodUnitID !== modal.unit.bloodUnitID));
-        setModal(null);
-    };
+    const total =
+        filtered.length;
 
-    const handleSave = (values) => {
-        if (modal.mode === 'edit') {
-            setUnits((prev) =>
-            prev.map((u) => (u.bloodUnitID === modal.unit.bloodUnitID ? { ...u, ...values } : u))
-            );
-        } else {
-            setUnits((prev) => [{ bloodUnitID: nextUnitId(prev), ...values }, ...prev]);
+
+    const totalPages =
+        Math.max(
+            1,
+            Math.ceil(
+                total / PAGE_SIZE
+            )
+        );
+
+
+    const safePage =
+        Math.min(
+            page,
+            totalPages
+        );
+
+
+    const pageRows =
+        filtered.slice(
+            (safePage - 1) * PAGE_SIZE,
+            safePage * PAGE_SIZE
+        );
+
+
+    const rangeStart =
+        total === 0
+            ? 0
+            : (safePage - 1) *
+                PAGE_SIZE + 1;
+
+
+    const rangeEnd =
+        Math.min(
+            safePage * PAGE_SIZE,
+            total
+        );
+
+
+    const onFilter =
+        (setter) =>
+        (value) => {
+
+            setter(value);
+
             setPage(1);
+        };
+
+
+    /*
+     * Create or update a blood unit using the API.
+     */
+    const handleSave = async (values) => {
+
+        if (!modal || !facilityID) {
+            return;
         }
-        setModal(null);
+
+
+        setError('');
+
+
+        try {
+
+            const isEdit =
+                modal.mode === 'edit';
+
+
+            const url = isEdit
+                ? `${API_URL}/api/facilities/${facilityID}/blood-units/${modal.unit.bloodUnitID}`
+                : `${API_URL}/api/facilities/${facilityID}/blood-units`;
+
+
+            const response = await fetch(
+                url,
+                {
+                    method:
+                        isEdit
+                            ? 'PUT'
+                            : 'POST',
+
+                    headers: {
+                        'Content-Type':
+                            'application/json'
+                    },
+
+                    body:
+                        JSON.stringify(values)
+                }
+            );
+
+
+            const body =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                const validationMessage =
+                    body.errors
+                        ? Object.values(
+                            body.errors
+                        )[0]
+                        : null;
+
+
+                throw new Error(
+                    validationMessage ||
+                    body.message ||
+                    'Could not save blood unit.'
+                );
+            }
+
+
+            if (isEdit) {
+
+                setUnits((current) =>
+                    current.map((unit) =>
+                        unit.bloodUnitID ===
+                        body.bloodUnitID
+                            ? body
+                            : unit
+                    )
+                );
+
+            } else {
+
+                setUnits((current) => [
+                    body,
+                    ...current
+                ]);
+
+                setPage(1);
+            }
+
+
+            /*
+             * The backend already called syncInventory().
+             * Refresh the Overview data stored in Inventory.jsx.
+             */
+            if (onInventoryChanged) {
+
+                await onInventoryChanged();
+            }
+
+
+            setModal(null);
+
+
+        } catch (err) {
+
+            setError(
+                err.message
+            );
+        }
     };
+
+
+    /*
+     * Delete an incorrectly entered blood-unit record.
+     *
+     * Normal stock removal should be done by changing
+     * the status to "Removed", not by deleting it.
+     */
+    const handleDelete = async () => {
+
+        if (
+            !modal?.unit ||
+            !facilityID
+        ) {
+            return;
+        }
+
+
+        setError('');
+
+
+        try {
+
+            const response = await fetch(
+                `${API_URL}/api/facilities/${facilityID}/blood-units/${modal.unit.bloodUnitID}`,
+                {
+                    method: 'DELETE'
+                }
+            );
+
+
+            const body =
+                await response.json();
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    body.message ||
+                    'Could not delete blood unit.'
+                );
+            }
+
+
+            setUnits((current) =>
+                current.filter(
+                    (unit) =>
+                        unit.bloodUnitID !==
+                        modal.unit.bloodUnitID
+                )
+            );
+
+
+            if (onInventoryChanged) {
+
+                await onInventoryChanged();
+            }
+
+
+            setModal(null);
+
+
+        } catch (err) {
+
+            setError(
+                err.message
+            );
+        }
+    };
+
 
     const emptyForm = {
-        donorID: '',
-        bloodType: '',
-        component: '',
-        collectionDate: toISODate(new Date()),
-        expiryDate: '',
-        status: 'In-stock',
-    };
 
+        donorID: '',
+
+        bloodType: '',
+
+        component: '',
+
+        collectionDate:
+            toISODate(new Date()),
+
+        expiryDate: '',
+
+        status: 'In-stock',
+
+    };
     return (
         <div className="bu">
         <style>{`
@@ -697,8 +1060,23 @@ function BloodUnitsTab() {
             </button>
             </div>
 
+            {error && (
+    <p
+        className="bu-empty"
+        role="alert"
+    >
+        {error}
+    </p>
+)}
             <div className="bu-table-wrap">
-            {pageRows.length === 0 ? (
+
+{loading ? (
+
+    <p className="bu-empty">
+        Loading blood units…
+    </p>
+
+) : pageRows.length === 0 ? (
                 <p className="bu-empty">No blood units match your search.</p>
             ) : (
                 <table className="bu-table">
@@ -746,7 +1124,9 @@ function BloodUnitsTab() {
             </div>
 
             <div className="bu-footer">
-            <span>Preview only: changes aren&apos;t saved yet.</span>
+            <span>
+    {total} blood {total === 1 ? 'unit' : 'units'}
+</span>
             <div className="bu-pager">
             <span>
             {rangeStart}–{rangeEnd} of {total}
@@ -773,15 +1153,26 @@ function BloodUnitsTab() {
             {modal && (
                 <UnitModal
                 mode={modal.mode}
-                unitId={modal.mode === 'edit' ? modal.unit.bloodUnitID : nextUnitId(units)}
+                unitId={
+                    modal.mode === 'edit'
+                        ? modal.unit.bloodUnitID
+                        : 'Generated automatically'
+                }
                 initial={
                     modal.mode === 'edit'
             ? {
                 donorID: modal.unit.donorID,
                 bloodType: modal.unit.bloodType,
                 component: modal.unit.component,
-                collectionDate: modal.unit.collectionDate,
-                expiryDate: modal.unit.expiryDate,
+                collectionDate:
+    toInputDate(
+        modal.unit.collectionDate
+    ),
+
+expiryDate:
+    toInputDate(
+        modal.unit.expiryDate
+    ),
                 status: modal.unit.status,
             }
             : emptyForm

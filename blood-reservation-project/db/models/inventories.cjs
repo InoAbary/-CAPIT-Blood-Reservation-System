@@ -26,7 +26,8 @@ const inventorySchema = new mongoose.Schema({
     availStatus: {
         type: String,
         required: true,
-        enum: ['Available', 'Limited', 'Out of Stock']
+        enum: ['Available', 'Limited', 'Out of Stock'],
+        default: 'Out of Stock'
     },
     lastUpdated: {
         type: Date,
@@ -35,11 +36,32 @@ const inventorySchema = new mongoose.Schema({
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Users',
-        required: true
+        default: null
     }
 
     
 
 })
 
-module.exports = mongoose.model('inventories', inventorySchema);
+
+inventorySchema.index(
+    {
+        facilityID: 1,
+        bloodType: 1,
+        component: 1
+    },
+    {
+        unique: true
+    }
+);
+
+
+inventorySchema.pre('save', function () {
+    this.lastUpdated = new Date();
+});
+
+module.exports = mongoose.model(
+    'Inventory',
+    inventorySchema,
+    'inventories'
+);

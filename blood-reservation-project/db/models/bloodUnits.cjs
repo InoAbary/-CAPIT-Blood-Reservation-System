@@ -11,7 +11,8 @@ const bloodUnitsSchema = new mongoose.Schema({
         required: true
     },
     facilityID: {
-        type: String,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Facilities',
         required: true
     },
     bloodType: {
@@ -36,7 +37,8 @@ const bloodUnitsSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true,
-        enum: ["In-stock", "Expired", "Removed"]
+        enum: ["In-stock", "Expired", "Removed"],
+        default: "In-stock"
     },
     dateAdded: {
         type: Date,
@@ -51,14 +53,20 @@ const bloodUnitsSchema = new mongoose.Schema({
 
 })
 
-module.exports = mongoose.model('BloodUnits', bloodUnitsSchema);
+bloodUnitsSchema.index(
+    { bloodUnitID: 1 },
+    { unique: true }
+);
 
 
-bloodUnitsSchema.index({ bloodUnitID: 1 }, { unique: true });
-
-bloodUnitsSchema.pre('save', function (next) {
+bloodUnitsSchema.pre('save', function () {
     if (!this.isNew) {
         this.lastUpdated = new Date();
     }
-    next();
 });
+
+
+module.exports = mongoose.model(
+    'BloodUnits',
+    bloodUnitsSchema
+);
