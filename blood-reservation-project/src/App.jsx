@@ -12,6 +12,9 @@ import Utilization from './pages/Utilization';
 import BloodDonorForm from './pages/BloodDonorForm';
 import FormDeny from './pages/FormDeny';
 import FormPending from './pages/FormPending';
+import BloodRequestForm from './pages/Bloodrequestform';
+import BloodRequestsAdmin from './components/BloodRequestsAdmin';
+
 
 function App() {
   const [count, setCount] = useState(0)
@@ -24,6 +27,9 @@ function App() {
         <Route path="/BloodDonorForm" element={<BloodDonorForm />} />
         <Route path="/FormDeny" element={<FormDeny />} />
         <Route path="/FormPending" element={<FormPending />} />
+        <Route path="/Request" element={<BloodRequestForm />}/>
+        <Route path="/Request-admin" element={<BloodRequestsAdmin />} />
+
     </Routes>
     
   );
