@@ -14,9 +14,9 @@ const answerSchema = new mongoose.Schema({
 const formAnswerSchema = new mongoose.Schema({
 
     // Link back to the parent Form_Details document
-    formDetails: {
+    donor: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Form_Details',
+        ref: 'Donors',
         required: true,
         index: true
     },

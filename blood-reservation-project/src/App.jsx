@@ -6,6 +6,9 @@ import viteLogo from './assets/vite.svg'
 import './App.css'
 import './i18n.cjs'
 
+import Register from './pages/Register'
+import Login from './pages/Login'
+
 import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
 import Utilization from './pages/Utilization';
@@ -21,6 +24,8 @@ function App() {
 
   return (
     <Routes>
+        <Route path="/Register" element = {<Register />} />
+        <Route path="/Login" element = {<Login />} />
         <Route path="/BloodBankMap" element = {<BloodBankMap />} />
         <Route path="/Inventory" element={<Inventory />} />
         <Route path="/Utilization" element={<Utilization />} />

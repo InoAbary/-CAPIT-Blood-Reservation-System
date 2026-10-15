@@ -45,7 +45,7 @@ const QUESTION_LIST = [
     { key: 'q37', id: 37 },
 ]
 
-const DENY_YES = new Set([5, 33, 36])
+const DENY_YES = new Set([2,3, 5, 33, 36])
 const DENY_NO = new Set([1])
 
 function ShouldDeny(questions){
@@ -68,6 +68,9 @@ function BloodDonorForm(){
     )
 
     const navigate = useNavigate();
+
+    const [questionModal, setQuestionModal] = useState(null);
+    const [rejectModal, setRejectModal] = useState(false);
 
     const updateQuestion = (id, field, value) => {
         setQuestions(prev=>
@@ -120,7 +123,7 @@ function BloodDonorForm(){
             const savedDetails = await detailRes.json()
 
             const answersPayload = {
-                formDetails: savedDetails._id,
+                donor: savedDetails._id,
                 answers: questions.map(q => {
                     if (DATE_ONLY.includes(q.id)) {
                         return {qId: q.id, date: q.date ? new Date(q.date) : null}

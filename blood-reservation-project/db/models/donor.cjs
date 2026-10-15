@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
+const bcrypt = require('bcrypt')
 
-const formDetailSchema = new mongoose.Schema({
+const donorSchema = new mongoose.Schema({
 
     // Personal Information
     lastName:       { type: String, required: true, trim: true },
@@ -39,8 +40,18 @@ const formDetailSchema = new mongoose.Schema({
     prcID:          { type: String, trim: true },
     driverID:       { type: String, trim: true },
     govID:          { type: String, trim: true },
-    otherID:        { type: String, trim: true }
+    otherID:        { type: String, trim: true },
+    
+    password:       { type: String, required: true}
 
 }, { timestamps: true })
 
-module.exports = mongoose.model('Form_Details', formDetailSchema)
+donorSchema.methods.generateHash = function(password) {
+    return bcrypt.hashSync(password, bcrypt.genSaltSync(10), null)
+}
+
+donorSchema.methods.validPassword = function(password) {
+    return bcrypt.compareSync(password, this.password)
+}
+
+module.exports = mongoose.model('Donors', donorSchema)
