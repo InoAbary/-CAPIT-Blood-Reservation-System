@@ -18,15 +18,28 @@ router.post('/register', async(req,res) => {
             })
             
         }
+
+        
+        const existing = await Donor.findOne({email: donorData.email})
+        
+        if (existing) {
+            return res.status(400).json({
+                error: 'Invalid register. Please try again.'
+            })
+        }
         const donor = new Donor(donorData)
-
-        donor.password = Donor.generateHash(donorData.password)
-
+        donor.password = donor.generateHash(donorData.password)
         await donor.save()
+
+        return res.status(201).json({
+            success: true,
+            message: 'Registration successful.',
+            donorId: donor._id
+        })
 
     } catch (err) {
 
-        res.status(400).json({ error: err.message })
+        return res.status(400).json({ error: 'Invalid register. Please try again.'})
        
 
     }
@@ -37,15 +50,20 @@ router.post('/login', async(req,res) => {
 
     try {
 
+        
         const data = req.body
-        const donorAcc = Donor.findOne({email: data.email}) 
+        const donorAcc = await Donor.findOne({email: data.email}) 
+        
         if (!donorAcc || !donorAcc.validPassword(data.password)) {
             return res.status(400).json({
-                error: 'Invalid login'
+                error: 'Invalid login.'
             })
         }
         
-        res.status(200)
+        return res.status(200).json({
+            success: true,
+            acc: donorAcc
+        })
 
     } catch (err) {
 

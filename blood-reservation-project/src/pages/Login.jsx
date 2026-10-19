@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-
+import { useNavigate } from 'react-router-dom'
 function Login(){
 
 
@@ -8,21 +8,45 @@ function Login(){
         password: ''
     })
 
+    const navigate = useNavigate()
+
     const [submitting, setSubmitting] = useState(false)
     const handleFormSubmission = async(e) => {
         e.preventDefault()
 
-        if (!email){
+        if (!accData.email){
             alert('Enter a valid email.')
             return
         }
 
-        if (!password){
+        if (!accData.password){
             alert('Enter a password.')
             return
         }
 
         setSubmitting(true);
+
+        try{
+
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(accData)
+            })
+
+            const body = await res.json()
+            if (!res.ok) throw new Error(body.error || 'Invalid login.')
+            
+            navigate('/Login/Success', {
+                state: { email: body.acc.email, firstName: body.acc.firstName },
+                replace: true,
+            })
+        } catch(err) {
+            console.error(err)
+            alert(err.message)
+        } finally {
+            setSubmitting(false)
+        }
         
 
     }

@@ -6,6 +6,7 @@ import '../styles/Register.css'
 function Register(){
 
     const {t, i18n} = useTranslation();
+    const navigate = useNavigate();
     const [submitting, setSubmitting] = useState(false)
     const [donorData, setDonorData] = useState({
         lastName: '',
@@ -58,8 +59,12 @@ function Register(){
             })
 
             const body = await res.json()
-            if (!res.ok) throw new Error(body.message || 'Registration failed.')
+            if (!res.ok) throw new Error(body.error || 'Registration failed.')
             
+            navigate('/Register/Success', {
+                state: { email: donorData.email },
+                replace: true,
+            })
         } catch(err) {
             console.error(err)
             alert(err.message)
@@ -105,7 +110,11 @@ function Register(){
                         <input type="text" required {...bind('civilStatus')} />
                     </label>
                     <label>{t('donorData.sex', 'Sex')}
-                        <input type="text" {...bind('sex')} />
+                        <select required {...bind('sex')}>
+                            <option value="" disabled>{t('donorData.selectSex', 'Select Sex')}</option>
+                            <option value="Male">{t('donorData.male', 'Male')}</option>
+                            <option value="Female">{t('donorData.female', 'Female')}</option>
+                        </select>
                     </label>
                 </div>
 

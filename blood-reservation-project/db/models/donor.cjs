@@ -10,7 +10,7 @@ const donorSchema = new mongoose.Schema({
     birthDate:      { type: Date,   required: true },
     age:            { type: Number, required: true, min: 16, max: 65 },
     civilStatus:    { type: String, required: true, trim: true },
-    sex:            { type: String, trim: true },
+    sex:            {   type: String, trim: true, enum: ["Male", "Female"]},
 
     // Address
     houseNumber:    { type: String, required: true, trim: true },
@@ -47,7 +47,7 @@ const donorSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 donorSchema.methods.generateHash = function(password) {
-    return bcrypt.hashSync(password, bcrypt.genSaltSync(10), null)
+    return bcrypt.hashSync(password, bcrypt.genSaltSync(10))
 }
 
 donorSchema.methods.validPassword = function(password) {

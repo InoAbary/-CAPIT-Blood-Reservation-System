@@ -36,6 +36,7 @@
     },
     "questionnaire": {
         "q1": "Maayos ba ang iyong kalusugan at pakiramdam ngayong araw na ito?",
+        "rejectReason_q1": "Hindi pa maayos ang kalusugan at pakiramdam mo sa araw nito.",
         "q2": "Nagkaroon ba ng pagkakataon na ikaw ay natanggihan o nasabihang hindi maaring magbigay ng dugo?",
         "q3": "Magbibigay ng dugo upang masuri lamang sa HIV/AIDS o Hepatitis virus o iba pang nakakahawang sakit?",
         "q4": "Alam mo ba na ang taong may HIV / Hepatitis ay maaari pa ring makahawa ng virus kahit na negatibo sa HIV/AIDS/Hepatitis test?",

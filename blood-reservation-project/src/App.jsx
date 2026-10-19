@@ -17,7 +17,8 @@ import FormDeny from './pages/FormDeny';
 import FormPending from './pages/FormPending';
 import BloodRequestForm from './pages/Bloodrequestform';
 import BloodRequestsAdmin from './components/BloodRequestsAdmin';
-
+import RegisterSuccess from './pages/RegisterSuccess';
+import LoginSuccess from './pages/LoginSuccess';
 
 function App() {
   const [count, setCount] = useState(0)
@@ -25,6 +26,8 @@ function App() {
   return (
     <Routes>
         <Route path="/Register" element = {<Register />} />
+        <Route path="/Register/Success" element = {<RegisterSuccess />} />
+        <Route path="/Login/Success" element = {<LoginSuccess />} />
         <Route path="/Login" element = {<Login />} />
         <Route path="/BloodBankMap" element = {<BloodBankMap />} />
         <Route path="/Inventory" element={<Inventory />} />
