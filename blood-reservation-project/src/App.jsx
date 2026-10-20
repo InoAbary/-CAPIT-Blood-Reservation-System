@@ -9,7 +9,7 @@ import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
 import Utilization from './pages/Utilization';
 import BloodRequestForm from './pages/Bloodrequestform';
-import BloodRequestsAdmin from './components/BloodRequestsAdmin';
+import BloodRequestsAdmin from './components/Bloodrequestsadmin';
 
 
 function App() {
