@@ -1,13 +1,16 @@
 import { useState } from "react";
 import "./Bloodrequestform.css";
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 const COMPONENTS = [
   "Whole blood",
-"Packed RBC",
-"Platelets",
-"Plasma"
+"Packed red blood cells",
+"Platelet concentrate",
+"Fresh frozen plasma",
+"Cryoprecipitate",
 ];
 
 const SEXES = ["Female", "Male"];
@@ -65,6 +68,9 @@ export default function BloodRequestForm() {
   const [values, setValues] = useState(INITIAL);
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [savedRecord, setSavedRecord] = useState(null);
 
   const set = (name, value) => {
     setValues((prev) => ({ ...prev, [name]: value }));
@@ -95,16 +101,45 @@ export default function BloodRequestForm() {
       units: Number(values.units),
       submittedAt: new Date().toISOString(),
     };
-    // TODO: POST payload to the backend (e.g. http://localhost:3000/api/blood-requests) once it exists.
-    console.log("Blood request payload:", payload);
+    setSaveError("");
     setSubmitted(payload);
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const saveRequest = async () => {
+    if (!submitted || saving) return;
+    setSaving(true);
+    setSaveError("");
+    try {
+      // Convert empty optional fields to omission to avoid empty-string Date casting errors.
+      const payload = Object.fromEntries(
+        Object.entries(submitted).filter(([key, value]) =>
+        key !== "submittedAt" && value !== ""
+        )
+      );
+      const response = await fetch(`${API_URL}/api/bloodForm`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error("Server could not save the request.");
+      const result = await response.json();
+      setSavedRecord(result.bloodRequest);
+    } catch (error) {
+      setSaveError(error.message || "Could not connect to the server.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const reset = () => {
     setValues(INITIAL);
     setErrors({});
     setSubmitted(null);
+    setSavedRecord(null);
+    setSaveError("");
   };
 
   if (submitted) {
@@ -114,44 +149,52 @@ export default function BloodRequestForm() {
       <div className="brf-wrap">
       <div className="brf-confirm-icon" aria-hidden="true">✓</div>
       <div className="brf-eyebrow">REQUEST SUMMARY</div>
-      <h1>Request ready to send</h1>
+      <h1>{savedRecord ? "Request saved successfully" : "Review your request"}</h1>
       <p className="brf-lead">
-      Nothing has been sent yet. The form is not connected to a backend.
-      </p>
-      <dl className="brf-summary">
-      <dt>Patient</dt>
-      <dd>
-      {s.lastName}, {s.firstName} {s.middleName}, {s.age}, {s.sex}
-      </dd>
-      <dt>Location</dt>
-      <dd>
-      {s.hospital}
-      {s.wardRoom && ` · ${s.wardRoom}`}
-      </dd>
-      <dt>Request</dt>
-      <dd>
-      {s.units} unit{s.units > 1 ? "s" : ""} of {s.bloodType} {s.component.toLowerCase()}
-      </dd>
-      <dt>Urgency</dt>
-      <dd>{s.urgency === "stat" ? "STAT / Emergency" : "Routine"}</dd>
-      </dl>
-      <div className="brf-review-actions">
-      <button
-      type="button"
-      className="brf-btn brf-btn--quiet"
-      onClick={() => {
-        setSubmitted(null);
-        window.scrollTo({ top: 0, behavior: "smooth" });
-      }}
-      >
-      <span aria-hidden="true">←</span> Back to form
-      </button>
-      <button type="button" className="brf-btn" onClick={reset}>
-      Start a new request
-      </button>
-      </div>
-      </div>
-      </main>
+      {savedRecord
+        ? `MongoDB record created. ID: ${savedRecord._id}`
+        : "Review these details, then submit to save the request in MongoDB."}
+        </p>
+        <dl className="brf-summary">
+        <dt>Patient</dt>
+        <dd>
+        {s.lastName}, {s.firstName} {s.middleName}, {s.age}, {s.sex}
+        </dd>
+        <dt>Location</dt>
+        <dd>
+        {s.hospital}
+        {s.wardRoom && ` · ${s.wardRoom}`}
+        </dd>
+        <dt>Request</dt>
+        <dd>
+        {s.units} unit{s.units > 1 ? "s" : ""} of {s.bloodType} {s.component.toLowerCase()}
+        </dd>
+        <dt>Urgency</dt>
+        <dd>{s.urgency === "stat" ? "STAT / Emergency" : "Routine"}</dd>
+        </dl>
+        {saveError && <p className="brf-error" role="alert">{saveError}</p>}
+        <div className="brf-review-actions">
+        {!savedRecord && <button
+          type="button"
+          className="brf-btn brf-btn--quiet"
+          onClick={() => {
+            setSubmitted(null);
+            window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+          >
+          <span aria-hidden="true">←</span> Back to form
+          </button>}
+          {!savedRecord && (
+            <button type="button" className="brf-btn" onClick={saveRequest} disabled={saving}>
+            {saving ? "Saving..." : "Submit request"}
+            </button>
+          )}
+          <button type="button" className="brf-btn brf-btn--quiet" onClick={reset}>
+          Start a new request
+          </button>
+          </div>
+          </div>
+          </main>
     );
   }
 

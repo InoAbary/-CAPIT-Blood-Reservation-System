@@ -1,5 +1,5 @@
 const express = require("express");
-const BloodRequest = require("../models/BloodRequest");
+const BloodRequest = require("../../db/models/BloodRequest.cjs");
 
 const router = express.Router();
 
