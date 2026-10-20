@@ -499,7 +499,8 @@ function BloodUnitsTab({ facilityID }) {
                 const response = await fetch(
                     `${API_URL}/api/facilities/${facilityID}/blood-units`,
                     {
-                        signal: controller.signal
+                        signal: controller.signal,
+                        credentials: "include"
                     }
                 );
 
@@ -639,6 +640,7 @@ function BloodUnitsTab({ facilityID }) {
                 `${API_URL}/api/facilities/${facilityID}/blood-units`,
                 {
                     method: 'POST',
+                    credentials: "include",
                     headers: {
                         'Content-Type': 'application/json'
                     },
@@ -698,6 +700,7 @@ function BloodUnitsTab({ facilityID }) {
                 )}`,
                 {
                     method: 'PUT',
+                    credentials: "include",
                     headers: {
                         'Content-Type': 'application/json'
                     },
@@ -771,7 +774,8 @@ function BloodUnitsTab({ facilityID }) {
                     bloodUnitID
                 )}`,
                 {
-                    method: 'DELETE'
+                    method: 'DELETE',
+                    credentials: "include"
                 }
             );
 

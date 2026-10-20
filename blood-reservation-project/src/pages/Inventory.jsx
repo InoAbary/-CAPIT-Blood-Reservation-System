@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import BloodUnitsTab from '../components/inventory/BloodUnitsTab';
 import InventoryOverview from '../components/inventory/InventoryOverview';
 import './Inventory.css';
+import { apiFetch } from "../utils/api";
 
 // Set REACT_APP_API_URL (CRA) or VITE_API_URL (Vite) if the API is somewhere else.
 const API_URL =
@@ -31,7 +32,9 @@ function Inventory() {
 
         (async () => {
             try {
-                const res = await fetch(`${API_URL}/api/facilities`, { signal: controller.signal });
+                const res = await apiFetch(`/api/facilities`, {
+                    signal: controller.signal,
+                });
                 if (!res.ok) throw new Error('Could not load facilities.');
                 const data = await res.json();
                 setFacilities(data);
@@ -55,8 +58,7 @@ function Inventory() {
 
         try {
             const [facRes, invRes] = await Promise.all([
-                fetch(`${API_URL}/api/facilities/${selectedId}`),
-                                                       fetch(`${API_URL}/api/facilities/${selectedId}/inventory`),
+                apiFetch(`/api/facilities/${selectedId}`), apiFetch(`/api/facilities/${selectedId}/inventory`),
             ]);
 
             const facBody = await facRes.json();
