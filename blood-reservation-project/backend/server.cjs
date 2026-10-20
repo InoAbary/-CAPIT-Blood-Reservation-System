@@ -7,7 +7,7 @@ const connectDB = require('./dbconnection.cjs');
 
 const inventoryRoutes = require('./routes/inventoryRoutes.cjs');
 const bloodFormRoutes = require('./routes/bloodFormRoutes.cjs');
-const authRoutes = require('./routes/auth.cjs');
+//const authRoutes = require('./routes/auth.cjs');
 
 const app = express();
 
