@@ -1,1 +1,10 @@
-{"_id":{"$oid":"6ab1f310c1737b61e3f4b4e8"},"userID":"U000001","facilityID":"6ab1f013c1737b61e3f4b4e6","firstName":"Juan","lastName":"Dela Cruz","email":"juandelacruz@prc.com.ph","role":"PRC Staff sample role","isActive":true}
+{
+  "_id": {"$oid": "6ad764eb68b0977f9030edbb"},
+  "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+  "firstName": "Juan",
+  "lastName": "Dela Cruz",
+  "email": "juan.delacruz@example.com",
+  "role": "admin",
+  "isActive": true,
+  "passwordHash": "$2b$12$rSfSa7CvhyULefN3ZWEnG.fX8z.kMRkpune3ZpYUwlE3omt7k5uzq"
+}
