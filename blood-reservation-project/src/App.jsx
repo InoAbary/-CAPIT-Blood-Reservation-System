@@ -8,6 +8,11 @@ import './i18n.cjs'
 
 import Register from './pages/Register'
 import Login from './pages/Login'
+import RegisterStaff from './pages/RegisterStaff'
+import LoginStaff from './pages/LoginStaff'
+
+import DonorDashboard from './pages/DonorDashboard'
+import StaffDashboard from './pages/StaffDashboard'
 
 import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
@@ -26,12 +31,18 @@ function App() {
   return (
     <Routes>
         <Route path="/Register" element = {<Register />} />
-        <Route path="/Register/Success" element = {<RegisterSuccess />} />
-        <Route path="/Login/Success" element = {<LoginSuccess />} />
         <Route path="/Login" element = {<Login />} />
+        <Route path="/Register/Staff" element = {<RegisterStaff />} />
+        <Route path="/Login/Staff" element = {<LoginStaff />} />
+
+        <Route path="/DonorDashboard" element = {<DonorDashboard/>} />
+        <Route path="/StaffDashboard" element = {<StaffDashboard/>} />
+
         <Route path="/BloodBankMap" element = {<BloodBankMap />} />
         <Route path="/Inventory" element={<Inventory />} />
         <Route path="/Utilization" element={<Utilization />} />
+
+
         <Route path="/BloodDonorForm" element={<BloodDonorForm />} />
         <Route path="/FormDeny" element={<FormDeny />} />
         <Route path="/FormPending" element={<FormPending />} />

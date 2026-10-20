@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
 
-const userSchema = new mongoose.Schema({
+const staffSchema = new mongoose.Schema({
 
     facilityID: {
         type: mongoose.Schema.Types.ObjectId,
@@ -25,15 +26,28 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        required: true
+        required: true,
+        default: "staff"
     },
     isActive: {
         type: Boolean,
         default: true
+    },
+    password: {
+        type: String,
+        required: true
     }
 
     
 
 })
 
-module.exports = mongoose.model('Users', userSchema);
+staffSchema.methods.generateHash = function(password) {
+    return bcrypt.hashSync(password, bcrypt.genSaltSync(10))
+}
+
+staffSchema.methods.validPassword = function(password) {
+    return bcrypt.compareSync(password, this.password)
+}
+
+module.exports = mongoose.model('Staff', staffSchema);
