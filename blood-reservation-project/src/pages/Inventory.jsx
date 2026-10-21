@@ -3,6 +3,7 @@ import BloodUnitsTab from '../components/inventory/BloodUnitsTab';
 import InventoryOverview from '../components/inventory/InventoryOverview';
 import './Inventory.css';
 import { apiFetch } from "../utils/api";
+import InventoryHistory from '../components/inventory/InventoryHistory';
 
 // Set REACT_APP_API_URL (CRA) or VITE_API_URL (Vite) if the API is somewhere else.
 const API_URL =
@@ -267,7 +268,11 @@ function Inventory() {
                  }
 
 
-                {activeTab === 'history' && <p className="inv-placeholder">Update History coming soon.</p>}
+                {activeTab === 'history' && (
+                    <InventoryHistory
+                        facilityID={selectedId}
+                    />
+                )}
                 </div>
                 </div>
             )}
