@@ -9,7 +9,25 @@ const mongoose = require ('mongoose');
 const Inventories = require('../../db/models/inventories.cjs')
 const BloodReport = require('../../db/models/bloodReports.cjs')
 const BloodUnits = require('../../db/models/bloodUnits.cjs')
+const Counter = require('../../db/models/counters.cjs');
 const router = express.Router();
+
+// Helper function for report IDs
+const nextReportID = async () => {
+    const counter = await Counter.findOneAndUpdate(
+        { _id: 'reportID' },
+        { $inc: { sequence: 1 } },
+        {
+            new: true,
+            upsert: true,
+            setDefaultsOnInsert: true
+        }
+    );
+
+    return `R${String(counter.sequence).padStart(8, '0')}`;
+};
+
+//
 
 function getInventoryStatus(quantity) {
     if (quantity === 0) {
@@ -112,11 +130,14 @@ router.post('/reports', async(req, res)=>{
             })
         }
 
+        const reportID = await nextReportID();
+
         const report = await BloodReport.create({
+            reportID,
             bloodUnitID,
             status,
             description,
-            dateCreate: new Date()
+            dateCreated: new Date()
         });
 
         res.status(201).json({success: true, report});
@@ -138,7 +159,7 @@ router.post('/create-utilization-report', async (req, res) => {
         const sheet = workbook.addWorksheet('Utilization Report');
 
         sheet.columns = [
-            { header: 'Report ID', key: '_id', width: 28 },
+            { header: 'Report ID', key: 'reportID', width: 16 },
             { header: 'Blood Type', key: 'bloodType', width: 12 },
             { header: 'Component', key: 'component', width: 18 },
             { header: 'Status', key: 'status', width: 14 },
@@ -148,7 +169,7 @@ router.post('/create-utilization-report', async (req, res) => {
 
         reports.forEach((r) => {
             sheet.addRow({
-                _id: r._id.toString(),
+                reportID: r.reportID || 'N/A',
                 bloodType: r.bloodUnitID?.bloodType || 'N/A',
                 component: r.bloodUnitID?.component || 'N/A',
                 status: r.status,

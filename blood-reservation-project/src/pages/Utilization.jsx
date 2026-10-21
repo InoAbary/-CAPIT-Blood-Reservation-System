@@ -359,7 +359,7 @@ function Utilization() {
                         <tbody>
                             {reports.map((r) => (
                                 <tr key={r._id?.$oid || r._id}>
-                                    <td>{r._id?.$oid || r._id}</td>
+                                    <td>{r.reportID || 'N/A'}</td>
                                     <td>{r.bloodUnitID?.bloodUnitID || 'N/A'}</td>
                                     <td>
                                         {r.bloodUnitID?.bloodType ? (

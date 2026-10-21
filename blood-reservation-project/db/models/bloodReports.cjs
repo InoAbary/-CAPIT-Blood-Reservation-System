@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const bloodReportSchema = new mongoose.Schema({
 
+    reportID: {
+        type: String,
+        required: true,
+        unique: true
+    },
     bloodUnitID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'BloodUnits'
