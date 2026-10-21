@@ -262,3 +262,129 @@
     flex-direction: column;
   }
 }
+
+/* ----- TOP MENU LAYOUT (DonorDashboard) ----- */
+.dashboard-container.top-menu-layout {
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header / menu bar across the top */
+.top-menu-layout .dashboard-menu {
+  width: 100%;
+  flex-direction: row;
+  align-items: center;
+  padding: 0.85rem 1.75rem;
+  gap: 1.5rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
+}
+
+/* Logo block no longer stacked/bordered at bottom */
+.top-menu-layout .dashboard-logo {
+  padding: 0;
+  margin: 0;
+  border-bottom: none;
+  border-right: 1px solid #334155;
+  padding-right: 1.5rem;
+  white-space: nowrap;
+}
+
+.top-menu-layout .dashboard-logo h2 {
+  font-size: 1.35rem;
+  margin-bottom: 0.15rem;
+}
+
+.top-menu-layout .welcome-text {
+  font-size: 0.75rem;
+}
+
+/* Horizontal nav links */
+.top-menu-layout .nav-links {
+  flex-direction: row;
+  flex: 1;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.top-menu-layout .nav-link {
+  padding: 0.55rem 0.9rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+/* Hover movement looks odd on a horizontal bar – use vertical lift instead */
+.top-menu-layout .nav-link:hover {
+  transform: translateY(-2px);
+}
+
+.top-menu-layout .nav-icon {
+  font-size: 1.1rem;
+  width: auto;
+}
+
+/* Quick action button in the header */
+.top-menu-layout .menu-footer {
+  margin: 0;
+  padding: 0;
+  border-top: none;
+  border-left: 1px solid #334155;
+  padding-left: 1.5rem;
+  flex-shrink: 0;
+}
+
+.top-menu-layout .quick-action-btn {
+  width: auto;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* Content sits below the header */
+.top-menu-layout .dashboard-content {
+  flex: 1;
+}
+
+/* Responsive: wrap the header on smaller screens */
+@media (max-width: 1024px) {
+  .top-menu-layout .dashboard-menu {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .top-menu-layout .dashboard-logo {
+    border-right: none;
+    border-bottom: 1px solid #334155;
+    padding-right: 0;
+    padding-bottom: 0.75rem;
+    width: 100%;
+  }
+
+  .top-menu-layout .nav-links {
+    flex: 1 1 100%;
+    order: 3;
+  }
+
+  .top-menu-layout .menu-footer {
+    border-left: none;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .top-menu-layout .dashboard-menu {
+    padding: 0.75rem 1rem;
+  }
+
+  .top-menu-layout .nav-links {
+    flex-direction: column;
+  }
+
+  .top-menu-layout .nav-link {
+    width: 100%;
+  }
+
+  .top-menu-layout .quick-action-btn {
+    width: 100%;
+  }
+}

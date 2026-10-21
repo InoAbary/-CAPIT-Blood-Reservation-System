@@ -1,21 +1,20 @@
-import React, { useState, useMemo } from 'react';
-
-import { Link, useNavigate } from 'react-router-dom'
+import React from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Dashboard.css';
 
 function DonorDashboard() {
+  const navigate = useNavigate();
 
-    const navigate = useNavigate()
-    const navItems = [
-    { label: 'Overview', path: '/donor/overview', icon: '📊' },
-    { label: 'Blood Bank Map', path: '/BloodBankMap', icon: '📊' },
+  const navItems = [
+    { label: 'Overview', path: '/DonorDashboard', icon: '📊' },
+    { label: 'Blood Bank Map', path: '/BloodBankMap', icon: '🗺️' },
     { label: 'Donor Application Form', path: '/BloodDonorForm', icon: '💝' },
     { label: 'Profile Settings', path: '/donor/profile', icon: '⚙️' },
   ];
 
   return (
-    <div className="dashboard-container">
-      <aside className="dashboard-menu">
+    <div className="dashboard-container top-menu-layout">
+      <header className="dashboard-menu">
         <div className="dashboard-logo">
           <h2>Donor Hub</h2>
           <p className="welcome-text">Welcome back!</p>
@@ -23,18 +22,13 @@ function DonorDashboard() {
 
         <nav className="nav-links">
           {navItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className="nav-link"
-            >
+            <Link key={item.path} to={item.path} className="nav-link">
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-label">{item.label}</span>
             </Link>
           ))}
         </nav>
 
-        
         <div className="menu-footer">
           <button
             className="quick-action-btn"
@@ -43,14 +37,13 @@ function DonorDashboard() {
             + New Donation
           </button>
         </div>
-      </aside>
+      </header>
 
       <main className="dashboard-content">
         <div className="content-placeholder">
           <h1>Donor Dashboard</h1>
           <p>Select a menu item to view details.</p>
           <div className="cards-grid">
-
             <div className="info-card">
               <h3>Total Donations</h3>
               <p className="stat">24</p>
@@ -68,7 +61,6 @@ function DonorDashboard() {
       </main>
     </div>
   );
-
 }
 
 export default DonorDashboard;

@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const router = express.Router();
 const Donor = require('../../db/models/donor.cjs')
 const Staff = require('../../db/models/staff.cjs')
-const bcrypt = require('bcrypt')
+const bcryptjs = require('bcryptjs')
 module.exports = router;
 
 
