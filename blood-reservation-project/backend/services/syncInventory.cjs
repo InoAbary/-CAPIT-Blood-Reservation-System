@@ -21,13 +21,45 @@ const keyOf = (bloodType, component) => `${bloodType}|${component}`;
 async function syncInventory(facility) {
     const now = new Date();
 
+    const philippineDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Manila',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    }).format(now);
+    
+    const startOfToday = new Date(
+        `${philippineDate}T00:00:00.000Z`
+    );
+
+     /*
+     * Automatically mark previously in-stock units as Expired
+     * once their expiry date has been reached.
+     *
+     * Do not touch units already marked Removed.
+     */
+     await BloodUnits.updateMany(
+        {
+            facilityID: facility._id.toString(),
+            status: 'In-stock',
+            expiryDate: { $lt: startOfToday }
+        },
+        {
+            $set: {
+                status: 'Expired',
+                lastUpdated: now
+            }
+        }
+    );
+
+
     // 1. Count in-stock, unexpired units per blood type + component
     const counts = await BloodUnits.aggregate([
         {
             $match: {
                 facilityID: facility._id.toString(), // bloodUnits store the custom ID, e.g. 'F00001'
                 status: /^In-stock$/i,
-                expiryDate: { $gt: now },
+                expiryDate: { $gte: startOfToday },
             },
         },
         {
