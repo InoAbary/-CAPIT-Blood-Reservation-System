@@ -1,5 +1,6 @@
 const BloodUnits = require('../../db/models/bloodUnits.cjs'); // adjust paths to your model files
 const Inventory = require('../../db/models/inventories.cjs');
+const BloodUnitHistory = require('../../db/models/bloodUnitsHistory.cjs');
 
 // Quantity at or below this (but above 0) is reported as "Limited"
 const LIMITED_THRESHOLD = 5;
@@ -44,24 +45,42 @@ async function syncInventory(facility) {
     );
 
      /*
-     * Automatically mark previously in-stock units as Expired
-     * once their expiry date has been reached.
-     *
-     * Do not touch units already marked Removed.
-     */
-     await BloodUnits.updateMany(
-        {
-            facilityID: facility._id.toString(),
-            status: 'In-stock',
-            expiryDate: { $lt: startOfToday }
-        },
-        {
-            $set: {
-                status: 'Expired',
-                lastUpdated: now
+    * Automatically expire units whose listed expiry date has passed.
+    * Automatic expiration is also recorded in blood-unit history.
+    */
+    const expiredUnits = await BloodUnits.find({
+        facilityID: facility._id.toString(),
+        status: 'In-stock',
+        expiryDate: { $lt: startOfToday }
+    });
+
+    for (const unit of expiredUnits) {
+        const before = unit.toObject();
+
+        const after = {
+            ...before,
+            status: 'Expired'
+        };
+
+        await BloodUnits.updateOne(
+            { _id: unit._id },
+            {
+                $set: {
+                    status: 'Expired',
+                    lastUpdated: now
+                }
             }
-        }
-    );
+        );
+
+        await BloodUnitHistory.logUpdate(
+            before,
+            after,
+            {
+                facilityID: facility._id,
+                performedBy: null
+            }
+        );
+    }
 
 
     // 1. Count in-stock, unexpired units per blood type + component
