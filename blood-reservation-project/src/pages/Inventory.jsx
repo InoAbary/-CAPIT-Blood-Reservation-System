@@ -77,6 +77,28 @@ function Inventory() {
         }
     };
 
+    const refreshInventory = async () => {
+        if (!selectedId) return;
+    
+        try {
+            const response = await apiFetch(
+                `/api/facilities/${selectedId}/inventory`
+            );
+    
+            const body = await response.json();
+    
+            if (!response.ok) {
+                throw new Error(
+                    body.message || 'Could not refresh inventory.'
+                );
+            }
+    
+            setInventory(body);
+        } catch (err) {
+            setError(err.message);
+        }
+    };
+
     const handleChangeFacility = () => {
         setFacility(null);
         setInventory(null);
@@ -237,7 +259,10 @@ function Inventory() {
                 )}
                     {activeTab === 'update' &&
                 (
-                    <BloodUnitsTab facilityID={selectedId}/>
+                    <BloodUnitsTab
+                        facilityID={selectedId}
+                        onInventoryChanged={refreshInventory}
+                    />
                 )
                  }
 
