@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const Facility = require('../../db/models/facilities.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const Inventory = require('../../db/models/inventories.cjs');
+const BloodUnitHistory = require('../../db/models/bloodUnitsHistory.cjs');
 
 const Counter = require('../../db/models/counters.cjs');
 
@@ -40,7 +41,7 @@ const validateFacilityId = (req, res, next) => {
 };
 
 const getActorId = (req) => {
-    const id = req.user?._id;
+    const id = req.user?.id;
 
     return id && mongoose.Types.ObjectId.isValid(id)
     ? id
@@ -152,11 +153,13 @@ router.get('/:id/blood-units', validateFacilityId, async (req, res) => {
     }
 });
 
+
+
 // POST /api/facilities/:id/blood-units
 router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
     try {
         // const performedBy = null; TODO: get the user ID
-
+        const performedBy = getActorId(req);
         /*
         if (!performedBy) {
             return res.status(401).json({
@@ -213,6 +216,11 @@ router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
             throw historyError;
         } */
 
+        await BloodUnitHistory.logCreate(unit, {
+            facilityID: facility._id,
+            performedBy
+        });
+
         res.status(201).json(unit);
     } catch (err) {
         console.error('Create blood unit:', err);
@@ -235,7 +243,7 @@ router.put(
     validateFacilityId,
     async (req, res) => {
         try {
-            const performedBy = null // getActorId(req);
+            const performedBy = getActorId(req);
             /*
             if (!performedBy) {
                 return res.status(401).json({
@@ -329,6 +337,11 @@ router.put(
                 facilityID: facility._id,
                 performedBy
             }); */
+
+            await BloodUnitHistory.logUpdate(before, unit, {
+                facilityID: facility._id,
+                performedBy
+            });
 
             res.json(unit);
         } catch (err) {
