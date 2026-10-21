@@ -1,0 +1,6 @@
+{
+  "name": "Philippine Red Cross & BSF Blood Locator System",
+  "description": "Locate verified blood stocks across nearest PRC chapters and hospital Blood Service Facilities with locational routing and emergency escalation.",
+  "permissions": [],
+  "capabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

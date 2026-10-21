@@ -1,0 +1,90 @@
+[
+  {
+    "_id": { "$oid": "6ab1f665c1737b61e3f4b4eb" },
+    "inventoryID": "I00001",
+    "facilityID": "F00001",
+    "bloodType": "O+",
+    "component": "Packed RBC",
+    "availQuantity": 18,
+    "availStatus": "Available",
+    "lastUpdated": { "$date": "2026-09-22T03:30:45.441Z" },
+    "updatedBy": "U00001"
+  },
+  {
+    "_id": { "$oid": "6ab1f665c1737b61e3f4b4ec" },
+    "inventoryID": "I00002",
+    "facilityID": "F00001",
+    "bloodType": "A+",
+    "component": "Whole Blood",
+    "availQuantity": 12,
+    "availStatus": "Available",
+    "lastUpdated": { "$date": "2026-09-23T04:15:00.000Z" },
+    "updatedBy": "U00001"
+  },
+  {
+    "_id": { "$oid": "6ab1f665c1737b61e3f4b4ed" },
+    "inventoryID": "I00003",
+    "facilityID": "F00001",
+    "bloodType": "B+",
+    "component": "Platelets",
+    "availQuantity": 5,
+    "availStatus": "Limited",
+    "lastUpdated": { "$date": "2026-09-24T06:20:00.000Z" },
+    "updatedBy": "U00001"
+  },
+  {
+    "_id": { "$oid": "6ab1f665c1737b61e3f4b4ee" },
+    "inventoryID": "I00004",
+    "facilityID": "F00001",
+    "bloodType": "O-",
+    "component": "Packed RBC",
+    "availQuantity": 2,
+    "availStatus": "Critical",
+    "lastUpdated": { "$date": "2026-09-24T08:00:00.000Z" },
+    "updatedBy": "U00001"
+  },
+  {
+    "_id": { "$oid": "6ab1f665c1737b61e3f4b4ef" },
+    "inventoryID": "I00005",
+    "facilityID": "F00001",
+    "bloodType": "AB+",
+    "component": "Plasma",
+    "availQuantity": 9,
+    "availStatus": "Available",
+    "lastUpdated": { "$date": "2026-09-25T01:10:00.000Z" },
+    "updatedBy": "U00001"
+  },
+  {
+    "_id": { "$oid": "6ab1f665c1737b61e3f4b4f0" },
+    "inventoryID": "I00006",
+    "facilityID": "F00001",
+    "bloodType": "A-",
+    "component": "Whole Blood",
+    "availQuantity": 4,
+    "availStatus": "Limited",
+    "lastUpdated": { "$date": "2026-09-25T03:45:00.000Z" },
+    "updatedBy": "U00001"
+  },
+  {
+    "_id": { "$oid": "6ab1f665c1737b61e3f4b4f1" },
+    "inventoryID": "I00007",
+    "facilityID": "F00001",
+    "bloodType": "B-",
+    "component": "Cryoprecipitate",
+    "availQuantity": 1,
+    "availStatus": "Critical",
+    "lastUpdated": { "$date": "2026-09-26T05:00:00.000Z" },
+    "updatedBy": "U00001"
+  },
+  {
+    "_id": { "$oid": "6ab1f665c1737b61e3f4b4f2" },
+    "inventoryID": "I00008",
+    "facilityID": "F00001",
+    "bloodType": "AB-",
+    "component": "Packed RBC",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": { "$date": "2026-09-26T07:30:00.000Z" },
+    "updatedBy": "U00001"
+  }
+]
