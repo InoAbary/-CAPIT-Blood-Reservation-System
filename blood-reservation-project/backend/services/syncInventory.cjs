@@ -4,6 +4,17 @@ const Inventory = require('../../db/models/inventories.cjs');
 // Quantity at or below this (but above 0) is reported as "Limited"
 const LIMITED_THRESHOLD = 5;
 
+const BLOOD_TYPES = [
+    'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'
+];
+
+const COMPONENTS = [
+    'Packed RBC',
+    'Plasma',
+    'Platelets',
+    'Whole Blood'
+];
+
 const statusFor = (qty) => {
     if (qty <= 0) return 'Out of Stock';
     if (qty <= LIMITED_THRESHOLD) return 'Limited';
@@ -70,9 +81,35 @@ async function syncInventory(facility) {
         },
     ]);
 
-    const countMap = new Map(
-        counts.map((c) => [keyOf(c._id.bloodType, c._id.component), c.count])
+    const countMap = new Map();
+
+/*
+ * Every facility tracks all 8 blood types × 4 components.
+ * Start every combination at zero so missing stock is represented
+ * as Out of Stock instead of having no inventory record.
+ */
+BLOOD_TYPES.forEach((bloodType) => {
+    COMPONENTS.forEach((component) => {
+        countMap.set(
+            keyOf(bloodType, component),
+            0
+        );
+    });
+});
+
+/*
+ * Replace the zero values with the actual counts found
+ * in BloodUnits.
+ */
+counts.forEach((count) => {
+    countMap.set(
+        keyOf(
+            count._id.bloodType,
+            count._id.component
+        ),
+        count.count
     );
+});
 
     // 2. Current inventory entries for this facility
     const existing = await Inventory.find({ facilityID: facility._id })
