@@ -3,6 +3,24 @@ import { Trans, useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom'
 import '../styles/Register.css'
 
+function calculateAge(birthDate) {
+    if (!birthDate) return '';
+
+    const today = new Date();
+    const birth = new Date(birthDate);
+
+    if (Number.isNaN(birth.getTime())) return '';
+
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+
+    return age >= 0 ? age : '';
+}
+
 function Register(){
 
     const {t, i18n} = useTranslation();
@@ -39,6 +57,13 @@ function Register(){
         password:'',
         confirmPassword:''
     })
+
+    useEffect(() => {
+        const computed = calculateAge(donorData.birthDate);
+        if (String(computed) !== String(donorData.age)) {
+            setDonorData(prev => ({ ...prev, age: computed }));
+        }
+    }, [donorData.birthDate, donorData.age]);
 
     const handleFormSubmission = async(e) => {
         e.preventDefault()
@@ -104,7 +129,7 @@ function Register(){
                         <input type="date" required {...bind('birthDate')} />
                     </label>
                     <label>{t('donorData.age', 'Age')}
-                        <input type="number" min="16" max="65" required {...bind('age')} />
+                        <input type="number" min="16" max="65" disabled required {...bind('age')} />
                     </label>
                     <label>{t('donorData.civilStatus', 'Civil Status')}
                         <input type="text" required {...bind('civilStatus')} />

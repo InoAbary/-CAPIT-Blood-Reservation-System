@@ -14,7 +14,7 @@ import LoginStaff from './pages/LoginStaff'
 import DonorDashboard from './pages/DonorDashboard'
 import StaffDashboard from './pages/StaffDashboard'
 
-import ProtectedRoute from './ProtectedRoute';
+import ProtectedRoute from './components/ProtectedRoute';
 import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
 import Utilization from './pages/Utilization';
@@ -24,33 +24,112 @@ import FormPending from './pages/FormPending';
 import BloodRequestForm from './pages/Bloodrequestform';
 import BloodRequestsAdmin from './components/BloodRequestsAdmin';
 import RegisterSuccess from './pages/RegisterSuccess';
-import LoginSuccess from './pages/LoginSuccess';
+
+import { AuthProvider } from './context/AuthContext'
 
 function App() {
   const [count, setCount] = useState(0)
 
   return (
-    <Routes>
-        <Route path="/Register" element = {<Register />} />
-        <Route path="/Login" element = {<Login />} />
-        <Route path="/Register/Staff" element = {<RegisterStaff />} />
-        <Route path="/Login/Staff" element = {<LoginStaff />} />
+    <AuthProvider>
+      <Routes>
+        {/* ---- Public ---- */}
+        <Route path="/Register" element={<Register />} />
+        <Route path="/Register/Success" element={<RegisterSuccess />} />
+        <Route path="/Register/Staff" element={<RegisterStaff />} />
+        <Route path="/Login" element={<Login />} />
+        <Route path="/Login/Staff" element={<LoginStaff />} />
 
-        <Route path="/DonorDashboard" element = {<DonorDashboard/>} />
-        <Route path="/StaffDashboard" element = {<StaffDashboard/>} />
+        {/* ---- Donor-only ---- */}
+        <Route
+          path="/DonorDashboard"
+          element={
+            <ProtectedRoute allowedRoles={['donor']}>
+              <DonorDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/BloodDonorForm"
+          element={
+            <ProtectedRoute allowedRoles={['donor']}>
+              <BloodDonorForm />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/FormDeny"
+          element={
+            <ProtectedRoute allowedRoles={['donor']}>
+              <FormDeny />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/FormPending"
+          element={
+            <ProtectedRoute allowedRoles={['donor']}>
+              <FormPending />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Request"
+          element={
+            <ProtectedRoute allowedRoles={['donor']}>
+              <BloodRequestForm />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/BloodBankMap" element = {<BloodBankMap />} />
-        <Route path="/Inventory" element={<Inventory />} />
-        <Route path="/Utilization" element={<Utilization />} />
+        {/* ---- Shared (donor + staff) ---- */}
+        <Route
+          path="/BloodBankMap"
+          element={
+            <ProtectedRoute allowedRoles={['donor', 'staff']}>
+              <BloodBankMap />
+            </ProtectedRoute>
+          }
+        />
 
+        {/* ---- Staff-only ---- */}
+        <Route
+          path="/StaffDashboard"
+          element={
+            <ProtectedRoute allowedRoles={['staff']}>
+              <StaffDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Inventory"
+          element={
+            <ProtectedRoute allowedRoles={['staff']}>
+              <Inventory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Utilization"
+          element={
+            <ProtectedRoute allowedRoles={['staff']}>
+              <Utilization />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Request-admin"
+          element={
+            <ProtectedRoute allowedRoles={['staff']}>
+              <BloodRequestsAdmin />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/BloodDonorForm" element={<BloodDonorForm />} />
-        <Route path="/FormDeny" element={<FormDeny />} />
-        <Route path="/FormPending" element={<FormPending />} />
-        <Route path="/Request" element={<BloodRequestForm />}/>
-        <Route path="/Request-admin" element={<BloodRequestsAdmin />} />
-
-    </Routes>
+        {/* ---- Fallback ---- */}
+        <Route path="*" element={<Navigate to="/Login" replace />} />
+      </Routes>
+    </AuthProvider>
     
   );
 }

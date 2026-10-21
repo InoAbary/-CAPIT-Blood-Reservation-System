@@ -5,7 +5,9 @@ const jwt = require("jsonwebtoken");
 const requireAuth = require("../middleware/requireAuth.cjs");
 const Donor = require('../../db/models/donor.cjs')
 const Staff = require('../../db/models/staff.cjs')
-const bcryptjs = require('bcryptjs')
+const bcrypt = require('bcryptjs');
+const { useRoutes } = require('react-router-dom');
+
 
 
 
@@ -13,9 +15,9 @@ router.post('/register', async(req,res) => {
 
     try {
 
-        const donorData = req.body
+        const {password, confirmPassword, ...rest} = req.body
 
-        if (donorData.password !== donorData.confirmPassword){
+        if (password !== confirmPassword){
             return res.status(400).json({
                 error: 'Passwords do not match.'
             })
@@ -23,16 +25,20 @@ router.post('/register', async(req,res) => {
         }
 
         
-        const existing = await Donor.findOne({email: donorData.email})
+        const existing = await Donor.findOne({email: rest.email})
         
         if (existing) {
             return res.status(400).json({
                 error: 'Invalid register. Please try again.'
             })
         }
-        const donor = new Donor(donorData)
-        donor.password = donor.generateHash(donorData.password)
-        await donor.save()
+
+        const hashedPassword = await bcrypt.hash(password, 10)
+        const donor = await Donor.create({
+            ...rest,
+            password: hashedPassword
+        })
+        
 
         return res.status(201).json({
             success: true,
@@ -99,11 +105,25 @@ router.post("/login", async (req, res) => {
 
 router.get("/me", requireAuth, async (req, res) => {
     const user = await Donor.findById(req.user.id)
-        .select("_id email role");
+        .select("-password");
 
     if (!user) {
         return res.status(401).json({
-            message: "User no longer exists"
+            message: "Invalid user"
+        });
+    }
+
+    res.json({ user });
+
+});
+
+router.get("/me/staff", requireAuth, async (req, res) => {
+    const user = await Staff.findById(req.user.id)
+        .select("-password");
+
+    if (!user) {
+        return res.status(401).json({
+            message: "Invalid user"
         });
     }
 
@@ -126,9 +146,9 @@ router.post('/register/staff', async(req,res) => {
 
     try {
 
-        const staffData = req.body
+        const {password, confirmPassword, ...rest} = req.body
 
-        if (staffData.password !== staffData.confirmPassword){
+        if (password !== confirmPassword){
             return res.status(400).json({
                 error: 'Passwords do not match.'
             })
@@ -136,7 +156,7 @@ router.post('/register/staff', async(req,res) => {
         }
 
         
-        const existing = await Staff.findOne({email: staffData.email})
+        const existing = await Staff.findOne({email: rest.email})
         
         if (existing) {
             
@@ -144,9 +164,14 @@ router.post('/register/staff', async(req,res) => {
                 error: 'Invalid register. Please try again.'
             })
         }
-        const staff = new Staff(staffData)
-        staff.password = staff.generateHash(staffData.password)
-        await staff.save()
+        
+        const hashedPassword = await bcrypt.hash(password, 10)
+
+        const staff = await Staff.create({
+            ...rest,
+            password: hashedPassword
+        })
+        
 
         return res.status(201).json({
             success: true,
@@ -162,33 +187,38 @@ router.post('/register/staff', async(req,res) => {
     }
 })
 
-router.post('/login/staff', async(req,res) => {
 
+router.post('/login/staff', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const staff = await Staff.findOne({ email: String(email || '').toLowerCase() });
 
-    try {
+    const valid = staff && await bcrypt.compare(password || '', staff.password);
+    if (!valid) return res.status(400).json({ error: 'Invalid login.' });
 
-        const data = req.body
-        const staffAcc = await Staff.findOne({email: data.email}) 
-        
-        if (!staffAcc || !staffAcc.validPassword(data.password)) {
-            return res.status(400).json({
-                error: 'Invalid login.'
-            })
-        }
-        
-        return res.status(200).json({
-            success: true,
-            acc: staffAcc
-        })
+    const token = jwt.sign(
+      { id: staff._id.toString(), role: staff.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
 
-    } catch (err) {
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 1000,
+      path: '/',
+    });
 
-        res.status(400).json({
-            error: 'Invalid login'
-        })
-
-    }
-})
+    return res.status(200).json({
+      success: true,
+      user: { id: staff._id, email: staff.email, role: staff.role  },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
 
 
 

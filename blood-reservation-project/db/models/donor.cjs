@@ -42,16 +42,11 @@ const donorSchema = new mongoose.Schema({
     govID:          { type: String, trim: true },
     otherID:        { type: String, trim: true },
     
-    password:       { type: String, required: true}
+    password:       { type: String, required: true},
+    role:           { type: String, default: "donor"}
 
 }, { timestamps: true })
 
-donorSchema.methods.generateHash = function(password) {
-    return bcrypt.hashSync(password, bcrypt.genSaltSync(10))
-}
 
-donorSchema.methods.validPassword = function(password) {
-    return bcrypt.compareSync(password, this.password)
-}
 
 module.exports = mongoose.model('Donors', donorSchema)

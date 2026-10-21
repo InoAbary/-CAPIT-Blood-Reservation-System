@@ -42,12 +42,6 @@ const staffSchema = new mongoose.Schema({
 
 })
 
-staffSchema.methods.generateHash = function(password) {
-    return bcrypt.hashSync(password, bcrypt.genSaltSync(10))
-}
 
-staffSchema.methods.validPassword = function(password) {
-    return bcrypt.compareSync(password, this.password)
-}
 
 module.exports = mongoose.model('Staff', staffSchema);

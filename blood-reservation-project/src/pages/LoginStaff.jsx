@@ -1,92 +1,129 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom'
-function LoginStaff(){
+import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import "../styles/Login.css";
 
 
-    const [accData, setAccData] = useState({
-        email: '',
-        password: ''
-    })
 
-    const navigate = useNavigate()
+export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-    const [submitting, setSubmitting] = useState(false)
-    const handleFormSubmission = async(e) => {
-        e.preventDefault()
+  const { user, login, logout } = useAuth();   // ← shared auth state
+  const navigate = useNavigate();
+  const location = useLocation();
 
-        if (!accData.email){
-            alert('Enter a valid email.')
-            return
-        }
+  // Where to send the user after login (ProtectedRoute passes this in)
 
-        if (!accData.password){
-            alert('Enter a password.')
-            return
-        }
+  async function handleLogin(event) {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
 
-        setSubmitting(true);
+    try {
+      const loggedInUser = await login(email, password, "staff");
+      setPassword("");
 
-        try{
+      const dest = "/StaffDashboard" 
 
-            const res = await fetch('/api/auth/login/staff', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(accData)
-            })
-
-            const body = await res.json()
-            if (!res.ok) throw new Error(body.error || 'Invalid login.')
-            
-            navigate('/Login/Success', {
-                state: { email: body.acc.email, firstName: body.acc.firstName },
-                replace: true,
-            })
-        } catch(err) {
-            console.error(err)
-            alert(err.message)
-        } finally {
-            setSubmitting(false)
-        }
-        
-
+      navigate(dest, { replace: true });
+    } catch (err) {
+      setError(err.message || "Cannot connect to the login server.");
+    } finally {
+      setLoading(false);
     }
+  }
 
-    const bind = (field) => ({
-        value: accData[field],
-        onChange: (e) => setAccData({ ...accData, [field]: e.target.value })
-    });
+  async function handleLogout() {
+    setError("");
+    try {
+      await logout();
+    } catch (err) {
+      setError(err.message || "Logout failed.");
+    }
+  }
 
-    return(
-        <div className="login-page">
+  return (
+    <main className="login-page">
+      <section className="login-card">
+        <div className="login-brand">✚</div>
+        <h1>Blood Reservation System</h1>
+        <p className="login-subtitle">
+          {user ? "You are signed in" : "Sign in to your staff account"}
+        </p>
 
-            <form onSubmit={handleFormSubmission} className="login-form">
-                <div className="login-fieldgroup">
-                    <label>
-                        Email: 
-                        <input type="email" required {...bind('email')} />
-                    </label>
-                </div>
-                <div className="login-fieldgroup">
-                    <label>
-                        Password: 
-                        <input type="password" required {...bind('password')} />
-                    </label>
-                </div>
+        {user ? (
+          <div className="login-result" role="status">
+            <strong>Login successful!</strong>
+            <p>
+              Signed in as{" "}
+              {user.firstName
+                ? `${user.firstName} ${user.lastName || ""}`
+                : user.email}
+            </p>
+            <p>Email: {user.email}</p>
+            {user.role && <p>Role: {user.role}</p>}
 
-                <div className="login-actions">
-                    <button
-                        type="submit"
-                        className="login-submit-btn"
-                        disabled={submitting}
-                    >
-                        {submitting && <span className="btn-spinner" aria-hidden="true" />}
-                        {submitting ? 'Logging in...' : 'Login'}
-                    </button>
-                </div>
-            </form>
+            <button
+              type="button"
+              onClick={() =>
+                navigate(
+                  user.role === "staff" ? "/StaffDashboard" : "/DonorDashboard",
+                  { replace: true }
+                )
+              }
+            >
+              Go to dashboard
+            </button>
+            <button type="button" onClick={handleLogout}>
+              Log out
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleLogin}>
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              autoComplete="username"
+              placeholder="juan.delacruz@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
 
-        </div>
-    )
+            <label htmlFor="login-password">Password</label>
+            <input
+              id="login-password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+
+            <button type="submit" disabled={loading}>
+              {loading ? "Signing in..." : "Log in"}
+            </button>
+          </form>
+        )}
+
+        {error && (
+          <p className="login-error" role="alert">
+            {error}
+          </p>
+        )}
+
+        {!user && (
+          <p className="login-note">
+            No account? <a href="/Register/Staff">Register</a>
+          </p>
+        )}
+        
+      </section>
+    </main>
+  );
 }
-
-export default LoginStaff;

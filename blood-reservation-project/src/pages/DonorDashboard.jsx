@@ -1,10 +1,11 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import {useAuth} from '../context/AuthContext'
 import '../styles/Dashboard.css';
 
 function DonorDashboard() {
   const navigate = useNavigate();
-
+  const { user, logout } = useAuth();
   const navItems = [
     { label: 'Overview', path: '/DonorDashboard', icon: '📊' },
     { label: 'Blood Bank Map', path: '/BloodBankMap', icon: '🗺️' },
@@ -12,12 +13,19 @@ function DonorDashboard() {
     { label: 'Profile Settings', path: '/donor/profile', icon: '⚙️' },
   ];
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/Login', { replace: true });
+  };
+
   return (
     <div className="dashboard-container top-menu-layout">
       <header className="dashboard-menu">
         <div className="dashboard-logo">
           <h2>Donor Hub</h2>
-          <p className="welcome-text">Welcome back!</p>
+          <p className="welcome-text">
+            Welcome back{user?.firstName ? `, ${user.firstName}` : '!'}
+          </p>
         </div>
 
         <nav className="nav-links">
@@ -35,6 +43,12 @@ function DonorDashboard() {
             onClick={() => navigate('/donor/new-donation')}
           >
             + New Donation
+          </button>
+        </div>
+
+        <div className="menu-footer">
+          <button className="quick-action-btn" onClick={handleLogout}>
+            Log out
           </button>
         </div>
       </header>

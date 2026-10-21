@@ -24,8 +24,8 @@ const formAnswerSchema = new mongoose.Schema({
     answers: {
         type: [answerSchema],
         validate: {
-            validator: (arr) => arr.length === 37,
-            message: 'Expected 37 answers, got {VALUE}.'
+            validator: (arr) => arr.length >= 32 && arr.length < 38,
+            message: 'Expected 32-37 answers, got {VALUE}.'
         }
     }
 

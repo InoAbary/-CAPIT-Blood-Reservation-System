@@ -3,8 +3,10 @@ import { Trans, useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Dashboard.css';
 import '../styles/BloodDonorForm.css';
+import {useAuth} from '../context/AuthContext'
 
 const DATE_ONLY = [34, 37];
+const FEMALE_ONLY_QUESTIONS = new Set([33, 34, 35, 36, 37]);
 
 const QUESTION_LIST = [
     { key: 'q1',  id: 1, rejectReason: 'You are not in a healthy condition to perform a blood donation now.'  },
@@ -103,19 +105,28 @@ function BloodDonorForm() {
     const [stepIndex, setStepIndex] = useState(0);
     const [rejected, setRejected] = useState(false);
 
-    const [questions, setQuestions] = useState(
+    const {user, loading} = useAuth()
+    const userSex = user?.sex
+    const [questionsState, setQuestionsState] = useState(
         QUESTION_LIST.map(q => ({ ...q, answer: '', remark: '', date: '' }))
     );
 
+    const questions = useMemo(()=> {
+        if (userSex === 'Female') return questionsState;
+        return questionsState.filter(q=> !FEMALE_ONLY_QUESTIONS.has(q.id))
+    }, [questionsState, userSex])
+
     const curQuestion = questions[stepIndex];
     const isLastStep = stepIndex === questions.length - 1;
+
+
     const progress = useMemo(
         () => Math.round(((stepIndex + 1) / questions.length) * 100),
         [stepIndex, questions.length]
     );
 
     const updateQuestion = (id, field, value) => {
-        setQuestions(prev =>
+        setQuestionsState(prev =>
             prev.map(q => (q.id === id ? { ...q, [field]: value } : q))
         );
     };
@@ -130,12 +141,15 @@ function BloodDonorForm() {
 
     const goBack = () => {
         if (stepIndex > 0) {
+            updateQuestion(stepIndex, 'answer', '');
             setStepIndex(i => i - 1);
             if (!DATE_ONLY.includes(stepIndex)) {
-                updateQuestion(stepIndex, 'answer', '');
+                updateQuestion(curQuestion.id, 'answer', '');
             }
         }
     };
+
+    
 
     const handleAnswer = (answer) => {
         updateQuestion(curQuestion.id, 'answer', answer);
@@ -162,7 +176,7 @@ function BloodDonorForm() {
 
         try {
             const answersPayload = {
-                donor: savedDetails._id,
+                donor: user._id || user.id,
                 answers: questions.map(q => {
                     if (DATE_ONLY.includes(q.id)) {
                         return {
@@ -186,7 +200,7 @@ function BloodDonorForm() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(answersPayload),
             });
-            if (!answersRes.ok) throw new Error('Failed to save form answers');
+            if (!answersRes.ok) throw new Error(answersRes.error);
 
             navigate(rejected ? '/FormDeny' : '/FormPending');
         } catch (err) {
@@ -196,6 +210,19 @@ function BloodDonorForm() {
             setSubmitting(false);
         }
     };
+
+    if (loading || !curQuestion) {
+        return (
+            <div className="dashboard-container top-menu-layout">
+                <DonorTopMenu />
+                <main className="dashboard-content">
+                    <div className="donorform-container">
+                        <p>{t('common.loading', 'Loading…')}</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
     /* ---------- Rejected view ---------- */
     if (rejected) {
@@ -250,6 +277,7 @@ function BloodDonorForm() {
     /* ---------- Per-step rendering ---------- */
     const isDateQuestion = DATE_ONLY.includes(curQuestion.id);
 
+    
     return (
         <div className="dashboard-container top-menu-layout">
             <DonorTopMenu />
@@ -347,7 +375,7 @@ function BloodDonorForm() {
                                     onClick={handleDateNext}
                                     disabled={submitting}
                                 >
-                                    {isLastStep
+                                    {(isLastStep)
                                         ? t('common.submit', 'Submit')
                                         : t('common.next', 'Next')}
                                 </button>

@@ -2,10 +2,12 @@ import React, { useState, useMemo } from 'react';
 
 import { Link, useNavigate } from 'react-router-dom'
 import '../styles/Dashboard.css';
+import {useAuth} from '../context/AuthContext'
 
 function DonorDashboard() {
 
     const navigate = useNavigate()
+    const { user, logout } = useAuth();
     const navItems = [
     { label: 'Overview', path: '/staff/overview', icon: '📊' },
     { label: 'Blood Utilization Reports', path: '/Utilization', icon: '📊' },
