@@ -44,7 +44,7 @@ function App() {
         <Route
           path="/DonorDashboard"
           element={
-            <ProtectedRoute allowedRoles={['donor']}>
+            <ProtectedRoute require="donor" >
               <DonorDashboard />
             </ProtectedRoute>
           }
@@ -52,7 +52,7 @@ function App() {
         <Route
           path="/BloodDonorForm"
           element={
-            <ProtectedRoute allowedRoles={['donor']}>
+            <ProtectedRoute require="donor" >
               <BloodDonorForm />
             </ProtectedRoute>
           }
@@ -60,7 +60,7 @@ function App() {
         <Route
           path="/FormDeny"
           element={
-            <ProtectedRoute allowedRoles={['donor']}>
+            <ProtectedRoute require="donor" >
               <FormDeny />
             </ProtectedRoute>
           }
@@ -68,7 +68,7 @@ function App() {
         <Route
           path="/FormPending"
           element={
-            <ProtectedRoute allowedRoles={['donor']}>
+            <ProtectedRoute require="donor" >
               <FormPending />
             </ProtectedRoute>
           }
@@ -76,7 +76,7 @@ function App() {
         <Route
           path="/Request"
           element={
-            <ProtectedRoute allowedRoles={['donor']}>
+            <ProtectedRoute require="staff" >
               <BloodRequestForm />
             </ProtectedRoute>
           }
@@ -86,7 +86,7 @@ function App() {
         <Route
           path="/BloodBankMap"
           element={
-            <ProtectedRoute allowedRoles={['donor', 'staff']}>
+            <ProtectedRoute >
               <BloodBankMap />
             </ProtectedRoute>
           }
@@ -96,7 +96,7 @@ function App() {
         <Route
           path="/StaffDashboard"
           element={
-            <ProtectedRoute allowedRoles={['staff']}>
+            <ProtectedRoute require="staff" >
               <StaffDashboard />
             </ProtectedRoute>
           }
@@ -104,7 +104,7 @@ function App() {
         <Route
           path="/Inventory"
           element={
-            <ProtectedRoute allowedRoles={['staff']}>
+            <ProtectedRoute require="staff" >
               <Inventory />
             </ProtectedRoute>
           }
@@ -112,7 +112,7 @@ function App() {
         <Route
           path="/Utilization"
           element={
-            <ProtectedRoute allowedRoles={['staff']}>
+            <ProtectedRoute require="staff" >
               <Utilization />
             </ProtectedRoute>
           }
@@ -120,7 +120,7 @@ function App() {
         <Route
           path="/Request-admin"
           element={
-            <ProtectedRoute allowedRoles={['staff']}>
+            <ProtectedRoute require="staff"  allowedRoles={['admin']}>
               <BloodRequestsAdmin />
             </ProtectedRoute>
           }

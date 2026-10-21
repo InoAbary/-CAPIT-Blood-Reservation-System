@@ -105,8 +105,8 @@ function BloodDonorForm() {
     const [stepIndex, setStepIndex] = useState(0);
     const [rejected, setRejected] = useState(false);
 
-    const {user, loading} = useAuth()
-    const userSex = user?.sex
+    const {donor, loading} = useAuth()
+    const userSex = donor?.sex
     const [questionsState, setQuestionsState] = useState(
         QUESTION_LIST.map(q => ({ ...q, answer: '', remark: '', date: '' }))
     );
@@ -176,7 +176,7 @@ function BloodDonorForm() {
 
         try {
             const answersPayload = {
-                donor: user._id || user.id,
+                donor: donor._id || donor.id,
                 answers: questions.map(q => {
                     if (DATE_ONLY.includes(q.id)) {
                         return {

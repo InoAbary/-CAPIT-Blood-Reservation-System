@@ -1,5 +1,5 @@
 import React from 'react';
-import { CITIES } from '../data/prcFacilitiesData';
+// import { CITIES } from '../data/prcFacilitiesData';
 import { PinIcon } from './Icons';
 
 export default function ChangeLocationModal({

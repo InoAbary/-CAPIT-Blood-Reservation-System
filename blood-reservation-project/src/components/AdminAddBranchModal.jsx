@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PinIcon, CheckIcon, RefreshIcon, SearchIcon, ShieldAlertIcon } from './Icons';
-import './AdminModal.css';
+import '../styles/AdminModal.css';
 
 export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
   // Search query on Google Maps

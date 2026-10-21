@@ -1,67 +1,92 @@
-import React, {createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-const AuthContext = createContext(null)
+const AuthContext = createContext(null);
 
-export function AuthProvider({children}){
-
-    const [user, setUser] = useState(null);
+export function AuthProvider({ children }) {
+    const [donor, setDonor] = useState(null);
+    const [staff, setStaff] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         let cancelled = false;
 
-        (async() => {
+        (async () => {
             try {
-                const res = await fetch('/api/auth/me', {credentials: 'include'})
-                if (res.ok) {
-                    const data = await res.json();
-                    if (!cancelled) setUser(data.user);
-                } else {
-                    if (!cancelled) setUser(null);
-                }
+                // Both endpoints are role-scoped server-side — safe to fire both
+                const [donorRes, staffRes] = await Promise.all([
+                    fetch('/api/auth/me', { credentials: 'include' }),
+                    fetch('/api/auth/me/staff', { credentials: 'include' }),
+                ]);
+
+                if (cancelled) return;
+
+                setDonor(donorRes.ok ? (await donorRes.json()).user : null);
+                setStaff(staffRes.ok ? (await staffRes.json()).user : null);
             } catch {
-                if (!cancelled) setUser(null);
+                if (!cancelled) { setDonor(null); setStaff(null); }
             } finally {
                 if (!cancelled) setLoading(false);
             }
         })();
 
-        return () => { cancelled = true }
-    }, [])
+        return () => { cancelled = true; };
+    }, []);
 
-    const login = async (email, password, role = 'donor') => {
-        const url = role === 'donor' ? '/api/auth/login' : '/api/auth/login/staff';
-        const res = await fetch(url, {
+    const loginDonor = async (email, password) => {
+        const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             credentials: 'include',
             body: JSON.stringify({ email, password }),
-        })
+        });
         const body = await res.json();
         if (!res.ok) throw new Error(body.message || body.error || 'Login failed');
 
-        const meUrl = role === 'donor' && '/api/auth/me' || '/api/auth/me/staff'
+        const me = await fetch('/api/auth/me', { credentials: 'include' });
+        const { user } = await me.json();
+        if (!user) throw new Error('Profile fetch failed');
+        setDonor(user);
+        return user;
+    };
 
-        const me = await fetch(meUrl, { credentials: 'include' });
-        const meData = await me.json();
-        setUser(meData.user);
-        return meData.user;
-    }
+    const loginStaff = async (email, password) => {
+        const res = await fetch('/api/auth/login/staff', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ email, password }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.message || body.error || 'Login failed');
 
-    const logout = async () => {
+        const me = await fetch('/api/auth/me/staff', { credentials: 'include' });
+        const { user } = await me.json();
+        if (!user) throw new Error('Profile fetch failed');
+        setStaff(user);
+        return user;
+    };
+
+    const logoutDonor = async () => {
         await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-        setUser(null);
+        setDonor(null);
+    };
+
+    const logoutStaff = async () => {
+        await fetch('/api/auth/logout/staff', { method: 'POST', credentials: 'include' });
+        setStaff(null);
     };
 
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout }}>
-        {children}
+        <AuthContext.Provider
+            value={{ donor, staff, loading, loginDonor, loginStaff, logoutDonor, logoutStaff }}
+        >
+            {children}
         </AuthContext.Provider>
     );
 }
 
 export function useAuth() {
-    const ctx = useContext(AuthContext)
+    const ctx = useContext(AuthContext);
     if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
-    return ctx
+    return ctx;
 }

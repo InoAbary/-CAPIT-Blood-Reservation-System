@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { ClockIcon, PhoneIcon, RefreshIcon } from './Icons';
-import './PRCRadarMap.css';
+import '../styles/PRCRadarMap.css';
 
 export default function MapLibreView({
   facilities,

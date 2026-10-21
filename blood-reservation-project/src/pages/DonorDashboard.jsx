@@ -5,7 +5,7 @@ import '../styles/Dashboard.css';
 
 function DonorDashboard() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { donor, logoutDonor } = useAuth();
   const navItems = [
     { label: 'Overview', path: '/DonorDashboard', icon: '📊' },
     { label: 'Blood Bank Map', path: '/BloodBankMap', icon: '🗺️' },
@@ -14,7 +14,7 @@ function DonorDashboard() {
   ];
 
   const handleLogout = async () => {
-    await logout();
+    await logoutDonor();
     navigate('/Login', { replace: true });
   };
 
@@ -24,7 +24,7 @@ function DonorDashboard() {
         <div className="dashboard-logo">
           <h2>Donor Hub</h2>
           <p className="welcome-text">
-            Welcome back{user?.firstName ? `, ${user.firstName}` : '!'}
+            Welcome back{donor?.firstName ? `, ${donor.firstName}` : '!'}
           </p>
         </div>
 

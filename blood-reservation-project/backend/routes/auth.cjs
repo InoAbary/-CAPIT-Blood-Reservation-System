@@ -2,12 +2,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
 const jwt = require("jsonwebtoken");
-const requireAuth = require("../middleware/requireAuth.cjs");
+
 const Donor = require('../../db/models/donor.cjs')
 const Staff = require('../../db/models/staff.cjs')
 const bcrypt = require('bcryptjs');
-const { useRoutes } = require('react-router-dom');
 
+const requireDonor = require("../middleware/requireDonor.cjs");
+const requireStaff = require("../middleware/requireStaff.cjs");
 
 
 
@@ -67,19 +68,17 @@ router.post("/login", async (req, res) => {
                 donor.password
             );
 
-        if (!validPassword) {
-            return res.status(401).json({
-                message: "Invalid email or password"
-            });
+        if (!validPassword || donor.role !== "donor") {
+            return res.status(401).json({ message: "Invalid email or password" });
         }
 
         const token = jwt.sign(
-            { id: donor._id.toString(), role: donor.role },
+            { id: donor._id.toString(), role: donor.role, aud: "donor" },
             process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
 
-        res.cookie("authToken", token, {
+        res.cookie("donorToken", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
@@ -103,7 +102,7 @@ router.post("/login", async (req, res) => {
     }
 });
 
-router.get("/me", requireAuth, async (req, res) => {
+router.get("/me", requireDonor, async (req, res) => {
     const user = await Donor.findById(req.user.id)
         .select("-password");
 
@@ -117,7 +116,7 @@ router.get("/me", requireAuth, async (req, res) => {
 
 });
 
-router.get("/me/staff", requireAuth, async (req, res) => {
+router.get("/me/staff", requireStaff, async (req, res) => {
     const user = await Staff.findById(req.user.id)
         .select("-password");
 
@@ -132,7 +131,7 @@ router.get("/me/staff", requireAuth, async (req, res) => {
 });
 
 router.post("/logout", (req, res) => {
-    res.clearCookie("authToken", {
+    res.clearCookie("donorToken", {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -187,6 +186,7 @@ router.post('/register/staff', async(req,res) => {
     }
 })
 
+const STAFF_ROLES = new Set(["staff", "supervisor", "admin"]);
 
 router.post('/login/staff', async (req, res) => {
   try {
@@ -197,18 +197,22 @@ router.post('/login/staff', async (req, res) => {
     if (!valid) return res.status(400).json({ error: 'Invalid login.' });
 
     const token = jwt.sign(
-      { id: staff._id.toString(), role: staff.role },
+      { id: staff._id.toString(), role: staff.role, aud: "staff" },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    res.cookie('authToken', token, {
+    res.cookie('staffToken', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 1000,
       path: '/',
     });
+
+    if (!STAFF_ROLES.has(staff.role)) {
+        return res.status(403).json({ error: "Account role not permitted." });
+    }
 
     return res.status(200).json({
       success: true,
@@ -218,6 +222,17 @@ router.post('/login/staff', async (req, res) => {
     console.error(err);
     res.status(500).json({ error: 'Login failed' });
   }
+});
+
+router.post("/logout/staff", (req, res) => {
+    res.clearCookie("staffToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/"
+    });
+
+    res.json({message: "Logged out"});
 });
 
 

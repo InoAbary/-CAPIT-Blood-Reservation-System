@@ -4,16 +4,22 @@ import { Link, useNavigate } from 'react-router-dom'
 import '../styles/Dashboard.css';
 import {useAuth} from '../context/AuthContext'
 
-function DonorDashboard() {
+function StaffDashboard() {
 
     const navigate = useNavigate()
-    const { user, logout } = useAuth();
+    const { user, logoutStaff } = useAuth();
     const navItems = [
     { label: 'Overview', path: '/staff/overview', icon: '📊' },
     { label: 'Blood Utilization Reports', path: '/Utilization', icon: '📊' },
+    { label: 'Inventory', path: '/Inventory', icon: '📊' },
     { label: 'Request Forms', path: '/Request', icon: '💝' },
     { label: 'Profile Settings', path: '/staff/profile', icon: '⚙️' },
   ];
+
+  const handleLogout = async () => {
+    await logoutStaff();
+    navigate('/Login', { replace: true });
+  };
 
   return (
     <div className="dashboard-container">
@@ -45,6 +51,12 @@ function DonorDashboard() {
             + New Donation
           </button>
         </div>
+
+        <div className="menu-footer">
+          <button className="quick-action-btn" onClick={handleLogout}>
+            Log out
+          </button>
+        </div>
       </aside>
 
       <main className="dashboard-content">
@@ -73,4 +85,4 @@ function DonorDashboard() {
 
 }
 
-export default DonorDashboard;
+export default StaffDashboard;

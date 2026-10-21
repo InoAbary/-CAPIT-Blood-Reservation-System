@@ -11,7 +11,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { user, login, logout } = useAuth();   // ← shared auth state
+  const { user, loginDonor, logoutDonor } = useAuth();   // ← shared auth state
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -24,7 +24,7 @@ export default function Login() {
     setError("");
 
     try {
-      const loggedInUser = await login(email, password, "donor");
+      const loggedInUser = await loginDonor(email, password, "donor");
       setPassword("");
 
       const dest = "/DonorDashboard";
@@ -40,7 +40,7 @@ export default function Login() {
   async function handleLogout() {
     setError("");
     try {
-      await logout();
+      await logoutDonor();
     } catch (err) {
       setError(err.message || "Logout failed.");
     }
