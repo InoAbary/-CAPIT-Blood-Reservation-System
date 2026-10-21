@@ -4,7 +4,8 @@ const inventorySchema = new mongoose.Schema({
 
     facilityID: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Facilities'
+        ref: 'Facilities',
+        required: true
     },
     bloodType: {
         type: String,
@@ -43,3 +44,4 @@ const inventorySchema = new mongoose.Schema({
 })
 
 module.exports = mongoose.model('inventories', inventorySchema);
+

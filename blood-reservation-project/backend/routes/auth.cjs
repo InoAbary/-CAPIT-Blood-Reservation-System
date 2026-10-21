@@ -1,10 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
+const jwt = require("jsonwebtoken");
+const requireAuth = require("../middleware/requireAuth.cjs");
 const Donor = require('../../db/models/donor.cjs')
 const Staff = require('../../db/models/staff.cjs')
 const bcryptjs = require('bcryptjs')
-module.exports = router;
+
 
 
 router.post('/register', async(req,res) => {
@@ -46,29 +48,79 @@ router.post('/register', async(req,res) => {
     }
 })
 
-router.post('/login', async(req,res) => {
-
+router.post("/login", async (req, res) => {
     try {
-        const data = req.body
-        const donorAcc = await Donor.findOne({email: data.email}) 
-        
-        if (!donorAcc || !donorAcc.validPassword(data.password)) {
-            return res.status(400).json({
-                error: 'Invalid login.'
-            })
+        const { email, password } = req.body;
+        const donor = await Donor.findOne({
+            email: String(email || "").toLowerCase()
+        });
+
+        const validPassword = donor &&
+            await bcrypt.compare(
+                password || "",
+                donor.password
+            );
+
+        if (!validPassword) {
+            return res.status(401).json({
+                message: "Invalid email or password"
+            });
         }
-        
-        return res.status(200).json({
-            success: true,
-            acc: donorAcc
-        })
-    } catch (err) {
-        res.status(400).json({
-            error: 'Invalid login'
-        })
+
+        const token = jwt.sign(
+            { id: donor._id.toString(), role: donor.role },
+            process.env.JWT_SECRET,
+            { expiresIn: "1h" }
+        );
+
+        res.cookie("authToken", token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 60 * 60 * 1000,
+            path: "/"
+        });
+
+        res.json({
+            message: "Login successful",
+            user: {
+                id: donor._id,
+                email: donor.email,
+                role: donor.role
+            }
+        });
+    } catch (error) {
+        console.error("LOGIN ERROR", error);
+        res.status(500).json({
+            message: "Login failed"
+        });
     }
-    
-})
+});
+
+router.get("/me", requireAuth, async (req, res) => {
+    const user = await Donor.findById(req.user.id)
+        .select("_id email role");
+
+    if (!user) {
+        return res.status(401).json({
+            message: "User no longer exists"
+        });
+    }
+
+    res.json({ user });
+
+});
+
+router.post("/logout", (req, res) => {
+    res.clearCookie("authToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/"
+    });
+
+    res.json({message: "Logged out"});
+});
 
 router.post('/register/staff', async(req,res) => {
 
@@ -137,3 +189,10 @@ router.post('/login/staff', async(req,res) => {
 
     }
 })
+
+
+
+
+module.exports = router;
+
+

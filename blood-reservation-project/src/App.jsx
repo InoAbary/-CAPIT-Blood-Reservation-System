@@ -14,6 +14,7 @@ import LoginStaff from './pages/LoginStaff'
 import DonorDashboard from './pages/DonorDashboard'
 import StaffDashboard from './pages/StaffDashboard'
 
+import ProtectedRoute from './ProtectedRoute';
 import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
 import Utilization from './pages/Utilization';

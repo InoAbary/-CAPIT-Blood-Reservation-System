@@ -1,11 +1,403 @@
-{
-    "_id":{"$oid":"6ab1f665c1737b61e3f4b4eb"},
-    "inventoryID":"I00001",
-    "facilityID":"F00001",
-    "bloodType":"O+",
-    "component":"Packed RBC",
-    "availQuantity":1
-    ,"availStatus":"Limited",
-    "lastUpdated": {"$date":"2026-09-22T03:30:45.441Z"},
-    "updatedBy":"U00001"
-}
+[
+  {
+    "_id": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "inventoryID": "I00001",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O+",
+    "component": "Packed RBC",
+    "availQuantity": 1,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00002",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O-",
+    "component": "Packed RBC",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00003",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A+",
+    "component": "Packed RBC",
+    "availQuantity": 0,
+    "availStatus": "Limited",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00004",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A-",
+    "component": "Packed RBC",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00005",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B+",
+    "component": "Packed RBC",
+    "availQuantity": 0,
+    "availStatus": "Limited",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00006",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B-",
+    "component": "Packed RBC",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00007",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB+",
+    "component": "Packed RBC",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00008",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB-",
+    "component": "Packed RBC",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00009",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O+",
+    "component": "Plasma",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00010",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O-",
+    "component": "Plasma",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00011",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A+",
+    "component": "Plasma",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00012",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A-",
+    "component": "Plasma",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00013",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B+",
+    "component": "Plasma",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00014",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B-",
+    "component": "Plasma",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00015",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB+",
+    "component": "Plasma",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00016",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB-",
+    "component": "Plasma",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00017",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A+",
+    "component": "Cryoprecipitate",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00018",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A-",
+    "component": "Cryoprecipitate",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00019",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B+",
+    "component": "Cryoprecipitate",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00020",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B-",
+    "component": "Cryoprecipitate",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00021",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB+",
+    "component": "Cryoprecipitate",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00022",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB-",
+    "component": "Cryoprecipitate",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00023",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O+",
+    "component": "Cryoprecipitate",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00024",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O-",
+    "component": "Cryoprecipitate",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00025",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O+",
+    "component": "Platelets",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00026",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O-",
+    "component": "Platelets",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00027",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A+",
+    "component": "Platelets",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00028",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A-",
+    "component": "Platelets",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00029",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B+",
+    "component": "Platelets",
+    "availQuantity": 1,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00030",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B-",
+    "component": "Platelets",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00031",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB+",
+    "component": "Platelets",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00032",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB-",
+    "component": "Platelets",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00033",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O+",
+    "component": "Whole Blood",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00034",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "O-",
+    "component": "Whole Blood",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00035",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A+",
+    "component": "Whole Blood",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00036",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "A-",
+    "component": "Whole Blood",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00037",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B+",
+    "component": "Whole Blood",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00038",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "B-",
+    "component": "Whole Blood",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00039",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB+",
+    "component": "Whole Blood",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  },
+  {
+    "inventoryID": "I00040",
+    "facilityID": {"$oid": "6ab1f013c1737b61e3f4b4e6"},
+    "bloodType": "AB-",
+    "component": "Whole Blood",
+    "availQuantity": 0,
+    "availStatus": "Out of Stock",
+    "lastUpdated": {"$date": "2026-09-22T03:30:45.441Z"},
+    "updatedBy": {"$oid": "6ab1f310c1737b61e3f4b4e8"}
+  }
+]
