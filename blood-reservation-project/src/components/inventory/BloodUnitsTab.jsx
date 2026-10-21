@@ -458,7 +458,10 @@ function FilterSelect({
 
 /* ---------- Tab ---------- */
 
-function BloodUnitsTab({ facilityID }) {
+function BloodUnitsTab({
+    facilityID,
+    onInventoryChanged
+}) {
 
     const [units, setUnits] = useState([]);
 
@@ -661,6 +664,8 @@ function BloodUnitsTab({ facilityID }) {
                 ...current
             ]);
 
+            await onInventoryChanged?.();
+
             setPage(1);
             setModal(null);
 
@@ -723,6 +728,8 @@ function BloodUnitsTab({ facilityID }) {
             : unit
             )
             );
+
+            await onInventoryChanged?.();
 
             setModal(null);
 
@@ -793,6 +800,8 @@ function BloodUnitsTab({ facilityID }) {
                 unit.bloodUnitID !== bloodUnitID
             )
             );
+
+            await onInventoryChanged?.();
 
             setModal(null);
 

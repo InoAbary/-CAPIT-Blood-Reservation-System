@@ -3,6 +3,7 @@ import BloodUnitsTab from '../components/inventory/BloodUnitsTab';
 import InventoryOverview from '../components/inventory/InventoryOverview';
 import './Inventory.css';
 import { apiFetch } from "../utils/api";
+import InventoryHistory from '../components/inventory/InventoryHistory';
 
 // Set REACT_APP_API_URL (CRA) or VITE_API_URL (Vite) if the API is somewhere else.
 const API_URL =
@@ -74,6 +75,28 @@ function Inventory() {
             setError(err.message);
         } finally {
             setLoadingDetails(false);
+        }
+    };
+
+    const refreshInventory = async () => {
+        if (!selectedId) return;
+    
+        try {
+            const response = await apiFetch(
+                `/api/facilities/${selectedId}/inventory`
+            );
+    
+            const body = await response.json();
+    
+            if (!response.ok) {
+                throw new Error(
+                    body.message || 'Could not refresh inventory.'
+                );
+            }
+    
+            setInventory(body);
+        } catch (err) {
+            setError(err.message);
         }
     };
 
@@ -237,12 +260,19 @@ function Inventory() {
                 )}
                     {activeTab === 'update' &&
                 (
-                    <BloodUnitsTab facilityID={selectedId}/>
+                    <BloodUnitsTab
+                        facilityID={selectedId}
+                        onInventoryChanged={refreshInventory}
+                    />
                 )
                  }
 
 
-                {activeTab === 'history' && <p className="inv-placeholder">Update History coming soon.</p>}
+                {activeTab === 'history' && (
+                    <InventoryHistory
+                        facilityID={selectedId}
+                    />
+                )}
                 </div>
                 </div>
             )}

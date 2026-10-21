@@ -34,6 +34,6 @@ app.use('/api/auth', authRoutes)
 app.use('/api/bloodForm', requireDonor, bloodFormRoutes)
 app.use('/api/inventories', requireStaff, inventoryRoutes);
 app.use('/api/facilities', requireStaff, facilityRoutes);
-app.use('/api/bloodUnit', requireStaff, bloodUnitRoutes);
+app.use('/api/facilities', requireStaff, bloodUnitRoutes);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
