@@ -1,4 +1,4 @@
-import BloodRequestsAdmin from "../components/BloodRequestsAdmin_no";
+import BloodRequestsAdmin from "../components/BloodRequestsAdmin";
 
 export default function App() {
   return <BloodRequestsAdmin />;
