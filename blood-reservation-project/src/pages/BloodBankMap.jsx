@@ -39,26 +39,28 @@ function computeHaversineKm(lat1, lon1, lat2, lon2) {
 
 export default function BloodBankMap() {
   // Facilities State (dynamic, backed by MongoDB and Git repository)
-  const [facilitiesList, setFacilitiesList] = useState(FACILITIES_DATA);
+  const [facilitiesList, setFacilitiesList] = useState([]);
 
   // Filter State
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState([]);
   const [selectedBloodType, setSelectedBloodType] = useState('B-');
   const [selectedComponent, setSelectedComponent] = useState('Packed Red Blood Cells');
   const [selectedRadiusKm, setSelectedRadiusKm] = useState(30);
   const [hierarchyMode, setHierarchyMode] = useState('prc-first'); // 'prc-first', 'prc-only', 'bsf-only'
   const [hideUnavailable, setHideUnavailable] = useState(false);
   const [viewMode, setViewMode] = useState('split'); // 'split', 'map-only', 'list-only'
-  const [currentOrigin, setCurrentOrigin] = useState(CITIES[0]); // City of Manila
+  const [currentOrigin, setCurrentOrigin] = useState(''); // City of Manila
 
   // Selected facility for map interaction / details modal
-  const [selectedFacility, setSelectedFacility] = useState(FACILITIES_DATA[0]);
+  const [selectedFacility, setSelectedFacility] = useState(null);
 
   // Modals state
   const [matrixModalFacility, setMatrixModalFacility] = useState(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
 
+  const [bloodTypes, setBloodTypes] = useState([]);
+  const [components, setComponents] = useState([])
   // Sync toast state
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState(null);
@@ -365,7 +367,7 @@ export default function BloodBankMap() {
           <div className="bt-component-row">
             <div className="bt-group">
               <span className="bt-group-label">Blood Type:</span>
-              {BLOOD_TYPES.map((bt) => (
+              {bloodTypes.map((bt) => (
                 <button
                   key={bt}
                   type="button"
@@ -384,7 +386,7 @@ export default function BloodBankMap() {
                 value={selectedComponent}
                 onChange={(e) => setSelectedComponent(e.target.value)}
               >
-                {COMPONENTS.map((c) => (
+                {components.map((c) => (
                   <option key={c.id} value={c.label}>
                     {c.label}
                   </option>
