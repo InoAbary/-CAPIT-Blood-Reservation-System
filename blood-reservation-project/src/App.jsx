@@ -76,7 +76,7 @@ function App() {
         <Route
           path="/Request"
           element={
-            <ProtectedRoute require="staff" >
+            <ProtectedRoute require="staff" allowedRoles={['hospital']} >
               <BloodRequestForm />
             </ProtectedRoute>
           }

@@ -9,7 +9,7 @@ const facilitySchema = new mongoose.Schema({
     facilityType: {
         type: String,
         required: true,
-        enum: ['bsf', 'hospital', 'blood bank', 'donation center']
+        enum: ['bsf', 'hospital', 'prc_chapter']
     },
     address: {
         type: String,

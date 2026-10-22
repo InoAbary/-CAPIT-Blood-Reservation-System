@@ -117,7 +117,7 @@ export default function BloodRequestForm() {
         key !== "submittedAt" && value !== ""
         )
       );
-      const response = await fetch(`${API_URL}/api/bloodForm`, {
+      const response = await fetch(`/api/bloodRequest`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

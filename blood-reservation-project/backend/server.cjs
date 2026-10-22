@@ -8,28 +8,18 @@ const inventoryRoutes = require('./routes/inventoryRoutes.cjs');
 const bloodFormRoutes = require('./routes/bloodFormRoutes.cjs');
 const facilityRoutes = require('./routes/FacilityRoutes.cjs');
 const bloodUnitRoutes = require('./routes/bloodUnitRoutes.cjs');
+const bloodRequestRoutes = require('./routes/bloodRequestRoutes.cjs')
 const authRoutes = require('./routes/auth.cjs');
 
 const requireDonor = require('./middleware/requireDonor.cjs');
 const requireStaff = require('./middleware/requireStaff.cjs');
+const requireRole = require('./middleware/requireRole.cjs');
 
 const app = express();
 
 require('dotenv').config();
 
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./dbconnection.cjs');
-
-const inventoryRoutes = require('./routes/inventoryRoutes.cjs');
-const bloodFormRoutes = require('./routes/bloodFormRoutes.cjs');
-//const authRoutes = require('./routes/auth.cjs');
-
-const app = express();
-
-app.use(cors({
-    origin: 'http://localhost:5173'
-}));
+connectDB();
 
 app.use(express.json());
 app.use(cors({
@@ -42,16 +32,12 @@ app.use(cookieParser());
 
 app.use('/api/auth', authRoutes)
 app.use('/api/bloodForm', requireDonor, bloodFormRoutes)
+app.use('/api/bloodRequest', requireStaff, requireRole("hospital"), bloodRequestRoutes)
 app.use('/api/inventories', requireStaff, inventoryRoutes);
 app.use('/api/facilities', requireStaff, facilityRoutes);
 app.use('/api/facilities', requireStaff, bloodUnitRoutes);
 
-// API Routes
-app.use('/api/inventories', inventoryRoutes);
-app.use('/api/bloodForm', bloodFormRoutes);
 
-// Enable when authRoutes exports a valid router
-// app.use('/api/auth', authRoutes);
 
 app.listen(3000, () => {
     console.log('Server running on port 3000');

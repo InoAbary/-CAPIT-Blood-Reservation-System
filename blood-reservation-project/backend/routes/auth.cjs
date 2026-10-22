@@ -186,7 +186,7 @@ router.post('/register/staff', async(req,res) => {
     }
 })
 
-const STAFF_ROLES = new Set(["staff", "supervisor", "admin"]);
+const STAFF_ROLES = new Set(["staff", "supervisor", "admin", "hospital"]);
 
 router.post('/login/staff', async (req, res) => {
   try {
