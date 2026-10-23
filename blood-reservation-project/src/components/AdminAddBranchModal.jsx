@@ -162,16 +162,17 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
       if (!mapContainerRef.current) return;
       try {
         const maplibregl = await import('maplibre-gl');
+        
         if (cancelled || !mapContainerRef.current) return;
 
-        map = new maplibregl.default.Map({
+        map = new maplibregl.Map({
           container: mapContainerRef.current,
           style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
           center: [121.0112, 14.5888],
           zoom: 12
         });
 
-        map.addControl(new maplibregl.default.NavigationControl({ showCompass: true }), 'top-right');
+        map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
 
         // Add red pin
         const el = document.createElement('div');
@@ -182,7 +183,7 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
           </div>
         `;
 
-        const marker = new maplibregl.default.Marker({ element: el })
+        const marker = new maplibregl.Marker({ element: el })
           .setLngLat([121.0112, 14.5888])
           .addTo(map);
 

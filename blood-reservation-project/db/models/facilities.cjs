@@ -1,3 +1,4 @@
+const { FormulaType } = require('exceljs');
 const mongoose = require('mongoose');
 
 const facilitySchema = new mongoose.Schema({
@@ -11,12 +12,28 @@ const facilitySchema = new mongoose.Schema({
         required: true,
         enum: ['bsf', 'hospital', 'prc_chapter']
     },
+    typeLabel: {
+        type: String,
+        required: true,
+    },
     address: {
         type: String,
         required: true
     },
     contactNumber: {       
         type: String,
+        required: true
+    },
+    hours: {       
+        type: String,
+        required: true
+    },
+    lat: {       
+        type: Number,
+        required: true
+    },
+    lon: {       
+        type: Number,
         required: true
     },
     isActive: {

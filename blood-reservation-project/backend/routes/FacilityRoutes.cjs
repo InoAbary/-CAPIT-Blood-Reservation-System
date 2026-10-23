@@ -13,21 +13,21 @@ const validateId = (req, res, next) => {
     next();
 };
 
-// GET /api/facilities -> active facilities for the dropdown (id + name only)
+
 router.get('/', async (req, res) => {
     try {
+       
         const facilities = await Facility.find({ isActive: true })
-        .select('facilityName')
         .sort({ facilityName: 1 })
         .lean();
-        res.json(facilities);
+        res.json({success: true, facilities: facilities});
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Failed to load facilities.' });
     }
 });
 
-// GET /api/facilities/:id -> full details of one facility
+
 router.get('/:id', validateId, async (req, res) => {
     try {
         const facility = await Facility.findById(req.params.id).lean();
@@ -41,8 +41,7 @@ router.get('/:id', validateId, async (req, res) => {
     }
 });
 
-// GET /api/facilities/:id/inventory
-// Recounts the facility's blood units, updates its inventory entries, then returns them.
+
 router.get('/:id/inventory', validateId, async (req, res) => {
     try {
         const facility = await Facility.findById(req.params.id).lean();
@@ -67,5 +66,45 @@ router.get('/:id/inventory', validateId, async (req, res) => {
         res.status(500).json({ message: 'Failed to load inventory.' });
     }
 });
+
+router.post('/', async(req,res) => {
+    try {
+        const {facilityName, category, facilityType, typeLabel, address, contactNumber, hours, lat, lon} = req.body
+        if (!facilityName || !address) {
+      return res.status(400).json({
+        success: false,
+        message: 'facilityName and address are required.',
+      });
+    }
+
+    // Generate a facilityID if your schema requires one
+    const facilityID =
+      'F' + String(Date.now()).slice(-5) + Math.floor(Math.random() * 90 + 10);
+
+    const facility = await Facility.create({
+      facilityID,
+      facilityName,
+      category,
+      facilityType,
+      typeLabel,
+      address,
+      contactNumber,
+      hours,
+      lat,
+      lon,
+      isActive: true,
+    });
+
+    res.status(201).json({ success: true, facility });
+  } catch (err) {
+    console.error('POST /api/facilities failed:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create facility.',
+      error: err.message,
+    });
+  }
+});
+
 
 module.exports = router;

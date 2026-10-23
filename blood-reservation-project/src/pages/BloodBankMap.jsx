@@ -20,6 +20,7 @@ import {
 //   CITIES,
 // } from '../data/prcFacilitiesData';
 import '../styles/BloodLocator.css';
+import {useAuth} from '../context/AuthContext'
 
 // Haversine formula to dynamically calculate real-time distance
 function computeHaversineKm(lat1, lon1, lat2, lon2) {
@@ -42,7 +43,7 @@ export default function BloodBankMap() {
   const [facilitiesList, setFacilitiesList] = useState([]);
 
   // Filter State
-  const [searchQuery, setSearchQuery] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedBloodType, setSelectedBloodType] = useState('B-');
   const [selectedComponent, setSelectedComponent] = useState('Packed Red Blood Cells');
   const [selectedRadiusKm, setSelectedRadiusKm] = useState(30);
@@ -65,14 +66,28 @@ export default function BloodBankMap() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState(null);
 
+  const {donor, staff, loading} = useAuth();
+  const isAdmin = staff?.role === 'admin'
+
   // Fetch facilities from MongoDB / git store on mount
   useEffect(() => {
     const fetchRemoteFacilities = async () => {
+
+      
       try {
-        const res = await fetch('/api/facilities');
+          const res = await fetch('/api/facilities', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        
         const data = await res.json();
+
+
+        
         if (data.success && Array.isArray(data.facilities) && data.facilities.length > 0) {
           // Merge remote facilities with local defaults
+          
           const existingIds = new Set(data.facilities.map((f) => f.facilityID || f.id));
           const formattedRemote = data.facilities.map((f) => ({
             id: f.facilityID || f._id?.$oid || 'fac-' + Math.random(),
@@ -87,25 +102,28 @@ export default function BloodBankMap() {
             hours: f.hours || '8:00 AM - 5:00 PM',
             lat: Number(f.lat) || 14.5995,
             lon: Number(f.lon) || 120.9842,
-            matrix: f.matrix || FACILITIES_DATA[0].matrix,
+           
             quote: f.quote || 'Integrated blood facility connected to central repository.',
             bbisSyncedMins: f.bbisSyncedMins || 15,
             isActive: f.isActive !== false
           }));
+          
 
+          
           // Merge any default facilities not in remote
           const merged = [...formattedRemote];
-          FACILITIES_DATA.forEach((df) => {
-            if (!existingIds.has(df.id) && !merged.some((m) => m.name === df.name)) {
-              merged.push(df);
-            }
-          });
+          
 
           setFacilitiesList(merged);
+
+          
         }
+
+        
       } catch (err) {
         console.warn('API facilities fetch fallback to local:', err);
       }
+      
     };
 
     fetchRemoteFacilities();
@@ -152,7 +170,7 @@ export default function BloodBankMap() {
       if (hierarchyMode === 'bsf-only' && fac.category !== 'Hospital BSF') return false;
 
       // Search keyword filter
-      if (searchQuery.trim()) {
+      if (searchQuery && searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchesName = (fac.name || fac.facilityName || '').toLowerCase().includes(q);
         const matchesAddress = (fac.address || '').toLowerCase().includes(q);
@@ -255,17 +273,19 @@ export default function BloodBankMap() {
           </p>
 
           {/* Admin Add Branch Trigger directly on Locator page */}
-          <div>
-            <button
-              type="button"
-              className="btn-admin-add-branch-hero"
-              onClick={() => setShowAdminModal(true)}
-              title="Open Admin Portal to add new facility via map click"
-            >
-              <PinIcon size={14} />
-              <span>+ Admin: Add Branch</span>
-            </button>
-          </div>
+          {isAdmin && (
+            <div>
+              <button
+                type="button"
+                className="btn-admin-add-branch-hero"
+                onClick={() => setShowAdminModal(true)}
+                title="Open Admin Portal to add new facility via map click"
+              >
+                <PinIcon size={14} />
+                <span>+ Admin: Add Branch</span>
+              </button>
+            </div>
+          )}
 
           {/* 4 Hero Metric Cards */}
           <div className="hero-metrics-grid" style={{ marginTop: '1.25rem' }}>
@@ -581,7 +601,7 @@ export default function BloodBankMap() {
       )}
 
       {/* Admin Add Branch Modal */}
-      {showAdminModal && (
+      {isAdmin && showAdminModal && (
         <AdminAddBranchModal
           onClose={() => setShowAdminModal(false)}
           onBranchAdded={handleBranchAdded}
