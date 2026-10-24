@@ -67,7 +67,7 @@ export default function BloodBankMap() {
   const [syncToast, setSyncToast] = useState(null);
 
   const {donor, staff, loading} = useAuth();
-  const isAdmin = staff?.role === 'admin'
+  const isAdmin = !donor && staff?.role === 'admin'
 
   // Fetch facilities from MongoDB / git store on mount
   useEffect(() => {

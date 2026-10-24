@@ -500,7 +500,7 @@ function BloodUnitsTab({
 
             try {
                 const response = await fetch(
-                    `${API_URL}/api/facilities/${facilityID}/blood-units`,
+                    `${API_URL}/api/bloodUnits/${facilityID}/blood-units`,
                     {
                         signal: controller.signal,
                         credentials: "include"
@@ -640,7 +640,7 @@ function BloodUnitsTab({
         try {
 
             const response = await fetch(
-                `${API_URL}/api/facilities/${facilityID}/blood-units`,
+                `${API_URL}/api/bloodUnits/${facilityID}/blood-units`,
                 {
                     method: 'POST',
                     credentials: "include",
@@ -700,7 +700,7 @@ function BloodUnitsTab({
         try {
 
             const response = await fetch(
-                `${API_URL}/api/facilities/${facilityID}/blood-units/${encodeURIComponent(
+                `${API_URL}/api/bloodUnits/${facilityID}/blood-units/${encodeURIComponent(
                     bloodUnitID
                 )}`,
                 {
@@ -777,7 +777,7 @@ function BloodUnitsTab({
         try {
 
             const response = await fetch(
-                `${API_URL}/api/facilities/${facilityID}/blood-units/${encodeURIComponent(
+                `/api/bloodUnits/${facilityID}/blood-units/${encodeURIComponent(
                     bloodUnitID
                 )}`,
                 {

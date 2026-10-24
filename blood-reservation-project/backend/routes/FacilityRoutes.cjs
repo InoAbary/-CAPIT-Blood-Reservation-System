@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Facility = require('./../../db/models/facilities.cjs');   // adjust paths to your model files
 const Inventory = require('../../db/models/inventories.cjs');
 const syncInventory = require('../services/syncInventory.cjs');
+const Counter = require('../../db/models/counters.cjs');
 
 const router = express.Router();
 
@@ -13,6 +14,16 @@ const validateId = (req, res, next) => {
     next();
 };
 
+
+const nextFacilityID = async () => {
+    const counter = await Counter.findOneAndUpdate(
+        {_id: 'facilityID'},
+        { $inc: { sequence: 1 } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+    )
+
+    return `F${String(counter.sequence).padStart(8, '0')}`;
+}
 
 router.get('/', async (req, res) => {
     try {
@@ -48,11 +59,7 @@ router.get('/:id/inventory', validateId, async (req, res) => {
         if (!facility) {
             return res.status(404).json({ message: 'Facility not found.' });
         }
-        if (!facility.facilityID) {
-            return res
-            .status(422)
-            .json({ message: 'This facility has no facilityID, so its blood units cannot be counted.' });
-        }
+       
 
         await syncInventory(facility);
 
@@ -78,8 +85,8 @@ router.post('/', async(req,res) => {
     }
 
     // Generate a facilityID if your schema requires one
-    const facilityID =
-      'F' + String(Date.now()).slice(-5) + Math.floor(Math.random() * 90 + 10);
+    const facilityID = await nextFacilityID();
+      
 
     const facility = await Facility.create({
       facilityID,

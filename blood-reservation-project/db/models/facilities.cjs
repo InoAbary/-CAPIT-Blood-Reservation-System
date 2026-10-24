@@ -3,6 +3,10 @@ const mongoose = require('mongoose');
 
 const facilitySchema = new mongoose.Schema({
 
+    facilityID: {
+        type: String,
+        required: true
+    },
     facilityName: {
         type: String,
         required: true

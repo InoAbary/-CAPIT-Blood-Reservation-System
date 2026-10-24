@@ -5,12 +5,23 @@ const jwt = require("jsonwebtoken");
 
 const Donor = require('../../db/models/donor.cjs')
 const Staff = require('../../db/models/staff.cjs')
+const Counter = require('../../db/models/counters.cjs')
 const bcrypt = require('bcryptjs');
 
 const requireDonor = require("../middleware/requireDonor.cjs");
 const requireStaff = require("../middleware/requireStaff.cjs");
 
 
+
+const nextDonorID = async () => {
+    const counter = await Counter.findOneAndUpdate(
+        {_id: 'donorID'},
+        { $inc: { sequence: 1 } },
+        { new: true, upsert: true, setDefaultsOnInsert: true }
+    )
+
+    return `D${String(counter.sequence).padStart(8, '0')}`;
+}
 
 router.post('/register', async(req,res) => {
 
@@ -35,7 +46,10 @@ router.post('/register', async(req,res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10)
+
+        const donorID = await nextDonorID();
         const donor = await Donor.create({
+            donorID,
             ...rest,
             password: hashedPassword
         })
@@ -77,6 +91,13 @@ router.post("/login", async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: "1h" }
         );
+
+        res.clearCookie("staffToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            path: "/"
+        });
 
         res.cookie("donorToken", token, {
             httpOnly: true,
@@ -201,6 +222,13 @@ router.post('/login/staff', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
+
+    res.clearCookie("donorToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/"
+    });
 
     res.cookie('staffToken', token, {
       httpOnly: true,

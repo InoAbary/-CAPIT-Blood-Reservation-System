@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt')
 const donorSchema = new mongoose.Schema({
 
     // Personal Information
+    donorID:        { type: String, required: true},
     lastName:       { type: String, required: true, trim: true },
     firstName:      { type: String, required: true, trim: true },
     middleName:     { type: String, trim: true },

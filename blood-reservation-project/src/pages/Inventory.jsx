@@ -38,8 +38,11 @@ function Inventory() {
                 });
                 if (!res.ok) throw new Error('Could not load facilities.');
                 const data = await res.json();
-                setFacilities(data);
-                if (data.length > 0) setSelectedId(data[0]._id);
+                setFacilities(data.facilities);
+                
+                
+                if (data.facilities.length > 0) setSelectedId(data.facilities[0]._id);
+                
             } catch (err) {
                 if (err.name !== 'AbortError') setError(err.message);
             } finally {

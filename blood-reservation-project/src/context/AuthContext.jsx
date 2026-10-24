@@ -12,7 +12,7 @@ export function AuthProvider({ children }) {
 
         (async () => {
             try {
-                // Both endpoints are role-scoped server-side — safe to fire both
+                
                 const [donorRes, staffRes] = await Promise.all([
                     fetch('/api/auth/me', { credentials: 'include' }),
                     fetch('/api/auth/me/staff', { credentials: 'include' }),
@@ -45,6 +45,7 @@ export function AuthProvider({ children }) {
         const me = await fetch('/api/auth/me', { credentials: 'include' });
         const { user } = await me.json();
         if (!user) throw new Error('Profile fetch failed');
+        setStaff(null);
         setDonor(user);
         return user;
     };
@@ -62,6 +63,7 @@ export function AuthProvider({ children }) {
         const me = await fetch('/api/auth/me/staff', { credentials: 'include' });
         const { user } = await me.json();
         if (!user) throw new Error('Profile fetch failed');
+        setDonor(null);
         setStaff(user);
         return user;
     };
