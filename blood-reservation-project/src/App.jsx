@@ -24,6 +24,7 @@ import FormPending from './pages/FormPending';
 import BloodRequestForm from './pages/Bloodrequestform';
 import BloodRequestsAdmin from './components/BloodRequestsAdmin';
 import RegisterSuccess from './pages/RegisterSuccess';
+import AdminBadgeTester from './pages/AdminBadgeTester'
 
 import { AuthProvider } from './context/AuthContext'
 
@@ -125,6 +126,15 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/AdminBadgeTester"
+          element={
+            <ProtectedRoute require="staff"  allowedRoles={['admin']}>
+              <AdminBadgeTester />
+            </ProtectedRoute>
+          }
+        />
+        
 
         {/* ---- Fallback ---- */}
         <Route path="*" element={<Navigate to="/Login" replace />} />

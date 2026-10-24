@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {useAuth} from '../context/AuthContext'
 import '../styles/Dashboard.css';
@@ -12,6 +12,17 @@ function DonorDashboard() {
     { label: 'Donor Application Form', path: '/BloodDonorForm', icon: '💝' },
     { label: 'Profile Settings', path: '/donor/profile', icon: '⚙️' },
   ];
+
+  const [badges, setBadges] = useState([])
+
+  useEffect(() => {
+    if (donor?.email) {
+        fetch(`/api/badgr/donor-badges?email=${encodeURIComponent(donor.email)}`)
+            .then(res => res.json())
+            .then(data => setBadges(data.result || []))
+            .catch(console.error);
+    }
+  }, [donor?.email]);
 
   const handleLogout = async () => {
     await logoutDonor();
@@ -70,6 +81,18 @@ function DonorDashboard() {
               <h3>Next Pickup</h3>
               <p className="stat">May 15</p>
             </div>
+          </div>
+          <div className="badges-section">
+              <h3>My Badges</h3>
+              <div className="badges-grid">
+                  {badges.map(badge => (
+                      <div key={badge.entityId} className="badge-card">
+                          <img src={badge.image} alt={badge.badgeclassName} />
+                          <h4>{badge.badgeclassName}</h4>
+                          <p>{new Date(badge.issuedOn).toLocaleDateString()}</p>
+                      </div>
+                  ))}
+              </div>
           </div>
         </div>
       </main>
