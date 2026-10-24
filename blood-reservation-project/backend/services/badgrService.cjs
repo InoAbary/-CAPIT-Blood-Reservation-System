@@ -69,14 +69,17 @@ async function badgrRequest(path, options = {}){
 }
 
 async function issueBadge(recipientEmail, badgeClassId) {
-    return badgrRequest(`/v2/badgclasses/${badgeClassId}/assertions`, {
+    return badgrRequest(`/v2/badgeclasses/${badgeClassId}/assertions`, {
         method: 'POST',
         body: JSON.stringify({
-            identity: recipientEmail,
-            type: 'email',
-            hashed: true,
+            recipient: {
+                identity: recipientEmail,
+                type: 'email',
+                hashed: true,
+            },
+            notify: false
         }),
-        notify: false
+        
     })
 }
 

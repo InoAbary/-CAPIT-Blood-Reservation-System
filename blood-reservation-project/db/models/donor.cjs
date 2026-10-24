@@ -43,7 +43,14 @@ const donorSchema = new mongoose.Schema({
     otherID:        { type: String, trim: true },
     
     password:       { type: String, required: true},
-    role:           { type: String, default: "donor"}
+    role:           { type: String, default: "donor"},
+    badges: [{
+        badgeClassId: String,
+        assertionId: String,
+        issuedOn: Date,
+        name: String,
+        imageUrl: String
+    }]
 
 }, { timestamps: true })
 
