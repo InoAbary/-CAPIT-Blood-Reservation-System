@@ -6,11 +6,11 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 const COMPONENTS = [
-  "Whole blood",
-"Packed red blood cells",
-"Platelet concentrate",
-"Fresh frozen plasma",
-"Cryoprecipitate",
+  { value: "Whole Blood", label: "Whole blood" },
+  { value: "Packed RBC", label: "Packed red blood cells" },
+  { value: "Platelets", label: "Platelet concentrate" },
+  { value: "Plasma", label: "Fresh frozen plasma" },
+  { value: "Cryoprecipitate", label: "Cryoprecipitate" },
 ];
 
 const SEXES = ["Female", "Male"];
@@ -391,8 +391,8 @@ export default function BloodRequestForm() {
     <select name="component" value={values.component} onChange={onChange}>
     <option value="">Select</option>
     {COMPONENTS.map((c) => (
-      <option key={c} value={c}>
-      {c}
+      <option key={c.value} value={c.value}>
+        {c.label}
       </option>
     ))}
     </select>
