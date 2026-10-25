@@ -87,6 +87,7 @@ const bloodUnitHistorySchema = new mongoose.Schema({
         type: String,
         enum: [
             'In-stock',
+            'Released',
             'Expired',
             'Removed'
         ]
@@ -135,7 +136,10 @@ function getSnapshot(unit) {
         component: data.component,
         collectionDate: data.collectionDate,
         expiryDate: data.expiryDate,
-        status: data.status
+        status: data.status,
+        requestID: data.requestID || null,
+        releasedToFacilityID: data.releasedToFacilityID || null,
+        releasedAt: data.releasedAt || null
     };
 }
 
@@ -192,7 +196,10 @@ async function (before, after, options = {}) {
         'component',
         'collectionDate',
         'expiryDate',
-        'status'
+        'status',
+        'requestID',
+        'releasedToFacilityID',
+        'releasedAt'
     ];
 
     const changes = [];
