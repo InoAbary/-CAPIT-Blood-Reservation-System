@@ -3,8 +3,7 @@ const BloodRequest = require("../../db/models/BloodRequest.cjs");
 
 const Staff = require("../../db/models/staff.cjs");
 
-const requireStaff =
-    require("../middleware/requireStaff.cjs");
+const requireStaff = require("../middleware/requireStaff.cjs");
 
 const router = express.Router();
 
