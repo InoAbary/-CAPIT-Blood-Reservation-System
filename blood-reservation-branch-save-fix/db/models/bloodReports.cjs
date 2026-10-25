@@ -10,7 +10,8 @@ const bloodReportSchema = new mongoose.Schema({
     },
     bloodUnitID: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'BloodUnits'
+        ref: 'BloodUnits',
+        required: true
     },
     dateCreated: {
         type: Date,
@@ -18,7 +19,24 @@ const bloodReportSchema = new mongoose.Schema({
     },
     status: {
         type: String,
+        required: true,
         enum: ["Used", "Wasted", "Expired", "Unused"]
+    },
+    reportSource: {
+        type: String,
+        required: true,
+        enum: ["Hospital", "System"],
+        default: "Hospital"
+    },
+    
+    isAssumed: {
+        type: Boolean,
+        default: false
+    },
+    reportedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Staff',
+        default: null
     },
     description: {
         type: String

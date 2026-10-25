@@ -93,6 +93,23 @@ const bloodUnitHistorySchema = new mongoose.Schema({
         ]
     },
 
+    requestID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BloodRequest',
+        default: null
+    },
+    
+    releasedToFacilityID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Facilities',
+        default: null
+    },
+    
+    releasedAt: {
+        type: Date,
+        default: null
+    },
+
     changes: {
         type: [changeSchema],
         default: []
@@ -138,7 +155,6 @@ function getSnapshot(unit) {
         expiryDate: data.expiryDate,
         status: data.status,
         requestID: data.requestID || null,
-        releasedToFacilityID: data.releasedToFacilityID || null,
         releasedAt: data.releasedAt || null
     };
 }
@@ -158,6 +174,13 @@ function valuesAreEqual(first, second) {
             second ? new Date(second).getTime() : null;
 
         return firstTime === secondTime;
+    }
+
+    if(
+        mongoose.Types.ObjectId.isValid(first) &&
+        mongoose.Types.ObjectId.isValid(second)
+    ) {
+        return String(first)=== String(second);
     }
 
     return first === second;
@@ -198,7 +221,6 @@ async function (before, after, options = {}) {
         'expiryDate',
         'status',
         'requestID',
-        'releasedToFacilityID',
         'releasedAt'
     ];
 
@@ -233,6 +255,8 @@ async function (before, after, options = {}) {
     return this.create({
         facilityID: options.facilityID,
         ...afterSnapshot,
+        releasedToFacilityID:
+            options.releasedToFacilityID || null,
         action: 'Updated',
         changes,
         performedBy: options.performedBy || null
