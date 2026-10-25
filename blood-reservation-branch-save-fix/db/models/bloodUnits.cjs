@@ -14,6 +14,22 @@ const bloodUnitsSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    requestID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BloodRequest',
+        default: null
+    },
+    
+    releasedToFacilityID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Facilities',
+        default: null
+    },
+    
+    releasedAt: {
+        type: Date,
+        default: null
+    },
     bloodType: {
         type: String,
         required: true,
@@ -36,7 +52,7 @@ const bloodUnitsSchema = new mongoose.Schema({
     status: {
         type: String,
         required: true,
-        enum: ["In-stock", "Expired", "Removed"]
+        enum: ["In-stock","Released", "Expired", "Removed"]
     },
     dateAdded: {
         type: Date,
