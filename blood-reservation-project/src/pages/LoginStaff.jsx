@@ -26,7 +26,7 @@ export default function Login() {
       const loggedInUser = await loginStaff(email, password, "staff");
       setPassword("");
 
-      const dest = "/StaffDashboard" 
+      const dest = loggedInUser.role === 'admin' && "/admin" || "/StaffDashboard" 
 
       navigate(dest, { replace: true });
     } catch (err) {

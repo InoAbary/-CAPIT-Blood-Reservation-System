@@ -24,7 +24,11 @@ import FormPending from './pages/FormPending';
 import BloodRequestForm from './pages/Bloodrequestform';
 import BloodRequestsAdmin from './components/BloodRequestsAdmin';
 import RegisterSuccess from './pages/RegisterSuccess';
-import AdminBadgeTester from './pages/AdminBadgeTester'
+import AdminLayout from './pages/admin/AdminLayout';
+import OverviewPage from './pages/admin/OverviewPage';
+import UserDirectoryPage from './pages/admin/UserDirectoryPage';
+import ProvisionSupervisorPage from './pages/admin/ProvisionSupervisorPage';
+import AuditLogPage from './pages/admin/AuditLogPage';
 
 import { AuthProvider } from './context/AuthContext'
 
@@ -118,6 +122,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* ----- ADMIN ONLY ------ */}
         <Route
           path="/Request-admin"
           element={
@@ -127,13 +133,30 @@ function App() {
           }
         />
         <Route
-          path="/AdminBadgeTester"
+          path="/admin"
           element={
             <ProtectedRoute require="staff"  allowedRoles={['admin']}>
-              <AdminBadgeTester />
+              <AdminLayout />
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/admin/user-directory"
+          element={
+            <ProtectedRoute require="staff"  allowedRoles={['admin']}>
+              <UserDirectoryPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/provision-supervisor"
+          element={
+            <ProtectedRoute require="staff"  allowedRoles={['admin']}>
+              <ProvisionSupervisorPage />
+            </ProtectedRoute>
+          }
+        />
+        
         
 
         {/* ---- Fallback ---- */}

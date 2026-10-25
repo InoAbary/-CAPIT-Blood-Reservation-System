@@ -11,9 +11,11 @@ const bloodUnitRoutes = require('./routes/bloodUnitRoutes.cjs');
 const authRoutes = require('./routes/auth.cjs');
 const utilizationRoutes = require('./routes/utilizationRoutes.cjs');
 const bloodRequestRoutes = require('./routes/bloodRequestRoutes.cjs');
+const adminRoutes = require('./routes/adminRoutes.cjs');
 
 const requireDonor = require('./middleware/requireDonor.cjs');
 const requireStaff = require('./middleware/requireStaff.cjs');
+const requireRole = require('./middleware/requireRole.cjs');
 
 const app = express();
 
@@ -39,5 +41,6 @@ app.use('/api/facilities', facilityRoutes);
 app.use('/api/bloodUnit', requireStaff, bloodUnitRoutes);
 app.use('/api/utilization', requireStaff, utilizationRoutes);
 app.use('/api/bloodRequest',requireStaff,bloodRequestRoutes);
+app.use('/api/admin',requireStaff, requireRole('admin'), adminRoutes);
 
 app.listen(3000, () => console.log('Server running on port 3000'));

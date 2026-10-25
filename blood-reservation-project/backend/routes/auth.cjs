@@ -217,6 +217,14 @@ router.post('/login/staff', async (req, res) => {
     const valid = staff && await bcrypt.compare(password || '', staff.password);
     if (!valid) return res.status(400).json({ error: 'Invalid login.' });
 
+    if (!staff.isActive) {
+        return res.status(403).json({ error: "Invalid login." });
+    }
+
+    if (!STAFF_ROLES.has(staff.role)) {
+        return res.status(403).json({ error: "Account role not permitted." });
+    }
+
     const token = jwt.sign(
       { id: staff._id.toString(), role: staff.role, aud: "staff" },
       process.env.JWT_SECRET,
@@ -238,9 +246,7 @@ router.post('/login/staff', async (req, res) => {
       path: '/',
     });
 
-    if (!STAFF_ROLES.has(staff.role)) {
-        return res.status(403).json({ error: "Account role not permitted." });
-    }
+    
 
     return res.status(200).json({
       success: true,
