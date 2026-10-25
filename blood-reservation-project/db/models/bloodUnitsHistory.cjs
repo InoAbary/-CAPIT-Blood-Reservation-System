@@ -87,9 +87,27 @@ const bloodUnitHistorySchema = new mongoose.Schema({
         type: String,
         enum: [
             'In-stock',
+            'Released',
             'Expired',
             'Removed'
         ]
+    },
+
+    requestID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BloodRequest',
+        default: null
+    },
+    
+    releasedToFacilityID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Facilities',
+        default: null
+    },
+    
+    releasedAt: {
+        type: Date,
+        default: null
     },
 
     changes: {
@@ -135,7 +153,9 @@ function getSnapshot(unit) {
         component: data.component,
         collectionDate: data.collectionDate,
         expiryDate: data.expiryDate,
-        status: data.status
+        status: data.status,
+        requestID: data.requestID || null,
+        releasedAt: data.releasedAt || null
     };
 }
 
@@ -154,6 +174,13 @@ function valuesAreEqual(first, second) {
             second ? new Date(second).getTime() : null;
 
         return firstTime === secondTime;
+    }
+
+    if(
+        mongoose.Types.ObjectId.isValid(first) &&
+        mongoose.Types.ObjectId.isValid(second)
+    ) {
+        return String(first)=== String(second);
     }
 
     return first === second;
@@ -192,7 +219,9 @@ async function (before, after, options = {}) {
         'component',
         'collectionDate',
         'expiryDate',
-        'status'
+        'status',
+        'requestID',
+        'releasedAt'
     ];
 
     const changes = [];
@@ -226,6 +255,8 @@ async function (before, after, options = {}) {
     return this.create({
         facilityID: options.facilityID,
         ...afterSnapshot,
+        releasedToFacilityID:
+            options.releasedToFacilityID || null,
         action: 'Updated',
         changes,
         performedBy: options.performedBy || null
