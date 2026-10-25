@@ -36,7 +36,7 @@ app.use('/api/auth', authRoutes)
 app.use('/api/bloodForm', requireDonor, bloodFormRoutes)
 app.use('/api/bloodRequest', requireStaff, requireRole("hospital"), bloodRequestRoutes)
 app.use('/api/inventories', requireStaff, inventoryRoutes);
-app.use('/api/facilities', requireStaff, facilityRoutes);
+app.use('/api/facilities', facilityRoutes);
 app.use('/api/bloodUnits', requireStaff, bloodUnitRoutes);
 app.use('/api/badgr', badgrRoutes)
 

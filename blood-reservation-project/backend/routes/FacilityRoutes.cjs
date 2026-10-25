@@ -7,6 +7,9 @@ const Counter = require('../../db/models/counters.cjs');
 
 const router = express.Router();
 
+const requireStaff = require('../middleware/requireStaff.cjs');
+const requireRole = require('../middleware/requireRole.cjs');
+
 const validateId = (req, res, next) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
         return res.status(400).json({ message: 'Invalid facility id.' });
@@ -74,7 +77,7 @@ router.get('/:id/inventory', validateId, async (req, res) => {
     }
 });
 
-router.post('/', async(req,res) => {
+router.post('/', requireStaff, requireRole("admin"), async(req,res) => {
     try {
         const {facilityName, category, facilityType, typeLabel, address, contactNumber, hours, lat, lon} = req.body
         if (!facilityName || !address) {

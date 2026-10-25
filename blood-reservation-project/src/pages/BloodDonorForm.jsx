@@ -263,9 +263,9 @@ function BloodDonorForm() {
                             <button
                                 type="button"
                                 className="submit-btn"
-                                onClick={dismissRejection}
+                                onClick={() => navigate('/DonorDashboard')}
                             >
-                                {t('common.continue', 'Return to questions')}
+                                {t('common.continue', 'Return to Dashboard')}
                             </button>
                         </div>
                     </div>
