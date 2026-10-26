@@ -11,7 +11,7 @@ import.meta.env.VITE_API_URL) ||
 
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
 const COMPONENTS = ['Packed RBC', 'Plasma', 'Platelets', 'Whole Blood'];
-const STATUSES = ['In-stock', 'Released', 'Expired', 'Removed'];
+const STATUSES = ['In-stock', 'Expired', 'Removed'];
 const PAGE_SIZE = 8;
 
 
@@ -338,7 +338,7 @@ function UnitModal({
     onChange={set('status')}
     disabled={saving || deleting}
     >
-    {STATUSES.filter(status => status !== 'Released').map((status) => (
+    {STATUSES.map((status) => (
         <option key={status} value={status}>
         {status}
         </option>
@@ -410,10 +410,10 @@ function UnitModal({
         >
         {saving
             ? mode === 'add'
-            ? 'Adding…'
-            : 'Saving…'
-            : mode === 'add'
-            ? 'Add unit'
+    ? 'Adding…'
+    : 'Saving…'
+    : mode === 'add'
+    ? 'Add unit'
     : 'Save changes'}
     </button>
     </div>
@@ -460,8 +460,7 @@ function FilterSelect({
 
 function BloodUnitsTab({
     facilityID,
-    onInventoryChanged,
-    readOnly = false
+    onInventoryChanged
 }) {
 
     const [units, setUnits] = useState([]);
@@ -635,7 +634,6 @@ function BloodUnitsTab({
 
 
     const handleAdd = async (values) => {
-        if (readOnly) return;
 
         setSaving(true);
 
@@ -694,7 +692,6 @@ function BloodUnitsTab({
     /* ---------- Edit ---------- */
 
     const handleEdit = async (values) => {
-        if (readOnly) return;
 
         const bloodUnitID = modal.unit.bloodUnitID;
 
@@ -756,7 +753,6 @@ function BloodUnitsTab({
     /* ---------- Save ---------- */
 
     const handleSave = (values) => {
-        if (readOnly) return;
 
         if (!modal) return;
 
@@ -771,7 +767,6 @@ function BloodUnitsTab({
     /* ---------- Delete ---------- */
 
     const handleDelete = async () => {
-        if (readOnly) return;
 
         if (!modal?.unit?.bloodUnitID) return;
 
@@ -782,7 +777,7 @@ function BloodUnitsTab({
         try {
 
             const response = await fetch(
-                `${API_URL}/api/bloodUnits/${facilityID}/blood-units/${encodeURIComponent(
+                `/api/bloodUnits/${facilityID}/blood-units/${encodeURIComponent(
                     bloodUnitID
                 )}`,
                 {
@@ -1327,227 +1322,227 @@ function BloodUnitsTab({
             options={BLOOD_TYPES}
             />
 
-            {!readOnly && <button
-                type="button"
-                className="bu-add"
-                onClick={() =>
-                    setModal({
-                        mode: 'add',
-                        apiError: ''
-                    })
-                }
-                disabled={!facilityID}
-                >
-                <PlusIcon />
-                Add Blood Units
-                </button>}
+            <button
+            type="button"
+            className="bu-add"
+            onClick={() =>
+                setModal({
+                    mode: 'add',
+                    apiError: ''
+                })
+            }
+            disabled={!facilityID}
+            >
+            <PlusIcon />
+            Add blood unit
+            </button>
 
-                </div>
-
-
-                {/* Error */}
-
-                {error && (
-                    <p className="bu-error" role="alert">
-                    {error}
-                    </p>
-                )}
+            </div>
 
 
-                {/* Table */}
+            {/* Error */}
 
-                <div className="bu-table-wrap">
-
-                {loading ? (
-                    <p className="bu-loading">
-                    Loading blood units…
-                    </p>
-
-                ) : pageRows.length === 0 ? (
-                    <p className="bu-empty">
-                    No blood units match your search.
-                    </p>
-
-                ) : (
-                    <table className="bu-table">
-
-                    <thead>
-                    <tr>
-                    <th scope="col">Unit ID</th>
-                    <th scope="col">Donor ID</th>
-                    <th scope="col">Blood type</th>
-                    <th scope="col">Component</th>
-                    <th scope="col">Collected</th>
-                    <th scope="col">Expires</th>
-                    <th scope="col">Status</th>
-                    {!readOnly && <th scope="col" className="bu-actions">
-                        Actions
-                        </th>}
-                        </tr>
-                        </thead>
-
-                        <tbody>
-
-                        {pageRows.map((unit) => (
-                            <tr key={unit.bloodUnitID}>
-
-                            <td className="bu-strong">
-                            {unit.bloodUnitID}
-                            </td>
-
-                            <td>
-                            {unit.donorID}
-                            </td>
-
-                            <td className="bu-strong">
-                            {unit.bloodType}
-                            </td>
-
-                            <td>
-                            {unit.component}
-                            </td>
-
-                            <td>
-                            {formatDate(
-                                unit.collectionDate
-                            )}
-                            </td>
-
-                            <td>
-                            {formatDate(
-                                unit.expiryDate
-                            )}
-                            </td>
-
-                            <td>
-                            <span
-                            className={statusClass(
-                                unit.status
-                            )}
-                            >
-                            {unit.status}
-                            </span>
-                            </td>
-
-                            {!readOnly && <td className="bu-actions">
-
-                                {unit.status !== 'Released' && !unit.requestID ? <button
-                                    type="button"
-                                    className="bu-icon-btn"
-                                    aria-label={`Edit unit ${unit.bloodUnitID}`}
-                                    onClick={() =>
-                                        setModal({
-                                            mode: 'edit',
-                                            unit,
-                                            apiError: ''
-                                        })
-                                    }
-                                    >
-                                    <PencilIcon />
-                                    </button> : <span>Released</span>}
-
-                                    </td>}
-
-                                    </tr>
-                        ))}
-
-                        </tbody>
-
-                        </table>
-                )}
-
-                </div>
+            {error && (
+                <p className="bu-error" role="alert">
+                {error}
+                </p>
+            )}
 
 
-                {/* Footer / Pagination */}
+            {/* Table */}
 
-                <div className="bu-footer">
+            <div className="bu-table-wrap">
 
-                <span>
-                {rangeStart}–{rangeEnd} of {total}
-                </span>
+            {loading ? (
+                <p className="bu-loading">
+                Loading blood units…
+                </p>
 
-                <div className="bu-pager">
+            ) : pageRows.length === 0 ? (
+                <p className="bu-empty">
+                No blood units match your search.
+                </p>
 
-                <button
-                type="button"
-                aria-label="Previous page"
-                disabled={safePage <= 1}
-                onClick={() =>
-                    setPage(safePage - 1)
-                }
-                >
-                <ChevronLeftIcon />
-                </button>
+            ) : (
+                <table className="bu-table">
 
-                <button
-                type="button"
-                aria-label="Next page"
-                disabled={safePage >= totalPages}
-                onClick={() =>
-                    setPage(safePage + 1)
-                }
-                >
-                <ChevronRightIcon />
-                </button>
+                <thead>
+                <tr>
+                <th scope="col">Unit ID</th>
+                <th scope="col">Donor ID</th>
+                <th scope="col">Blood type</th>
+                <th scope="col">Component</th>
+                <th scope="col">Collected</th>
+                <th scope="col">Expires</th>
+                <th scope="col">Status</th>
+                <th scope="col" className="bu-actions">
+                Actions
+                </th>
+                </tr>
+                </thead>
 
-                </div>
+                <tbody>
 
-                </div>
+                {pageRows.map((unit) => (
+                    <tr key={unit.bloodUnitID}>
 
+                    <td className="bu-strong">
+                    {unit.bloodUnitID}
+                    </td>
 
-                {/* Modal */}
+                    <td>
+                    {unit.donorID}
+                    </td>
 
-                {!readOnly && modal && (
-                    <UnitModal
-                    mode={modal.mode}
-                    unitId={
-                        modal.mode === 'edit'
-                        ? modal.unit.bloodUnitID
-                        : null
+                    <td className="bu-strong">
+                    {unit.bloodType}
+                    </td>
+
+                    <td>
+                    {unit.component}
+                    </td>
+
+                    <td>
+                    {formatDate(
+                        unit.collectionDate
+                    )}
+                    </td>
+
+                    <td>
+                    {formatDate(
+                        unit.expiryDate
+                    )}
+                    </td>
+
+                    <td>
+                    <span
+                    className={statusClass(
+                        unit.status
+                    )}
+                    >
+                    {unit.status}
+                    </span>
+                    </td>
+
+                    <td className="bu-actions">
+
+                    <button
+                    type="button"
+                    className="bu-icon-btn"
+                    aria-label={`Edit unit ${unit.bloodUnitID}`}
+                    onClick={() =>
+                        setModal({
+                            mode: 'edit',
+                            unit,
+                            apiError: ''
+                        })
                     }
-                    initial={
-                        modal.mode === 'edit'
-                ? {
-                    donorID:
-                    modal.unit.donorID || '',
+                    >
+                    <PencilIcon />
+                    </button>
 
-                    bloodType:
-                    modal.unit.bloodType || '',
+                    </td>
 
-                    component:
-                    modal.unit.component || '',
+                    </tr>
+                ))}
 
-                    collectionDate:
-                    toISODate(
-                        modal.unit.collectionDate
-                    ),
+                </tbody>
 
-                    expiryDate:
-                    toISODate(
-                        modal.unit.expiryDate
-                    ),
+                </table>
+            )}
 
-                    status:
-                    modal.unit.status ||
-                    'In-stock'
+            </div>
+
+
+            {/* Footer / Pagination */}
+
+            <div className="bu-footer">
+
+            <span>
+            {rangeStart}–{rangeEnd} of {total}
+            </span>
+
+            <div className="bu-pager">
+
+            <button
+            type="button"
+            aria-label="Previous page"
+            disabled={safePage <= 1}
+            onClick={() =>
+                setPage(safePage - 1)
+            }
+            >
+            <ChevronLeftIcon />
+            </button>
+
+            <button
+            type="button"
+            aria-label="Next page"
+            disabled={safePage >= totalPages}
+            onClick={() =>
+                setPage(safePage + 1)
+            }
+            >
+            <ChevronRightIcon />
+            </button>
+
+            </div>
+
+            </div>
+
+
+            {/* Modal */}
+
+            {modal && (
+                <UnitModal
+                mode={modal.mode}
+                unitId={
+                    modal.mode === 'edit'
+            ? modal.unit.bloodUnitID
+            : null
                 }
-                : emptyForm
-                    }
-                    onSave={handleSave}
-                    onDelete={handleDelete}
-                    onClose={() => {
-                        if (!saving && !deleting) {
-                            setModal(null);
-                        }
-                    }}
-                    saving={saving}
-                    deleting={deleting}
-                    apiError={modal.apiError}
-                    />
-                )}
+                initial={
+                    modal.mode === 'edit'
+            ? {
+                donorID:
+                modal.unit.donorID || '',
 
-                </div>
+                bloodType:
+                modal.unit.bloodType || '',
+
+                component:
+                modal.unit.component || '',
+
+                collectionDate:
+                toISODate(
+                    modal.unit.collectionDate
+                ),
+
+                expiryDate:
+                toISODate(
+                    modal.unit.expiryDate
+                ),
+
+                status:
+                modal.unit.status ||
+                'In-stock'
+            }
+            : emptyForm
+                }
+                onSave={handleSave}
+                onDelete={handleDelete}
+                onClose={() => {
+                    if (!saving && !deleting) {
+                        setModal(null);
+                    }
+                }}
+                saving={saving}
+                deleting={deleting}
+                apiError={modal.apiError}
+                />
+            )}
+
+            </div>
     );
 }
 

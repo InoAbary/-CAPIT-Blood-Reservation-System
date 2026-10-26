@@ -19,12 +19,6 @@ const bloodUnitsSchema = new mongoose.Schema({
         ref: 'BloodRequest',
         default: null
     },
-    releaseOperationID: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'FulfillmentOperation',
-        default: null,
-            index: true
-    },
     releasedAt: {
         type: Date,
         default: null
@@ -68,11 +62,11 @@ const bloodUnitsSchema = new mongoose.Schema({
 
 bloodUnitsSchema.index({ bloodUnitID: 1 }, { unique: true });
 
-// Mongoose 9 pre hooks complete when the function returns; no next callback.
-bloodUnitsSchema.pre('save', function () {
+bloodUnitsSchema.pre('save', function (next) {
     if (!this.isNew) {
         this.lastUpdated = new Date();
     }
+    next();
 });
 
 module.exports = mongoose.model('BloodUnits', bloodUnitsSchema);

@@ -10,16 +10,6 @@ const BloodUnitHistory = require('../../db/models/bloodUnitsHistory.cjs');
 const Counter = require('../../db/models/counters.cjs');
 
 const router = express.Router();
-const syncInventory = require('../services/syncInventory.cjs');
-const { authenticateInventory, authorizeFacility, requireInventoryWrite } = require('../middleware/inventoryAccess.cjs');
-// Apply auth only to this router's known paths so it can also be mounted below
-// /api/facilities without blocking unrelated public facility-directory routes.
-router.use('/:id/blood-units', ...authenticateInventory, authorizeFacility, (req, res, next) => {
-    if (!['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return requireInventoryWrite(req, res, next);
-    return next();
-});
-router.use('/:id/blood-unit-history', ...authenticateInventory, authorizeFacility);
-
 
 const BLOOD_TYPES = [
     'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'
@@ -127,7 +117,7 @@ const nextBloodUnitID = async () => {
     const counter = await Counter.findOneAndUpdate(
         { _id: 'bloodUnitID' },
         { $inc: { sequence: 1 } },
-        { returnDocument: 'after', upsert: true, setDefaultsOnInsert: true }
+        { new: true, upsert: true, setDefaultsOnInsert: true }
     );
 
     return `BU${String(counter.sequence).padStart(8, '0')}`;
@@ -178,17 +168,17 @@ router.get(
             }
 
             const history = await BloodUnitHistory
-            .find({
-                facilityID: facility._id
-            })
-            .populate(
-                'performedBy',
-                'firstName lastName email role'
-            )
-            .sort({
-                date: -1
-            })
-            .lean();
+                .find({
+                    facilityID: facility._id
+                })
+                .populate(
+                    'performedBy',
+                    'firstName lastName email role'
+                )
+                .sort({
+                    date: -1
+                })
+                .lean();
 
             res.json(history);
 
@@ -211,11 +201,11 @@ router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
         // const performedBy = null; TODO: get the user ID
         const performedBy = getActorId(req);
         /*
-         *        if (!performedBy) {
-         *            return res.status(401).json({
-         *                message: 'Authentication is required to create a blood unit.'
-    });
-    } */
+        if (!performedBy) {
+            return res.status(401).json({
+                message: 'Authentication is required to create a blood unit.'
+            });
+        } */
 
         const facility = await getFacility(req.params.id);
 
@@ -253,25 +243,24 @@ router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
 
         await unit.save();
 
-        // Recount after the unit/history save instead of incrementing an arbitrary component.
+        await Inventory.updateOne({facilityID: facility._id}, {$inc: {availQuantity: 1}});
 
         /*
-         *        try {
-         *            await BloodUnitHistory.logCreate(unit, {
-         *                facilityID: facility._id
-         *                // TODO: performedBy
-    });
-    } catch (historyError) {
-    await BloodUnits.deleteOne({ _id: unit._id });
-throw historyError;
-    } */
+        try {
+            await BloodUnitHistory.logCreate(unit, {
+                facilityID: facility._id
+                // TODO: performedBy
+            });
+        } catch (historyError) {
+            await BloodUnits.deleteOne({ _id: unit._id });
+            throw historyError;
+        } */
 
         await BloodUnitHistory.logCreate(unit, {
             facilityID: facility._id,
             performedBy
         });
 
-        await syncInventory(facility);
         res.status(201).json(unit);
     } catch (err) {
         console.error('Create blood unit:', err);
@@ -296,11 +285,11 @@ router.put(
         try {
             const performedBy = getActorId(req);
             /*
-             *            if (!performedBy) {
-             *                return res.status(401).json({
-             *                    message: 'Authentication is required to update a blood unit.'
-        });
-        } */
+            if (!performedBy) {
+                return res.status(401).json({
+                    message: 'Authentication is required to update a blood unit.'
+                });
+            } */
 
             const facility = await getFacility(req.params.id);
 
@@ -318,9 +307,6 @@ router.put(
                 '_id',
                 'dateAdded',
                 'lastUpdated',
-                'requestID',
-                'releasedAt',
-                'releaseOperationID',
                 'date',
                 'performedBy'
             ];
@@ -353,9 +339,6 @@ router.put(
                 });
             }
 
-            if (unit.status === 'Released' || unit.requestID || unit.releaseOperationID) {
-                return res.status(409).json({ message: 'Released blood units cannot be edited through inventory maintenance.' });
-            }
             const before = unit.toObject();
 
             for (const field of TRACKED_FIELDS) {
@@ -387,30 +370,20 @@ router.put(
                 });
             }
 
-            // A unit might have been released after it was loaded for editing.
-            // Apply changes only while it remains unallocated and in its old status.
-            const savedUnit = await BloodUnits.findOneAndUpdate(
-                { _id: unit._id, facilityID: facility._id.toString(), status: before.status,
-                    requestID: null, releaseOperationID: null },
-                    { $set: Object.fromEntries([...TRACKED_FIELDS, 'lastUpdated'].map(field =>
-                        [field, field === 'lastUpdated' ? new Date() : unit[field]])) },
-                                                                { returnDocument: 'after', runValidators: true }
-            );
-            if (!savedUnit) return res.status(409).json({ message: 'The blood unit changed or was released. Refresh before editing.' });
+            await unit.save();
 
             /* TODO:
-             *            await BloodUnitHistory.logUpdate(before, savedUnit, {
-             *                facilityID: facility._id,
-             *                performedBy
-        }); */
+            await BloodUnitHistory.logUpdate(before, unit, {
+                facilityID: facility._id,
+                performedBy
+            }); */
 
-            await BloodUnitHistory.logUpdate(before, savedUnit, {
+            await BloodUnitHistory.logUpdate(before, unit, {
                 facilityID: facility._id,
                 performedBy
             });
 
-            await syncInventory(facility);
-            res.json(savedUnit);
+            res.json(unit);
         } catch (err) {
             console.error('Update blood unit:', err);
             res.status(500).json({
@@ -429,11 +402,11 @@ router.delete(
             //TODO: const performedBy = getActorId(req);
 
             /*
-             *            if (!performedBy) {
-             *                return res.status(401).json({
-             *                    message: 'Authentication is required to delete a blood unit.'
-        });
-        }*/
+            if (!performedBy) {
+                return res.status(401).json({
+                    message: 'Authentication is required to delete a blood unit.'
+                });
+            }*/
 
             const facility = await getFacility(req.params.id);
 
@@ -453,18 +426,13 @@ router.delete(
                     message: 'Blood unit not found in this facility.'
                 });
             }
-            if (unit.status === 'Released' || unit.requestID || unit.releaseOperationID) {
-                return res.status(409).json({ message: 'Released units cannot be deleted.' });
-            }
-            const removed = await BloodUnits.findOneAndDelete({
-                _id: unit._id, facilityID: facility._id.toString(),
-                                                              status: unit.status, requestID: null, releaseOperationID: null
-            });
-            if (!removed) return res.status(409).json({ message: 'The unit changed or was released. Refresh before deleting.' });
-            await BloodUnitHistory.logDelete(removed, {
-                facilityID: facility._id, performedBy: getActorId(req)
-            });
-            await syncInventory(facility);
+            /* TODO:
+            await BloodUnitHistory.logDelete(unit, {
+                facilityID: facility._id,
+                performedBy
+            }); */
+
+            await unit.deleteOne();
 
             res.json({
                 message: 'Blood unit deleted successfully.',

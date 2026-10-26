@@ -6,10 +6,6 @@ const syncInventory = require('../services/syncInventory.cjs');
 const Counter = require('../../db/models/counters.cjs');
 
 const router = express.Router();
-const { authenticateInventory, authorizeFacility } = require('../middleware/inventoryAccess.cjs');
-
-const requireStaff = require('../middleware/requireStaff.cjs');
-const requireRole = require('../middleware/requireRole.cjs');
 
 const validateId = (req, res, next) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -29,21 +25,9 @@ const nextFacilityID = async () => {
     return `F${String(counter.sequence).padStart(8, '0')}`;
 }
 
-// Dedicated inventory picker; keep the public map directory unchanged.
-router.get('/inventory-access', ...authenticateInventory, async (req, res) => {
-    try {
-        const access = req.inventoryAccess;
-        const facilities = access.canEdit ? [access.facility] : await Facility.find({}).sort({ facilityName: 1 }).lean();
-        res.json({ success: true, role: access.account.role, canEdit: access.canEdit,
-            assignedFacilityID: access.facility?._id || null, facilities });
-    } catch (error) {
-        res.status(500).json({ message: 'Could not load inventory facilities.' });
-    }
-});
-
 router.get('/', async (req, res) => {
     try {
-
+       
         const facilities = await Facility.find({ isActive: true })
         .sort({ facilityName: 1 })
         .lean();
@@ -69,18 +53,14 @@ router.get('/:id', validateId, async (req, res) => {
 });
 
 
-router.get('/:id/inventory', ...authenticateInventory, authorizeFacility, validateId, async (req, res) => {
+router.get('/:id/inventory', validateId, async (req, res) => {
     try {
         const facility = await Facility.findById(req.params.id).lean();
         if (!facility) {
             return res.status(404).json({ message: 'Facility not found.' });
         }
+       
 
-
-        if (!req.inventoryAccess.canEdit) {
-            const items = await syncInventory(facility, { readOnly: true });
-            return res.json(items);
-        }
         await syncInventory(facility);
 
         const items = await Inventory.find({ facilityID: facility._id })
@@ -94,43 +74,43 @@ router.get('/:id/inventory', ...authenticateInventory, authorizeFacility, valida
     }
 });
 
-router.post('/', requireStaff, requireRole("admin"), async(req,res) => {
+router.post('/', async(req,res) => {
     try {
         const {facilityName, category, facilityType, typeLabel, address, contactNumber, hours, lat, lon} = req.body
         if (!facilityName || !address) {
-            return res.status(400).json({
-                success: false,
-                message: 'facilityName and address are required.',
-            });
-        }
-
-        // Generate a facilityID if your schema requires one
-        const facilityID = await nextFacilityID();
-
-
-        const facility = await Facility.create({
-            facilityID,
-            facilityName,
-            category,
-            facilityType,
-            typeLabel,
-            address,
-            contactNumber,
-            hours,
-            lat,
-            lon,
-            isActive: true,
-        });
-
-        res.status(201).json({ success: true, facility });
-    } catch (err) {
-        console.error('POST /api/facilities failed:', err);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to create facility.',
-            error: err.message,
-        });
+      return res.status(400).json({
+        success: false,
+        message: 'facilityName and address are required.',
+      });
     }
+
+    // Generate a facilityID if your schema requires one
+    const facilityID = await nextFacilityID();
+      
+
+    const facility = await Facility.create({
+      facilityID,
+      facilityName,
+      category,
+      facilityType,
+      typeLabel,
+      address,
+      contactNumber,
+      hours,
+      lat,
+      lon,
+      isActive: true,
+    });
+
+    res.status(201).json({ success: true, facility });
+  } catch (err) {
+    console.error('POST /api/facilities failed:', err);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create facility.',
+      error: err.message,
+    });
+  }
 });
 
 

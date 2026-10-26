@@ -17,7 +17,8 @@ const syncInventory =
     
 const Staff = require("../../db/models/staff.cjs");
 
-const requireStaff = require("../middleware/requireStaff.cjs");
+const requireStaff =
+    require("../middleware/requireStaff.cjs");
 
 const router = express.Router();
 
@@ -55,7 +56,7 @@ router.post("/", requireStaff, async (req, res) => {
         const request = await BloodRequest.create({
             ...requestData,
 
-            //hospitalFacilityID: staff.facilityID,
+            hospitalFacilityID: staff.facilityID,
             requestedBy: staff._id,
 
             requestStatus: "Pending",
@@ -74,5 +75,5 @@ router.post("/", requireStaff, async (req, res) => {
 });
 
 
-module.exports = router;
 
+module.exports = router;

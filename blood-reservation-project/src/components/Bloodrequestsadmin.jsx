@@ -1,9 +1,139 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 
-// Uses the existing credentialed API helper and staffToken cookie.
-import { apiFetch } from "../utils/api";
-const REQUEST_STATUSES = ["Pending", "Approved", "Partially Fulfilled", "Fulfilled", "Rejected", "Cancelled"];
-const REQUEST_API = "/api/blood-requests";
+/**
+ * BloodRequestsAdmin.jsx
+ * Frontend-only blood request review page.
+ *
+ * Usage:
+ *   import BloodRequestsAdmin from "./BloodRequestsAdmin";
+ *   <BloodRequestsAdmin />
+ *
+ * No backend or external UI library required. Demo decisions and audit logs
+ * are kept in React state and reset on page refresh.
+ */
+
+const INITIAL_REQUESTS = [
+  {
+    id: "BR-2026-0142",
+    submittedAt: "Oct 15, 2026 · 12:08 AM",
+    submittedBy: "Angela D. Ramos",
+    patient: {
+      name: "Maria Lourdes Santos",
+      age: 42,
+      gender: "Female",
+      hospital: "Philippine General Hospital",
+      wardRoom: "Ward 5B · Room 512",
+    },
+    clinical: {
+      diagnosis: "Symptomatic anemia secondary to gastrointestinal bleeding",
+      hemoglobin: "6.8 g/dL",
+      platelets: "184 ×10³/µL",
+      previousTransfusion: "Yes",
+      previousTransfusionNotes: "Transfused in 2023; no known reaction.",
+    },
+    request: { bloodType: "O+", component: "Packed red blood cells", units: 2, urgency: "stat" },
+    status: "Pending",
+    history: [{ action: "Request submitted", actor: "Angela D. Ramos", role: "Hospital staff", at: "Oct 15, 2026 · 12:08 AM" }],
+  },
+  {
+    id: "BR-2026-0141",
+    submittedAt: "Oct 14, 2026 · 11:42 PM",
+    submittedBy: "Mark Villanueva",
+    patient: {
+      name: "Jose Miguel Reyes",
+      age: 67,
+      gender: "Male",
+      hospital: "East Avenue Medical Center",
+      wardRoom: "ICU · Bed 08",
+    },
+    clinical: {
+      diagnosis: "Severe thrombocytopenia requiring platelet support",
+      hemoglobin: "9.2 g/dL",
+      platelets: "18 ×10³/µL",
+      previousTransfusion: "No",
+      previousTransfusionNotes: "",
+    },
+    request: { bloodType: "B-", component: "Platelet concentrate", units: 1, urgency: "routine" },
+    status: "Pending",
+    history: [{ action: "Request submitted", actor: "Mark Villanueva", role: "Hospital staff", at: "Oct 14, 2026 · 11:42 PM" }],
+  },
+  {
+    id: "BR-2026-0140",
+    submittedAt: "Oct 14, 2026 · 10:15 PM",
+    submittedBy: "Clarissa Mendoza",
+    patient: {
+      name: "Ana Patricia Cruz",
+      age: 29,
+      gender: "Female",
+      hospital: "Ospital ng Makati",
+      wardRoom: "Ward 2 · Room 204",
+    },
+    clinical: {
+      diagnosis: "Postpartum hemorrhage; ongoing blood loss",
+      hemoglobin: "7.4 g/dL",
+      platelets: "—",
+      previousTransfusion: "Unknown",
+      previousTransfusionNotes: "",
+    },
+    request: { bloodType: "A+", component: "Fresh frozen plasma", units: 3, urgency: "stat" },
+    status: "Approved",
+    history: [
+      { action: "Request submitted", actor: "Clarissa Mendoza", role: "Hospital staff", at: "Oct 14, 2026 · 10:15 PM" },
+      { action: "Request approved", actor: "Rafael D. Garcia", role: "Blood Services Admin", at: "Oct 14, 2026 · 10:31 PM", note: "Request reviewed and approved." },
+    ],
+  },
+  {
+    id: "BR-2026-0139",
+    submittedAt: "Oct 14, 2026 · 8:54 PM",
+    submittedBy: "Paolo Lim",
+    patient: {
+      name: "Pedro Antonio Lim",
+      age: 54,
+      gender: "Male",
+      hospital: "Rizal Medical Center",
+      wardRoom: "Ward 7 · Room 711",
+    },
+    clinical: {
+      diagnosis: "Anemia associated with chronic kidney disease",
+      hemoglobin: "8.1 g/dL",
+      platelets: "152 ×10³/µL",
+      previousTransfusion: "Yes",
+      previousTransfusionNotes: "Two previous transfusions; reaction history not reported.",
+    },
+    request: { bloodType: "AB+", component: "Packed red blood cells", units: 2, urgency: "routine" },
+    status: "Denied",
+    denialReason: "Required supporting clinical documentation is missing. Please resubmit with the attending physician's assessment.",
+    history: [
+      { action: "Request submitted", actor: "Paolo Lim", role: "Hospital staff", at: "Oct 14, 2026 · 8:54 PM" },
+      { action: "Request denied", actor: "Rafael D. Garcia", role: "Blood Services Admin", at: "Oct 14, 2026 · 9:12 PM", note: "Required supporting clinical documentation is missing. Please resubmit with the attending physician's assessment." },
+    ],
+  },
+  {
+    id: "BR-2026-0138",
+    submittedAt: "Oct 14, 2026 · 7:26 PM",
+    submittedBy: "Nina Bautista",
+    patient: {
+      name: "Elena Flores",
+      age: 73,
+      gender: "Female",
+      hospital: "Quezon City General Hospital",
+      wardRoom: "",
+    },
+    clinical: {
+      diagnosis: "Symptomatic anemia",
+      hemoglobin: "7.0 g/dL",
+      platelets: "205 ×10³/µL",
+      previousTransfusion: "No",
+      previousTransfusionNotes: "",
+    },
+    request: { bloodType: "A-", component: "Packed red blood cells", units: 1, urgency: "routine" },
+    status: "Pending",
+    history: [{ action: "Request submitted", actor: "Nina Bautista", role: "Hospital staff", at: "Oct 14, 2026 · 7:26 PM" }],
+  },
+];
+
+const ADMIN_NAME = "Rafael D. Garcia";
+const ADMIN_ROLE = "Blood Services Admin";
 
 const styles = {
   page: { minHeight: "100vh", background: "#f7f7f8", color: "#222329", fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' },
@@ -77,251 +207,288 @@ const styles = {
   empty: { padding: "35px 20px", textAlign: "center", color: "#92939c", fontSize: 12 },
 };
 
-
-function fullName(record) {
-  return [record.firstName, record.middleName, record.lastName].filter(Boolean).join(" ");
-}
-function formatDate(value, dateOnly = false) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-PH", {
-    timeZone: "Asia/Manila", dateStyle: "medium",
-    ...(dateOnly ? {} : { timeStyle: "short" }),
-  }).format(date);
-}
-function displayValue(value) {
-  return value === null || value === undefined || value === "" ? "—" : value;
-}
-function Info({ label, children }) {
-  return <div><div style={styles.infoLabel}>{label}</div><div style={styles.infoValue}>{displayValue(children)}</div></div>;
-}
 function StatusPill({ status }) {
-  const colors = {
-    Pending: ["#fff4df", "#98661b"], Approved: ["#e9f6ef", "#287d5a"],
-    "Partially Fulfilled": ["#edf0ff", "#5559a6"], Fulfilled: ["#e6f5f5", "#226f73"],
-    Rejected: ["#fae9eb", "#a82032"], Cancelled: ["#f1f1f4", "#666772"],
+  const map = {
+    Pending: { bg: "#fff4df", color: "#98661b", dot: "#d9a441" },
+    Approved: { bg: "#e9f6ef", color: "#287d5a", dot: "#32956c" },
+    Denied: { bg: "#fae9eb", color: "#a82032", dot: "#bf3548" },
   };
-  const [background, color] = colors[status] || ["#f1f1f4", "#666772"];
-  return <span style={{ ...styles.pill, background, color }}>{status || "—"}</span>;
+  const s = map[status] || map.Pending;
+  return <span style={{ ...styles.pill, background: s.bg, color: s.color }}><span style={{ width: 5, height: 5, borderRadius: "50%", background: s.dot }} />{status}</span>;
 }
+
 function UrgencyPill({ urgency }) {
-  const urgent = String(urgency).toLowerCase() === "stat";
-  return <span style={{ ...styles.pill, background: urgent ? "#fae9eb" : "#f1f1f4", color: urgent ? "#a82032" : "#666772" }}>{urgent ? "⚡ STAT" : urgency === "routine" ? "Routine" : displayValue(urgency)}</span>;
+  const stat = urgency === "stat";
+  return <span style={{ ...styles.pill, background: stat ? "#fae9eb" : "#f1f1f4", color: stat ? "#a82032" : "#777883" }}>{stat ? "⚡ STAT" : "Routine"}</span>;
+}
+
+function Info({ label, children }) {
+  return <div><div style={styles.infoLabel}>{label}</div><div style={styles.infoValue}>{children || "—"}</div></div>;
 }
 
 export default function BloodRequestsAdmin() {
-  const [requests, setRequests] = useState([]);
-  const [receivingFacility, setReceivingFacility] = useState(null);
-  const [selectedId, setSelectedId] = useState("");
+  const [requests, setRequests] = useState(INITIAL_REQUESTS);
+  const [selectedId, setSelectedId] = useState(INITIAL_REQUESTS[0].id);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All statuses");
   const [urgencyFilter, setUrgencyFilter] = useState("All urgency");
   const [modal, setModal] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [decisionError, setDecisionError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [denialReason, setDenialReason] = useState("");
+  const [reasonError, setReasonError] = useState("");
 
-  useEffect(() => {
-    const controller = new AbortController();
-    let active = true;
-    setLoading(true);
-    setError("");
-    setRequests([]);
-    (async () => {
-      try {
-        const response = await apiFetch(REQUEST_API, { signal: controller.signal });
-        const body = await response.json();
-        if (!response.ok) throw new Error(body.message || "Could not load blood requests.");
-        if (!Array.isArray(body.requests)) throw new Error("The API returned an invalid request list.");
-        if (active) { setRequests(body.requests); setReceivingFacility(body.facility || null); }
-      } catch (err) {
-        if (active && err.name !== "AbortError") setError(err.message || "Could not load blood requests.");
-      } finally {
-        if (active) setLoading(false);
-      }
-    })();
-    return () => { active = false; controller.abort(); };
-  }, [refreshKey]);
-  const filtered = useMemo(() => requests.filter(record => {
-    const text = [record._id, fullName(record), record.hospital, record.wardRoom, record.bloodType, record.component, record.hospitalFacilityID, record.requestedBy].join(" ").toLowerCase();
-    return text.includes(search.trim().toLowerCase()) &&
-    (statusFilter === "All statuses" || record.requestStatus === statusFilter) &&
-    (urgencyFilter === "All urgency" || record.urgency === urgencyFilter);
-  }), [requests, search, statusFilter, urgencyFilter]);
-  const selected = filtered.find(record => record._id === selectedId) || filtered[0] || null;
-  const pendingCount = requests.filter(record => record.requestStatus === "Pending").length;
-  async function confirmDecision() {
-    if (!modal || saving) return;
-    setSaving(true);
-    setDecisionError("");
-    try {
-      const response = await apiFetch(`${REQUEST_API}/${modal.id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requestStatus: modal.status }),
-      });
-      const body = await response.json();
-      if (!response.ok) {
-        if (response.status === 409 || response.status === 404) {
-          setModal(null);
-          setRefreshKey(value => value + 1);
-          setNotice(body.message || "This request has changed. The list is being refreshed.");
-        }
-        throw new Error(body.message || "Could not save the decision.");
-      }
-      if (!body.request?._id) throw new Error("The API returned an invalid updated request.");
-      setRequests(previous => previous.map(record => record._id === body.request._id ? body.request : record));
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return requests.filter((r) => {
+      const matchesText = !q || [r.id, r.patient.name, r.patient.hospital, r.patient.wardRoom, r.request.bloodType, r.request.component].join(" ").toLowerCase().includes(q);
+      const matchesStatus = statusFilter === "All statuses" || r.status === statusFilter;
+      const matchesUrgency = urgencyFilter === "All urgency" || (urgencyFilter === "STAT / Emergency" ? r.request.urgency === "stat" : r.request.urgency === "routine");
+      return matchesText && matchesStatus && matchesUrgency;
+    });
+  }, [requests, search, statusFilter, urgencyFilter]);
+
+  const selected = requests.find((r) => r.id === selectedId) || filtered[0] || null;
+  const pendingCount = requests.filter((r) => r.status === "Pending").length;
+  const statCount = requests.filter((r) => r.request.urgency === "stat" && r.status === "Pending").length;
+  const approvedToday = requests.filter((r) => r.status === "Approved" && r.history.some((h) => h.action === "Request approved" && h.at.includes("Oct 15, 2026"))).length;
+
+  function openDecision(type, request) {
+    setDenialReason("");
+    setReasonError("");
+    setModal({ type, id: request.id });
+  }
+
+  function decide() {
+    if (!modal) return;
+    const request = requests.find((r) => r.id === modal.id);
+    if (!request || request.status !== "Pending") {
       setModal(null);
-    } catch (err) {
-      setDecisionError(err.message || "Could not save the decision.");
-    } finally {
-      setSaving(false);
+      return;
     }
+    if (modal.type === "Denied" && !denialReason.trim()) {
+      setReasonError("Please provide a reason for denial.");
+      return;
+    }
+    const now = new Date().toLocaleString("en-US", {
+      month: "short", day: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+    const historyEntry = {
+      action: modal.type === "Approved" ? "Request approved" : "Request denied",
+      actor: ADMIN_NAME,
+      role: ADMIN_ROLE,
+      at: now,
+      ...(modal.type === "Denied" ? { note: denialReason.trim() } : { note: "Request reviewed and approved." }),
+    };
+    setRequests((prev) => prev.map((r) => r.id === modal.id
+      ? { ...r, status: modal.type, ...(modal.type === "Denied" ? { denialReason: denialReason.trim() } : {}), history: [...r.history, historyEntry] }
+      : r
+    ));
+    setSelectedId(modal.id);
+    setModal(null);
+    setDenialReason("");
+    setReasonError("");
   }
-  function openDecision(record, status) {
-    setDecisionError("");
-    setNotice("");
-    setModal({ id: record._id, status });
-  }
+
+  const navItems = [
+    ["▦", "Overview"], ["☷", "Blood Requests"], ["▤", "Inventory"], ["♙", "Donors"], ["▥", "Reports"], ["◷", "Audit Log"],
+  ];
+
   return (
-    <div className="br-design" style={styles.page}>
-    <style>{`
-      .br-design, .br-design * { box-sizing: border-box; }
-      .br-design button, .br-design input, .br-design select, .br-design textarea { font: inherit; }
-      .br-design button:focus-visible, .br-design input:focus-visible, .br-design select:focus-visible, .br-design textarea:focus-visible { outline: 2px solid #c45a68; outline-offset: 2px; }
-      .br-design button { transition: background .15s ease, border-color .15s ease, transform .15s ease; }
-      .br-design button:active { transform: translateY(1px); }
-      @media (max-width: 1080px) {
-        .br-shell { display: block !important; }
-        .br-sidebar { width: 100% !important; padding: 13px 16px !important; border-right: 0 !important; border-bottom: 1px solid #ececef; }
-        .br-brand { padding: 0 5px 10px !important; }
-        .br-nav-label, .br-side-foot { display: none !important; }
-        .br-nav { flex-direction: row !important; overflow-x: auto; }
-        .br-nav-item { white-space: nowrap; padding: 9px 10px !important; }
-        .br-main { padding: 23px 18px !important; }
-        .br-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-        .br-detail-grid { grid-template-columns: 1fr !important; }
-      }
-      @media (max-width: 560px) {
-        .br-topbar { align-items: flex-start !important; }
-        .br-profile-copy { display: none; }
-        .br-h1 { font-size: 23px !important; }
-        .br-stats { gap: 9px !important; }
-        .br-stat-card { padding: 13px !important; }
-        .br-stat-number { font-size: 23px !important; }
-        .br-search { min-width: 100% !important; width: 100%; }
-        .br-controls { width: 100%; }
-        .br-controls select { flex: 1; min-width: 0; }
-        .br-info-grid { grid-template-columns: 1fr !important; }
-      }
+    <div style={styles.page}>
+      <style>{`
+        * { box-sizing: border-box; }
+        button, input, select, textarea { font: inherit; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid #c45a68; outline-offset: 2px; }
+        button { transition: background .15s ease, border-color .15s ease, transform .15s ease; }
+        button:active { transform: translateY(1px); }
+        @media (max-width: 1080px) {
+          .br-shell { display: block !important; }
+          .br-sidebar { width: 100% !important; padding: 13px 16px !important; border-right: 0 !important; border-bottom: 1px solid #ececef; }
+          .br-brand { padding: 0 5px 10px !important; }
+          .br-nav-label, .br-side-foot { display: none !important; }
+          .br-nav { flex-direction: row !important; overflow-x: auto; }
+          .br-nav-item { white-space: nowrap; padding: 9px 10px !important; }
+          .br-main { padding: 23px 18px !important; }
+          .br-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+          .br-detail-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 560px) {
+          .br-topbar { align-items: flex-start !important; }
+          .br-profile-copy { display: none; }
+          .br-h1 { font-size: 23px !important; }
+          .br-stats { gap: 9px !important; }
+          .br-stat-card { padding: 13px !important; }
+          .br-stat-number { font-size: 23px !important; }
+          .br-search { min-width: 100% !important; width: 100%; }
+          .br-controls { width: 100%; }
+          .br-controls select { flex: 1; min-width: 0; }
+          .br-info-grid { grid-template-columns: 1fr !important; }
+        }
       `}</style>
       <div className="br-shell" style={styles.shell}>
-      <aside className="br-sidebar" style={styles.sidebar}>
-      <div className="br-brand" style={styles.brand}>
-      <div style={styles.brandMark}>✚</div>
-      <div><div style={styles.brandTitle}>Blood Services</div><div style={styles.brandSub}>Request review</div></div>
+        <aside className="br-sidebar" style={styles.sidebar}>
+          <div className="br-brand" style={styles.brand}>
+            <div style={styles.brandMark}>✚</div>
+            <div><div style={styles.brandTitle}>Blood Services</div><div style={styles.brandSub}>Inventory & Requests</div></div>
+          </div>
+          <div className="br-nav-label" style={styles.navLabel}>WORKSPACE</div>
+          <nav className="br-nav" style={styles.nav} aria-label="Main navigation">
+            {navItems.map(([icon, label]) => {
+              const active = label === "Blood Requests";
+              return <div key={label} className="br-nav-item" style={{ ...styles.navItem, ...(active ? styles.navActive : {}) }}>
+                <span style={{ fontSize: 16, width: 18, textAlign: "center" }}>{icon}</span>{label}
+                {label === "Blood Requests" && <span style={{ marginLeft: "auto", background: "#a82032", color: "#fff", borderRadius: 20, padding: "2px 6px", fontSize: 10 }}>{pendingCount}</span>}
+              </div>;
+            })}
+          </nav>
+          <div className="br-side-foot" style={styles.sideFoot}>BLOOD SERVICES PORTAL<br />Administrative workspace<br /><span style={{ color: "#c1c1c7" }}>Frontend demo · v1.0</span></div>
+        </aside>
+
+        <main className="br-main" style={styles.main}>
+          <header className="br-topbar" style={styles.topbar}>
+            <div>
+              <div style={styles.eyebrow}>WORKSPACE / REQUESTS</div>
+              <h1 className="br-h1" style={styles.h1}>Blood Requests</h1>
+              <div style={styles.subtitle}>Review incoming requests and record administrative decisions.</div>
+            </div>
+            <div style={styles.profile}>
+              <div style={styles.avatar}>RG</div>
+              <div className="br-profile-copy"><div style={styles.profileName}>{ADMIN_NAME}</div><div style={styles.profileRole}>{ADMIN_ROLE}</div></div>
+            </div>
+          </header>
+
+          <section className="br-stats" style={styles.stats} aria-label="Request summary">
+            {[
+              { label: "Total requests", value: requests.length, icon: "▤", foot: "All submitted requests" },
+              { label: "Pending review", value: pendingCount, icon: "◷", foot: "Awaiting a decision" },
+              { label: "STAT / Emergency", value: statCount, icon: "⚡", foot: "Pending urgent requests" },
+              { label: "Approved today", value: approvedToday, icon: "✓", foot: "Recorded approvals" },
+            ].map((s) => <div key={s.label} className="br-stat-card" style={styles.statCard}>
+              <div style={styles.statTop}><span>{s.label}</span><span style={styles.statIcon}>{s.icon}</span></div>
+              <div className="br-stat-number" style={styles.statNumber}>{s.value}</div>
+              <div style={styles.statFoot}>{s.foot}</div>
+            </div>)}
+          </section>
+
+          <section style={styles.panel}>
+            <div style={styles.panelHead}>
+              <div><h2 style={styles.panelTitle}>Request queue</h2><div style={styles.panelHint}>Select a request to review patient and clinical details.</div></div>
+              <div className="br-controls" style={styles.controls}>
+                <input className="br-search" style={styles.search} aria-label="Search requests" placeholder="Search patient, hospital, request ID…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <select style={styles.select} aria-label="Filter by status" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                  {["All statuses", "Pending", "Approved", "Denied"].map((s) => <option key={s}>{s}</option>)}
+                </select>
+                <select style={styles.select} aria-label="Filter by urgency" value={urgencyFilter} onChange={(e) => setUrgencyFilter(e.target.value)}>
+                  {["All urgency", "STAT / Emergency", "Routine"].map((s) => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            <div style={styles.tableWrap}>
+              <table style={styles.table}>
+                <thead><tr>
+                  {["Request / Submitted", "Patient / Hospital", "Blood request", "Urgency", "Status", "Decision"].map((h) => <th key={h} style={styles.th}>{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {filtered.map((r) => {
+                    const isSelected = selected?.id === r.id;
+                    return <tr key={r.id} onClick={() => setSelectedId(r.id)} style={{ background: isSelected ? "#fffafb" : "#fff", cursor: "pointer" }}>
+                      <td style={styles.td}><div style={styles.reqId}>{r.id}</div><div style={styles.secondary}>{r.submittedAt}</div></td>
+                      <td style={styles.td}><div style={styles.patientName}>{r.patient.name}</div><div style={styles.secondary}>{r.patient.hospital}</div></td>
+                      <td style={styles.td}><div style={styles.blood}>{r.request.bloodType} · {r.request.units} unit{r.request.units > 1 ? "s" : ""}</div><div style={styles.secondary}>{r.request.component}</div></td>
+                      <td style={styles.td}><UrgencyPill urgency={r.request.urgency} /></td>
+                      <td style={styles.td}><StatusPill status={r.status} /></td>
+                      <td style={styles.td} onClick={(e) => e.stopPropagation()}>
+                        {r.status === "Pending" ? <div style={{ display: "flex", gap: 5 }}>
+                          <button type="button" style={styles.approveBtn} onClick={() => { setSelectedId(r.id); openDecision("Approved", r); }}>Approve</button>
+                          <button type="button" style={styles.denyBtn} onClick={() => { setSelectedId(r.id); openDecision("Denied", r); }}>Deny</button>
+                        </div> : <button type="button" style={styles.viewBtn} onClick={() => setSelectedId(r.id)}>View details ↗</button>}
+                      </td>
+                    </tr>;
+                  })}
+                  {filtered.length === 0 && <tr><td colSpan="6" style={styles.empty}>No requests match your search or filters.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div style={styles.panelFoot}><span>Showing {filtered.length} of {requests.length} requests</span><span>Demo data · decisions are not sent to a server</span></div>
+          </section>
+
+          {selected && <section className="br-detail-grid" style={styles.detailGrid}>
+            <article style={styles.detailPanel}>
+              <div style={styles.detailHead}>
+                <div><div style={styles.reqId}>{selected.id}</div><h2 style={{ ...styles.panelTitle, marginTop: 7 }}>{selected.patient.name}</h2><div style={styles.panelHint}>Submitted {selected.submittedAt}</div></div>
+                <StatusPill status={selected.status} />
+              </div>
+              <div style={styles.detailBody}>
+                <h3 style={styles.sectionTitle}>Patient information</h3>
+                <div className="br-info-grid" style={styles.infoGrid}>
+                  <Info label="Complete name">{selected.patient.name}</Info>
+                  <Info label="Age / Gender">{selected.patient.age} years · {selected.patient.gender}</Info>
+                  <Info label="Hospital">{selected.patient.hospital}</Info>
+                  <Info label="Ward / Room">{selected.patient.wardRoom || "Not confined / not provided"}</Info>
+                </div>
+                <h3 style={styles.sectionTitle}>Clinical information</h3>
+                <div style={{ marginBottom: 15 }}><Info label="Diagnostic reason">{selected.clinical.diagnosis}</Info></div>
+                <div className="br-info-grid" style={styles.infoGrid}>
+                  <Info label="Hemoglobin">{selected.clinical.hemoglobin}</Info>
+                  <Info label="Platelet count">{selected.clinical.platelets}</Info>
+                  <Info label="Previous transfusions">{selected.clinical.previousTransfusion}</Info>
+                  {selected.clinical.previousTransfusion === "Yes" && <Info label="Previous transfusion notes">{selected.clinical.previousTransfusionNotes}</Info>}
+                </div>
+                <h3 style={styles.sectionTitle}>Specific request</h3>
+                <div className="br-info-grid" style={{ ...styles.infoGrid, marginBottom: 0 }}>
+                  <Info label="Blood type">{selected.request.bloodType}</Info>
+                  <Info label="Needed component">{selected.request.component}</Info>
+                  <Info label="Units requested">{selected.request.units} unit{selected.request.units > 1 ? "s" : ""}</Info>
+                  <Info label="Urgency"><UrgencyPill urgency={selected.request.urgency} /></Info>
+                </div>
+                {selected.status === "Denied" && selected.denialReason && <div style={{ marginTop: 20, padding: 13, borderRadius: 9, background: "#fff5f5", border: "1px solid #f2dfe2" }}>
+                  <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: ".7px", color: "#a82032", textTransform: "uppercase", marginBottom: 6 }}>Reason for denial</div>
+                  <div style={{ fontSize: 12, color: "#5e4246", lineHeight: 1.6 }}>{selected.denialReason}</div>
+                </div>}
+                {selected.status === "Pending" && <div style={{ display: "flex", gap: 9, marginTop: 23, paddingTop: 18, borderTop: "1px solid #f0f0f2" }}>
+                  <button type="button" style={{ ...styles.approveBtn, padding: "10px 15px" }} onClick={() => openDecision("Approved", selected)}>✓ Approve request</button>
+                  <button type="button" style={{ ...styles.denyBtn, padding: "10px 15px" }} onClick={() => openDecision("Denied", selected)}>Deny request</button>
+                </div>}
+              </div>
+            </article>
+
+            <aside style={styles.detailPanel}>
+              <div style={styles.detailHead}><div><h2 style={styles.panelTitle}>Decision history</h2><div style={styles.panelHint}>Audit trail for this request</div></div><span style={{ fontSize: 11, color: "#9b9ca5" }}>{selected.history.length} event{selected.history.length !== 1 ? "s" : ""}</span></div>
+              <div style={styles.detailBody}>
+                {selected.history.slice().reverse().map((h, i) => <div key={`${h.action}-${h.at}-${i}`} style={{ ...styles.historyItem, paddingBottom: i === selected.history.length - 1 ? 0 : 19 }}>
+                  <span style={{ ...styles.historyDot, background: h.action.includes("approved") ? "#32956c" : h.action.includes("denied") ? "#bf3548" : "#b7b8c0" }} />
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={styles.historyAction}>{h.action}</div>
+                    <div style={styles.historyMeta}>{h.actor} · {h.role}<br />{h.at}</div>
+                    {h.note && h.action !== "Request submitted" && <div style={styles.historyNote}>{h.note}</div>}
+                  </div>
+                </div>)}
+                <div style={styles.divider} />
+                <div style={{ fontSize: 10, color: "#9b9ca5", lineHeight: 1.6 }}>Every approval or denial is recorded with the administrator and timestamp. This frontend demo stores entries in page state only.</div>
+              </div>
+            </aside>
+          </section>}
+          <footer style={{ textAlign: "center", fontSize: 10, color: "#b0b0b7", padding: "25px 0 0" }}>Blood Services Portal · Administrative review interface</footer>
+        </main>
       </div>
-      <div style={{ ...styles.navItem, ...styles.navActive }}>Blood Requests <span style={{ marginLeft: "auto" }}>{pendingCount}</span></div>
-      <div className="br-side-foot" style={styles.sideFoot}>Facility staff access<br />Requests sent to your facility</div>
-      </aside>
-      <main className="br-main" style={styles.main}>
-      <header className="br-topbar" style={styles.topbar}>
-      <div><div style={styles.eyebrow}>WORKSPACE / REQUESTS</div><h1 className="br-h1" style={styles.h1}>Blood Requests</h1><p style={styles.subtitle}>{receivingFacility?.facilityName ? `Requests forwarded to ${receivingFacility.facilityName}.` : "Review requests forwarded to your assigned facility."}</p></div>
-      <span style={{ ...styles.pill, background: "#fbebed", color: "#9f1f31" }}>Live records</span>
-      </header>
-      <div style={{ marginBottom: 16, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-      <button type="button" style={styles.actionBtn} disabled={loading || saving} onClick={() => setRefreshKey(value => value + 1)}>Refresh requests</button>
-      {loading && <span role="status" style={styles.secondary}>Loading blood requests…</span>}
-      {notice && <span role="status" style={{ fontSize: 13 }}>{notice}</span>}
-      {error && <span role="alert" style={{ color: "#a82032", fontSize: 13 }}>{error}</span>}
-      </div>
-      <section className="br-stats" style={styles.stats} aria-label="Request summary">
-      {[
-        ["Total requests", requests.length, "Forwarded to your facility"],
-        ["Pending review", pendingCount, "Awaiting a decision"],
-        ["Partially fulfilled", requests.filter(r => r.requestStatus === "Partially Fulfilled").length, "Remaining units needed"],
-          ["Fulfilled", requests.filter(r => r.requestStatus === "Fulfilled").length, "Completed requests"],
-      ].map(([label, count, hint]) => <div key={label} className="br-stat-card" style={styles.statCard}><div style={styles.statTop}>{label}</div><div className="br-stat-number" style={styles.statNumber}>{count}</div><div style={styles.statFoot}>{hint}</div></div>)}
-      </section>
-      <section style={styles.panel}>
-      <div style={styles.panelHead}>
-      <div><h2 style={styles.panelTitle}>Request queue</h2><p style={styles.panelHint}>Open a request to see its complete details.</p></div>
-      <div className="br-controls" style={styles.controls}>
-      <input className="br-search" style={styles.search} aria-label="Search requests" placeholder="Search patient, hospital, or component…" value={search} onChange={event => setSearch(event.target.value)} />
-      <select style={styles.select} aria-label="Filter by status" value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>{["All statuses", ...REQUEST_STATUSES].map(value => <option key={value}>{value}</option>)}</select>
-      <select style={styles.select} aria-label="Filter by urgency" value={urgencyFilter} onChange={event => setUrgencyFilter(event.target.value)}><option>All urgency</option>{[...new Set(requests.map(r => r.urgency))].map(value => <option key={value} value={value}>{value === "stat" ? "STAT" : value === "routine" ? "Routine" : value}</option>)}</select>
-      </div>
-      </div>
-      <div style={styles.tableWrap}><table style={styles.table}>
-      <thead><tr>{["Submitted date / time", "Patient / Hospital", "Blood requirement", "Urgency", "Request status", "Review"].map(label => <th key={label} scope="col" style={styles.th}>{label}</th>)}</tr></thead>
-      <tbody>{filtered.map(record => <tr key={record._id} style={{ background: selected?._id === record._id ? "#fffafb" : "#fff" }}>
-      <td style={styles.td}><div style={styles.patientName}>{formatDate(record.createdAt)}</div></td>
-      <td style={styles.td}><div style={styles.patientName}>{fullName(record)}</div><div style={styles.secondary}>{record.hospital}</div></td>
-      <td style={styles.td}><div style={styles.blood}>{record.bloodType} · {record.units} unit{record.units === 1 ? "" : "s"}</div><div style={styles.secondary}>{record.component}</div></td>
-      <td style={styles.td}><UrgencyPill urgency={record.urgency} /></td>
-      <td style={styles.td}><StatusPill status={record.requestStatus} /></td>
-      <td style={styles.td}><button type="button" style={styles.actionBtn} aria-label={`Review request for ${fullName(record)}`} aria-pressed={selected?._id === record._id} onClick={() => setSelectedId(record._id)}>View details</button></td>
-      </tr>)}{filtered.length === 0 && <tr><td colSpan={6} style={styles.empty}>{loading ? "Loading blood requests…" : error ? "The request list could not be loaded." : requests.length === 0 ? "No blood requests have been submitted yet." : "No requests match your search or filters."}</td></tr>}</tbody>
-      </table></div>
-      <div style={styles.panelFoot}><span>Showing {filtered.length} of {requests.length} requests</span><span>Dates shown in Philippine time</span></div>
-      </section>
-      {selected && <section className="br-detail-grid" style={styles.detailGrid} aria-label="Selected request details">
-      <article style={styles.detailPanel}>
-      <div style={styles.detailHead}><div><h2 style={styles.panelTitle}>{fullName(selected)}</h2><div style={styles.panelHint}>Submitted {formatDate(selected.createdAt)}</div></div><StatusPill status={selected.requestStatus} /></div>
-      <div style={styles.detailBody}>
-      <h3 style={styles.sectionTitle}>Patient information</h3>
-      <div className="br-info-grid" style={styles.infoGrid}>
-      <Info label="First name">{selected.firstName}</Info><Info label="Last name">{selected.lastName}</Info>
-      <Info label="Middle name">{selected.middleName}</Info><Info label="Age">{selected.age}</Info>
-      <Info label="Sex">{selected.sex}</Info><Info label="Hospital">{selected.hospital}</Info><Info label="Ward / Room">{selected.wardRoom}</Info>
-      </div>
-      <h3 style={styles.sectionTitle}>Clinical information</h3>
-      <div className="br-info-grid" style={styles.infoGrid}>
-      <Info label="Diagnosis">{selected.diagnosis}</Info>
-      <Info label="Hemoglobin (g/dL)">{selected.hemoglobin}</Info>
-      <Info label="Platelets (×10³/µL)">{selected.platelets}</Info>
-      <Info label="Prior transfusion">{selected.priorTransfusion}</Info>
-      <Info label="Prior transfusion date">{formatDate(selected.priorTransfusionDate, true)}</Info>
-      <Info label="Prior transfusion notes">{selected.priorTransfusionNotes}</Info>
-      </div>
-      <h3 style={styles.sectionTitle}>Blood requirement</h3>
-      <div className="br-info-grid" style={{ ...styles.infoGrid, marginBottom: 0 }}>
-      <Info label="Blood type">{selected.bloodType}</Info><Info label="Component">{selected.component}</Info>
-      <Info label="Units requested">{selected.units}</Info><Info label="Urgency"><UrgencyPill urgency={selected.urgency} /></Info>
-      </div>
-      {selected.requestStatus === "Pending" && <div style={{ display: "flex", flexWrap: "wrap", gap: 9, marginTop: 23, paddingTop: 18, borderTop: "1px solid #f0f0f2" }}>
-      <button type="button" style={styles.approveBtn} onClick={() => openDecision(selected, "Approved")}>Approve request</button>
-      <button type="button" style={styles.denyBtn} onClick={() => openDecision(selected, "Rejected")}>Reject request</button>
+
+      {modal && <div style={styles.overlay} role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setModal(null); }}>
+        <div style={styles.modal} role="dialog" aria-modal="true" aria-labelledby="decision-modal-title">
+          <div style={{ width: 42, height: 42, borderRadius: 12, background: modal.type === "Approved" ? "#e9f6ef" : "#fae9eb", color: modal.type === "Approved" ? "#287d5a" : "#a82032", display: "grid", placeItems: "center", fontSize: 19, marginBottom: 16 }}>{modal.type === "Approved" ? "✓" : "!"}</div>
+          <h2 id="decision-modal-title" style={styles.modalTitle}>{modal.type === "Approved" ? "Approve this request?" : "Deny this request?"}</h2>
+          <p style={styles.modalText}>{modal.type === "Approved"
+            ? `You're approving ${modal.id}. This decision will be added to the request's decision history.`
+            : `Please provide a clear reason for denying ${modal.id}. The reason will be recorded in the audit trail.`}</p>
+          {modal.type === "Denied" && <>
+            <label htmlFor="denial-reason" style={{ display: "block", fontSize: 11, fontWeight: 750, color: "#4c4d55", marginBottom: 7 }}>Reason for denial <span style={{ color: "#a82032" }}>*</span></label>
+            <textarea id="denial-reason" style={{ ...styles.textarea, borderColor: reasonError ? "#bf3548" : "#e2e2e7" }} placeholder="Explain why this request cannot be approved…" value={denialReason} onChange={(e) => { setDenialReason(e.target.value); setReasonError(""); }} />
+            {reasonError && <div role="alert" style={{ color: "#a82032", fontSize: 11, marginTop: 6 }}>{reasonError}</div>}
+          </>}
+          <div style={styles.modalActions}>
+            <button type="button" style={{ ...styles.actionBtn, padding: "10px 14px" }} onClick={() => setModal(null)}>Cancel</button>
+            <button type="button" style={{ ...(modal.type === "Approved" ? styles.approveBtn : styles.denyBtn), padding: "10px 14px" }} onClick={decide}>{modal.type === "Approved" ? "Confirm approval" : "Confirm denial"}</button>
+          </div>
+        </div>
       </div>}
-      </div>
-      </article>
-      <aside style={styles.detailPanel}>
-      <div style={styles.detailHead}><h2 style={styles.panelTitle}>Request tracking</h2></div>
-      <div style={styles.detailBody}>
-      <div className="br-info-grid" style={{ ...styles.infoGrid, gridTemplateColumns: "1fr" }}>
-      <Info label="Receiving facility">{selected.receivingFacilityID?.facilityName || receivingFacility?.facilityName || "—"}</Info>
-      <Info label="Request status"><StatusPill status={selected.requestStatus} /></Info>
-      <Info label="Fulfilled at">{formatDate(selected.fulfilledAt)}</Info>
-      <Info label="Created at">{formatDate(selected.createdAt)}</Info><Info label="Updated at">{formatDate(selected.updatedAt)}</Info>
-      </div>
-      <p style={styles.historyNote}>Approvals and rejections are saved to the database. Approval does not allocate blood units or mark a request as fulfilled.</p>
-      </div>
-      </aside>
-      </section>}
-      </main>
-      </div>
-      {modal && <div style={styles.overlay} onKeyDown={event => { if (event.key === "Escape" && !saving) setModal(null); }} onMouseDown={event => { if (event.target === event.currentTarget && !saving) setModal(null); }}>
-      <div style={styles.modal} role="dialog" aria-modal="true" aria-labelledby="br-decision-title" aria-describedby="br-decision-description">
-      <h2 id="br-decision-title" style={styles.modalTitle}>{modal.status === "Approved" ? "Approve this request?" : "Reject this request?"}</h2>
-      <p id="br-decision-description" style={styles.modalText}>The request status will become {modal.status}. This decision will be saved to the database.</p>
-      {decisionError && <p role="alert" style={{ color: "#a82032", fontSize: 12 }}>{decisionError}</p>}
-      <div style={styles.modalActions}><button autoFocus disabled={saving} type="button" style={styles.actionBtn} onClick={() => setModal(null)}>Cancel</button><button type="button" style={modal.status === "Approved" ? styles.approveBtn : styles.denyBtn} onClick={confirmDecision} disabled={saving}>{saving ? "Saving…" : "Confirm decision"}</button></div>
-      </div>
-      </div>}
-      </div>
+    </div>
   );
 }

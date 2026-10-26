@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
 
-const STAFF_ROLES = new Set(["staff", "branch-admin", "admin", "hospital"]);
+const STAFF_ROLES = new Set(["staff", "supervisor", "admin", "hospital"]);
 
 function requireStaff(req, res, next) {
     const token = req.cookies?.staffToken;

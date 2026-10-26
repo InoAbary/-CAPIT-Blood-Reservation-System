@@ -11,9 +11,9 @@ const BLOOD_TYPES = [
 
 const COMPONENTS = [
     'Packed RBC',
-'Plasma',
-'Platelets',
-'Whole Blood'
+    'Plasma',
+    'Platelets',
+    'Whole Blood'
 ];
 
 const statusFor = (qty) => {
@@ -30,7 +30,7 @@ const keyOf = (bloodType, component) => `${bloodType}|${component}`;
  * lastUpdated keeps meaning "when the stock last changed".
  * `facility` is a lean Facility document (needs _id and the custom facilityID string).
  */
-async function syncInventory(facility, { readOnly = false } = {}) {
+async function syncInventory(facility) {
     const now = new Date();
 
     const philippineDate = new Intl.DateTimeFormat('en-CA', {
@@ -39,19 +39,19 @@ async function syncInventory(facility, { readOnly = false } = {}) {
         month: '2-digit',
         day: '2-digit'
     }).format(now);
-
+    
     const startOfToday = new Date(
         `${philippineDate}T00:00:00.000Z`
     );
 
-    /*
-     * Automatically expire units whose listed expiry date has passed.
-     * Automatic expiration is also recorded in blood-unit history.
-     */
-    const expiredUnits = readOnly ? [] : await BloodUnits.find({
+     /*
+    * Automatically expire units whose listed expiry date has passed.
+    * Automatic expiration is also recorded in blood-unit history.
+    */
+    const expiredUnits = await BloodUnits.find({
         facilityID: facility._id.toString(),
-                                                               status: 'In-stock',
-                                                               expiryDate: { $lt: startOfToday }
+        status: 'In-stock',
+        expiryDate: { $lt: startOfToday }
     });
 
     for (const unit of expiredUnits) {
@@ -89,8 +89,6 @@ async function syncInventory(facility, { readOnly = false } = {}) {
             $match: {
                 facilityID: facility._id.toString(), // bloodUnits store the custom ID, e.g. 'F00001'
                 status: /^In-stock$/i,
-                requestID: null,
-                collectionDate: { $lte: now },
                 expiryDate: { $gte: startOfToday },
             },
         },
@@ -104,37 +102,37 @@ async function syncInventory(facility, { readOnly = false } = {}) {
 
     const countMap = new Map();
 
-    /*
-     * Every facility tracks all 8 blood types × 4 components.
-     * Start every combination at zero so missing stock is represented
-     * as Out of Stock instead of having no inventory record.
-     */
-    BLOOD_TYPES.forEach((bloodType) => {
-        COMPONENTS.forEach((component) => {
-            countMap.set(
-                keyOf(bloodType, component),
-                         0
-            );
-        });
-    });
-
-    /*
-     * Replace the zero values with the actual counts found
-     * in BloodUnits.
-     */
-    counts.forEach((count) => {
+/*
+ * Every facility tracks all 8 blood types × 4 components.
+ * Start every combination at zero so missing stock is represented
+ * as Out of Stock instead of having no inventory record.
+ */
+BLOOD_TYPES.forEach((bloodType) => {
+    COMPONENTS.forEach((component) => {
         countMap.set(
-            keyOf(
-                count._id.bloodType,
-                count._id.component
-            ),
-            count.count
+            keyOf(bloodType, component),
+            0
         );
     });
+});
+
+/*
+ * Replace the zero values with the actual counts found
+ * in BloodUnits.
+ */
+counts.forEach((count) => {
+    countMap.set(
+        keyOf(
+            count._id.bloodType,
+            count._id.component
+        ),
+        count.count
+    );
+});
 
     // 2. Current inventory entries for this facility
     const existing = await Inventory.find({ facilityID: facility._id })
-    .select('bloodType component availQuantity availStatus lastUpdated')
+    .select('bloodType component availQuantity availStatus')
     .lean();
 
     const existingMap = new Map();
@@ -146,18 +144,6 @@ async function syncInventory(facility, { readOnly = false } = {}) {
         existingMap.forEach((_, key) => {
             if (!countMap.has(key)) countMap.set(key, 0);
         });
-
-            // Admin reads derive current quantities without expiration writes, history
-            // entries, upserts, or changing lastUpdated.
-            if (readOnly) {
-                return Array.from(countMap, ([key, quantity]) => {
-                    const [bloodType, component] = key.split('|');
-                    const current = existingMap.get(key);
-                    return { _id: current?._id, bloodType, component,
-                        availQuantity: quantity, availStatus: statusFor(quantity),
-                                  lastUpdated: current?.lastUpdated || null };
-                });
-            }
 
             // 3. Write only what changed (or is new)
             const ops = [];
