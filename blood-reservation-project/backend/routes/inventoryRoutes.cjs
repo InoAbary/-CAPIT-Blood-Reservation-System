@@ -11,6 +11,13 @@ const BloodReport = require('../../db/models/bloodReports.cjs')
 const BloodUnits = require('../../db/models/bloodUnits.cjs')
 const Counter = require('../../db/models/counters.cjs');
 const router = express.Router();
+const { authenticateInventory, requireInventoryWrite, inventoryFilter, unitFilter } = require('../middleware/inventoryAccess.cjs');
+router.use(...authenticateInventory);
+router.use((req, res, next) => {
+    // Spreadsheet export is a read operation, despite its legacy POST method.
+    if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || (req.method === 'POST' && req.path === '/create-utilization-report')) return next();
+    return requireInventoryWrite(req, res, next);
+});
 
 // Helper function for report IDs
 const nextReportID = async () => {
@@ -43,14 +50,14 @@ function getInventoryStatus(quantity) {
 
 router.get('/', async (req, res) => {
     try{
-        const inventories = await Inventories.find();
+        const inventories = await Inventories.find(inventoryFilter(req));
         res.json({
             success: true,
             inventories: inventories
         });
     } catch (err) {
         console.error('Error fetching inventories:', err);
-        res.status(500).json({ 
+        res.status(500).json({
             success: false,
             message: 'Failed to fetch inventories.'});
     }
@@ -59,7 +66,7 @@ router.get('/', async (req, res) => {
 
 router.get('/bloodUnits', async (req, res) => {
     try {
-        const bUnits = await BloodUnits.find({}).lean();
+        const bUnits = await BloodUnits.find(unitFilter(req)).lean();
         res.json({ success: true, bUnits });
     } catch (err) {
         console.error('Error fetching blood units:', err);
@@ -72,7 +79,8 @@ router.get('/reports', async(req, res)=>{
 
         const {bloodType, component, status, fromDate, toDate} = req.query;
 
-        const matchStage = {}
+        const matchStage = {};
+        if (req.inventoryAccess.canEdit) matchStage['bloodUnitID.facilityID'] = String(req.inventoryAccess.facility._id);
 
         if (bloodType && bloodType !== 'all'){
             matchStage['bloodUnitID.bloodType'] = bloodType;
@@ -93,10 +101,10 @@ router.get('/reports', async(req, res)=>{
         const pipeline = [
             {
                 $lookup: {
-                    from: BloodUnits.collection.name, 
-                    localField: 'bloodUnitID',
-                    foreignField: '_id',
-                    as: 'bloodUnitID'
+                    from: BloodUnits.collection.name,
+           localField: 'bloodUnitID',
+           foreignField: '_id',
+               as: 'bloodUnitID'
                 }
             },
             { $unwind: '$bloodUnitID' },
@@ -130,6 +138,8 @@ router.post('/reports', async(req, res)=>{
             })
         }
 
+        const ownedUnit = await BloodUnits.findOne({ _id: bloodUnitID, ...unitFilter(req) }).lean();
+        if (!ownedUnit) return res.status(404).json({ success: false, message: 'Blood unit not found in your facility.' });
         const reportID = await nextReportID();
 
         const report = await BloodReport.create({
@@ -149,11 +159,13 @@ router.post('/reports', async(req, res)=>{
 
 router.post('/create-utilization-report', async (req, res) => {
     try {
+        const reportScope = req.inventoryAccess.canEdit
+        ? { bloodUnitID: { $in: await BloodUnits.distinct('_id', unitFilter(req)) } } : {};
         const reports = await BloodReport
-            .find({})
-            .populate('bloodUnitID')
-            .sort({ dateCreated: -1 })
-            .lean();
+        .find(reportScope)
+        .populate('bloodUnitID')
+        .sort({ dateCreated: -1 })
+        .lean();
 
         const workbook = new exceljs.Workbook();
         const sheet = workbook.addWorksheet('Utilization Report');
@@ -193,7 +205,7 @@ router.post('/create-utilization-report', async (req, res) => {
         const height = 400;
 
         const chartJSNodeCanvas = new ChartJSNodeCanvas({width, height})
-        
+
         const chartBuffer = await chartJSNodeCanvas.renderToBuffer({
             type: 'pie',
             data: {
@@ -268,20 +280,24 @@ router.patch('/batch', async (req, res) => {
             }
         }
 
+        if (updates.some(update => !mongoose.isObjectIdOrHexString(update.id))) return res.status(400).json({ message: 'Invalid inventory ID.' });
+        const uniqueIDs = [...new Set(updates.map(update => update.id))];
+        const ownedCount = await Inventories.countDocuments({ _id: { $in: uniqueIDs }, ...inventoryFilter(req) });
+        if (ownedCount !== uniqueIDs.length) return res.status(404).json({ message: 'An inventory record was not found in your facility.' });
         const updatedRecords = [];
 
         for (const update of updates) {
             const quantity = Number(update.availQuantity);
             const availStatus = getInventoryStatus(quantity);
 
-            const inventory = await Inventories.findByIdAndUpdate(
-                update.id,
-                {
-                    availQuantity: quantity,
-                    availStatus: availStatus,
-                    lastUpdated: new Date()
-                },
-                { new: true }
+            const inventory = await Inventories.findOneAndUpdate(
+                { _id: update.id, ...inventoryFilter(req) },
+                                                                 {
+                                                                     availQuantity: quantity,
+                                                                     availStatus: availStatus,
+                                                                     lastUpdated: new Date()
+                                                                 },
+                                                                 { new: true }
             );
 
             if (!inventory) {
@@ -313,8 +329,9 @@ router.patch('/batch', async (req, res) => {
 // Updates one inventory record.
 router.patch('/:id', async (req, res) => {
     try {
+        if (!mongoose.isObjectIdOrHexString(req.params.id)) return res.status(400).json({ message: 'Invalid inventory ID.' });
         const quantity =
-            Number(req.body.availQuantity);
+        Number(req.body.availQuantity);
 
 
         if (
@@ -324,27 +341,27 @@ router.patch('/:id', async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message:
-                    'Quantity must be a non-negative whole number.'
+                'Quantity must be a non-negative whole number.'
             });
         }
 
 
         const availStatus =
-            getInventoryStatus(quantity);
+        getInventoryStatus(quantity);
 
 
         const inventory =
-            await Inventories.findByIdAndUpdate(
-                req.params.id,
-                {
-                    availQuantity: quantity,
-                    availStatus: availStatus,
-                    lastUpdated: new Date()
-                },
-                {
-                    returnDocument: 'after'
-                }
-            );
+        await Inventories.findOneAndUpdate(
+            { _id: req.params.id, ...inventoryFilter(req) },
+                                           {
+                                               availQuantity: quantity,
+                                               availStatus: availStatus,
+                                               lastUpdated: new Date()
+                                           },
+                                           {
+                                               returnDocument: 'after'
+                                           }
+        );
 
 
         if (!inventory) {

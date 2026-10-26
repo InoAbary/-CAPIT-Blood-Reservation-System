@@ -41,7 +41,7 @@ router.post("/", requireStaff, async (req, res) => {
         const request = await BloodRequest.create({
             ...requestData,
 
-            hospitalFacilityID: staff.facilityID,
+            //hospitalFacilityID: staff.facilityID,
             requestedBy: staff._id,
 
             requestStatus: "Pending",

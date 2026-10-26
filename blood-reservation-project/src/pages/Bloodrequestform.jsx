@@ -1,16 +1,15 @@
-import { useState } from "react";
-import "./Bloodrequestform.css";
+import { useEffect, useRef, useState } from "react";
+import "../styles/Bloodrequestform.css";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
 const COMPONENTS = [
-  { value: "Whole Blood", label: "Whole blood" },
-  { value: "Packed RBC", label: "Packed red blood cells" },
-  { value: "Platelets", label: "Platelet concentrate" },
-  { value: "Plasma", label: "Fresh frozen plasma" },
-  { value: "Cryoprecipitate", label: "Cryoprecipitate" },
+  { value: "Packed RBC", label: "Packed RBC" },
+{ value: "Platelets", label: "Platelets" },
+{ value: "Plasma", label: "Plasma" },
+{ value: "Whole Blood", label: "Whole Blood" },
 ];
 
 const SEXES = ["Female", "Male"];
@@ -22,6 +21,7 @@ const INITIAL = {
   age: "",
   sex: "",
   hospital: "",
+  receivingFacilityID: "",
   wardRoom: "",
   diagnosis: "",
   hemoglobin: "",
@@ -30,8 +30,7 @@ const INITIAL = {
   priorTransfusionDate: "",
   priorTransfusionNotes: "",
   bloodType: "",
-  component: "",
-  units: 1,
+  products: [{ rowId: 1, component: "", units: 1 }],
   urgency: "routine",
 };
 
@@ -57,10 +56,14 @@ function validate(v) {
     e.priorTransfusionDate = "Select the date of the previous transfusion.";
   if (v.priorTransfusion === "yes" && v.priorTransfusionDate && v.priorTransfusionDate > todayLocalISO())
     e.priorTransfusionDate = "The date cannot be in the future.";
+  if (!v.receivingFacilityID) e.receivingFacilityID = "Select a receiving BSF or PRC facility.";
   if (!v.bloodType) e.bloodType = "Select a blood type.";
-  if (!v.component) e.component = "Select a component.";
-  if (!Number.isInteger(Number(v.units)) || Number(v.units) < 1)
-    e.units = "At least 1.";
+  v.products.forEach((product) => {
+    if (!COMPONENTS.some(option => option.value === product.component))
+      e[`component-${product.rowId}`] = "Select a component.";
+    if (!Number.isSafeInteger(Number(product.units)) || Number(product.units) < 1)
+      e[`units-${product.rowId}`] = "Enter a whole number of at least 1.";
+  });
   return e;
 }
 
@@ -70,7 +73,54 @@ export default function BloodRequestForm() {
   const [submitted, setSubmitted] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  const [savedRecord, setSavedRecord] = useState(null);
+  const [savedRows, setSavedRows] = useState({});
+  const [uncertainRow, setUncertainRow] = useState(null);
+  const [receivingFacilities, setReceivingFacilities] = useState([]);
+  const [loadingFacilities, setLoadingFacilities] = useState(true);
+  const [facilityError, setFacilityError] = useState("");
+  const [facilityRefresh, setFacilityRefresh] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    setLoadingFacilities(true); setFacilityError("");
+    (async () => {
+      try {
+        const response = await fetch(`${API_URL}/api/blood-requests/receiving-facilities`, { credentials: "include", signal: controller.signal });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.message || "Could not load receiving facilities.");
+        if (!Array.isArray(body.facilities)) throw new Error("The server returned an invalid facility list.");
+        if (active) setReceivingFacilities(body.facilities);
+      } catch (error) {
+        if (active && error.name !== "AbortError") { setReceivingFacilities([]); setFacilityError(error.message); }
+      } finally { if (active) setLoadingFacilities(false); }
+    })();
+    return () => { active = false; controller.abort(); };
+  }, [facilityRefresh]);
+  const nextRowId = useRef(2);
+  const saveInProgress = useRef(false);
+
+  const updateProduct = (rowId, name, value) => {
+    setValues(previous => ({ ...previous, products: previous.products.map(product =>
+      product.rowId === rowId ? { ...product, [name]: value } : product) }));
+    setErrors(previous => {
+      const next = { ...previous };
+      delete next[`${name}-${rowId}`];
+      return next;
+    });
+  };
+  const addProduct = () => {
+    const rowId = nextRowId.current++;
+    setValues(previous => ({ ...previous, products: [...previous.products, { rowId, component: "", units: 1 }] }));
+  };
+  const removeProduct = (rowId) => {
+    setValues(previous => previous.products.length > 1
+    ? { ...previous, products: previous.products.filter(product => product.rowId !== rowId) } : previous);
+    setErrors(previous => {
+      const next = { ...previous };
+      delete next[`component-${rowId}`]; delete next[`units-${rowId}`];
+      return next;
+    });
+  };
 
   const set = (name, value) => {
     setValues((prev) => ({ ...prev, [name]: value }));
@@ -89,6 +139,8 @@ export default function BloodRequestForm() {
   const handleSubmit = (e) => {
     e.preventDefault();
     const found = validate(values);
+    if (!receivingFacilities.some(facility => facility._id === values.receivingFacilityID))
+      found.receivingFacilityID = "Select an available BSF or PRC facility.";
     setErrors(found);
     if (Object.keys(found).length > 0) {
       document
@@ -98,7 +150,7 @@ export default function BloodRequestForm() {
     }
     const payload = {
       ...values,
-      units: Number(values.units),
+      products: values.products.map(product => ({ ...product, units: Number(product.units) })),
       submittedAt: new Date().toISOString(),
     };
     setSaveError("");
@@ -107,29 +159,60 @@ export default function BloodRequestForm() {
   };
 
   const saveRequest = async () => {
-    if (!submitted || saving) return;
+    if (!submitted || saveInProgress.current || uncertainRow !== null) return;
+    saveInProgress.current = true;
     setSaving(true);
     setSaveError("");
+    // Only shared model fields go into every record; products/rowId are UI state.
+    const { products, submittedAt, ...shared } = submitted;
+    // This destination comes ONLY from the supplier dropdown. The backend
+    // derives hospitalFacilityID and requestedBy from the signed-in account.
+    const destinationID = submitted.receivingFacilityID;
+    const basePayload = Object.fromEntries(Object.entries(shared).filter(([, value]) => value !== ""));
     try {
-      // Convert empty optional fields to omission to avoid empty-string Date casting errors.
-      const payload = Object.fromEntries(
-        Object.entries(submitted).filter(([key, value]) =>
-        key !== "submittedAt" && value !== ""
-        )
-      );
-      const response = await fetch(`/api/bloodRequest`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
-      if (!response.ok) throw new Error("Server could not save the request.");
-      const result = await response.json();
-      setSavedRecord(result.bloodRequest);
+      for (const product of products) {
+        if (savedRows[product.rowId]) continue;
+        let response;
+        try {
+          response = await fetch(`${API_URL}/api/blood-requests`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...basePayload, receivingFacilityID: destinationID, component: product.component, units: product.units }),
+          });
+        } catch {
+          setUncertainRow(product.rowId);
+          throw new Error(`Could not confirm whether ${product.component} was saved. Check your submitted requests before starting another submission to avoid duplicates.`);
+        }
+        if (!response.ok) {
+          let body = {};
+          try { body = await response.json(); } catch { /* Keep the fallback message. */ }
+          if (response.status >= 500) {
+            setUncertainRow(product.rowId);
+            throw new Error(`The server could not confirm the save for ${product.component}. Check your submitted requests before starting another submission.`);
+          }
+          throw new Error(`${product.component}: ${body.message || body.error || "The server could not save this product."} Earlier saved products will not be sent again.`);
+        }
+        // Confirm that the API persisted the selected destination before showing
+        // success. An old model may otherwise discard an unknown schema field.
+        let result;
+        try { result = await response.json(); } catch {
+          setUncertainRow(product.rowId);
+          throw new Error("The server returned an unconfirmed save. Check submitted requests before trying again.");
+        }
+        const record = result.request || result.bloodRequest;
+        const persistedDestination = typeof record?.receivingFacilityID === "string"
+        ? record.receivingFacilityID : record?.receivingFacilityID?._id;
+        if (persistedDestination !== destinationID) {
+          setUncertainRow(product.rowId);
+          throw new Error("The server did not confirm the selected receiving facility. Update the BloodRequest model and submission route, restart the backend, and check this request before resubmitting.");
+        }
+        setSavedRows(previous => ({ ...previous, [product.rowId]: true }));
+      }
     } catch (error) {
-      setSaveError(error.message || "Could not connect to the server.");
+      setSaveError(error.message || "Could not save the requests.");
     } finally {
+      saveInProgress.current = false;
       setSaving(false);
     }
   };
@@ -138,43 +221,57 @@ export default function BloodRequestForm() {
     setValues(INITIAL);
     setErrors({});
     setSubmitted(null);
-    setSavedRecord(null);
+    setSavedRows({});
+    setUncertainRow(null);
+    nextRowId.current = 2;
     setSaveError("");
   };
 
   if (submitted) {
     const s = submitted;
+    const savedCount = s.products.filter(product => savedRows[product.rowId]).length;
+    const allSaved = savedCount === s.products.length;
+    const canEdit = savedCount === 0 && uncertainRow === null && !saving;
     return (
       <main className="brf">
       <div className="brf-wrap">
       <div className="brf-confirm-icon" aria-hidden="true">✓</div>
       <div className="brf-eyebrow">REQUEST SUMMARY</div>
-      <h1>{savedRecord ? "Request saved successfully" : "Review your request"}</h1>
+      <h1>{allSaved ? "Requests saved successfully" : savedCount > 0 ? "Some requests have been saved" : "Review your request"}</h1>
       <p className="brf-lead">
-      {savedRecord
-        ? `MongoDB record created. ID: ${savedRecord._id}`
-        : "Review these details, then submit to save the request in MongoDB."}
+      {allSaved
+        ? `${savedCount} blood request${savedCount === 1 ? " has" : "s have"} been submitted successfully.`
+        : `Each product below will be saved as a separate request with the same patient and clinical details. ${savedCount} of ${s.products.length} saved.`}
         </p>
         <dl className="brf-summary">
         <dt>Patient</dt>
         <dd>
         {s.lastName}, {s.firstName} {s.middleName}, {s.age}, {s.sex}
         </dd>
-        <dt>Location</dt>
+        <dt>Requesting hospital</dt>
         <dd>
         {s.hospital}
         {s.wardRoom && ` · ${s.wardRoom}`}
         </dd>
+        <dt>Facility supplying the blood</dt>
+        <dd>{receivingFacilities.find(facility => facility._id === s.receivingFacilityID)?.facilityName || "Selected facility"}</dd>
         <dt>Request</dt>
         <dd>
-        {s.units} unit{s.units > 1 ? "s" : ""} of {s.bloodType} {s.component.toLowerCase()}
+        <ul style={{ margin: 0, paddingLeft: 20 }}>
+        {s.products.map((product, index) => <li key={product.rowId} style={{ marginBottom: 8 }}>
+        {product.units} unit{product.units === 1 ? "" : "s"} of {s.bloodType} {product.component}
+        <span style={{ marginLeft: 8, fontSize: "0.85em" }}>
+        {savedRows[product.rowId] ? "✓ Saved" : uncertainRow === product.rowId ? "Save unconfirmed — check requests" : `Product ${index + 1}`}
+        </span>
+        </li>)}
+        </ul>
         </dd>
         <dt>Urgency</dt>
         <dd>{s.urgency === "stat" ? "STAT / Emergency" : "Routine"}</dd>
         </dl>
         {saveError && <p className="brf-error" role="alert">{saveError}</p>}
         <div className="brf-review-actions">
-        {!savedRecord && <button
+        {canEdit && <button
           type="button"
           className="brf-btn brf-btn--quiet"
           onClick={() => {
@@ -184,12 +281,12 @@ export default function BloodRequestForm() {
           >
           <span aria-hidden="true">←</span> Back to form
           </button>}
-          {!savedRecord && (
+          {!allSaved && uncertainRow === null && (
             <button type="button" className="brf-btn" onClick={saveRequest} disabled={saving}>
-            {saving ? "Saving..." : "Submit request"}
+            {saving ? "Saving…" : savedCount > 0 ? "Submit remaining products" : "Submit requests"}
             </button>
           )}
-          <button type="button" className="brf-btn brf-btn--quiet" onClick={reset}>
+          <button type="button" className="brf-btn brf-btn--quiet" onClick={reset} disabled={saving}>
           Start a new request
           </button>
           </div>
@@ -265,7 +362,7 @@ export default function BloodRequestForm() {
     </div>
 
     <div className="brf-row">
-    <Field label="Hospital" error={errors.hospital} invalid={bad("hospital")} grow>
+    <Field label="Requesting hospital" error={errors.hospital} invalid={bad("hospital")} grow>
     <input name="hospital" value={values.hospital} onChange={onChange} autoComplete="off" />
     </Field>
     <Field label="Ward / room" optional width="md">
@@ -375,6 +472,16 @@ export default function BloodRequestForm() {
     {/* ---------- Request ---------- */}
     <fieldset className="brf-section">
     <legend>Blood product request</legend>
+    <Field label="Facility to get blood from (BSF / PRC)" error={errors.receivingFacilityID} invalid={bad("receivingFacilityID")}>
+    <select name="receivingFacilityID" value={values.receivingFacilityID} onChange={onChange} disabled={loadingFacilities || receivingFacilities.length === 0}>
+    <option value="">{loadingFacilities ? "Loading facilities…" : "Select the facility that will supply the blood"}</option>
+    {receivingFacilities.map(facility => <option key={facility._id} value={facility._id}>{facility.facilityName} · {facility.facilityType === "bsf" ? "BSF" : "PRC Chapter"}</option>)}
+    </select>
+    </Field>
+    {facilityError && <div role="alert"><p className="brf-error">{facilityError}</p><button type="button" className="brf-btn brf-btn--quiet" onClick={() => setFacilityRefresh(value => value + 1)}>Retry facilities</button></div>}
+    <p style={{ fontSize: "0.9em", marginTop: 4 }}>Choose the BSF or PRC chapter that will receive this request and supply the blood. This is separate from the requesting hospital.</p>
+    {!loadingFacilities && !facilityError && receivingFacilities.length === 0 && <p className="brf-error" role="status">No active BSF or PRC facilities are available.</p>}
+
 
     <div className="brf-row">
     <Field label="Blood type" error={errors.bloodType} invalid={bad("bloodType")} width="sm">
@@ -387,44 +494,30 @@ export default function BloodRequestForm() {
     ))}
     </select>
     </Field>
-    <Field label="Component" error={errors.component} invalid={bad("component")} grow>
-    <select name="component" value={values.component} onChange={onChange}>
-    <option value="">Select</option>
-    {COMPONENTS.map((c) => (
-      <option key={c.value} value={c.value}>
-        {c.label}
-      </option>
+    </div>
+
+    {values.products.map((product, index) => (
+      <div key={product.rowId} className="brf-row" style={{ alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+      <Field label={`Component ${index + 1}`} error={errors[`component-${product.rowId}`]} invalid={bad(`component-${product.rowId}`)} grow>
+      <select name={`component-${product.rowId}`} value={product.component} onChange={event => updateProduct(product.rowId, "component", event.target.value)}>
+      <option value="">Select</option>
+      {COMPONENTS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select>
+      </Field>
+      <Field label="Units" error={errors[`units-${product.rowId}`]} invalid={bad(`units-${product.rowId}`)} width="sm" group>
+      <div className="brf-stepper" role="group" aria-label={`Number of units for product ${index + 1}`}>
+      <button type="button" aria-label={`Decrease units for product ${index + 1}`} onClick={() => updateProduct(product.rowId, "units", Math.max(1, Number(product.units || 1) - 1))}>−</button>
+      <input name={`units-${product.rowId}`} type="number" min="1" step="1" inputMode="numeric" value={product.units} onChange={event => updateProduct(product.rowId, "units", event.target.value)} aria-label={`Units for product ${index + 1}`} />
+      <button type="button" aria-label={`Increase units for product ${index + 1}`} onClick={() => updateProduct(product.rowId, "units", Number(product.units || 0) + 1)}>+</button>
+      </div>
+      </Field>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, paddingTop: 26 }}>
+      <button type="button" className="brf-btn brf-btn--quiet" onClick={addProduct} aria-label="Add another blood product" title="Add another blood product" style={{ padding: "10px 14px" }}>＋ Add</button>
+      <button type="button" className="brf-btn brf-btn--quiet" onClick={() => removeProduct(product.rowId)} disabled={values.products.length === 1} aria-label={`Remove product ${index + 1}`} style={{ padding: "10px 14px" }}>Remove</button>
+      </div>
+      </div>
     ))}
-    </select>
-    </Field>
-    <Field label="Units" error={errors.units} invalid={bad("units")} width="sm" group>
-    <div className="brf-stepper" role="group" aria-label="Number of units">
-    <button
-    type="button"
-    aria-label="Decrease units"
-    onClick={() => set("units", Math.max(1, Number(values.units) - 1))}
-    >
-    −
-    </button>
-    <input
-    name="units"
-    type="number"
-    min="1"
-    inputMode="numeric"
-    value={values.units}
-    onChange={onChange}
-    aria-label="Units"
-    />
-    <button
-    type="button"
-    aria-label="Increase units"
-    onClick={() => set("units", Number(values.units) + 1)}
-    >
-    +
-    </button>
-    </div>
-    </Field>
-    </div>
+
 
     <Field label="Urgency" group>
     <div className="brf-urgency" role="radiogroup" aria-label="Urgency">
@@ -453,7 +546,7 @@ export default function BloodRequestForm() {
 
     <div className="brf-actions">
     <p className="brf-actions-note">Please review all details before submitting.</p>
-    <button type="button" className="brf-btn brf-btn--quiet" onClick={reset}>
+    <button type="button" className="brf-btn brf-btn--quiet" onClick={reset} disabled={saving}>
     Clear form
     </button>
     <button type="submit" className="brf-btn">
