@@ -1,6 +1,20 @@
 const express = require("express");
 const BloodRequest = require("../../db/models/BloodRequest.cjs");
 
+const mongoose = require("mongoose");
+
+const BloodUnits =
+    require("../../db/models/bloodUnits.cjs");
+
+const BloodUnitHistory =
+    require("../../db/models/bloodUnitsHistory.cjs");
+
+const Facility =
+    require("../../db/models/facilities.cjs");
+
+const syncInventory =
+    require("../services/syncInventory.cjs");
+    
 const Staff = require("../../db/models/staff.cjs");
 
 const requireStaff =
@@ -59,5 +73,7 @@ router.post("/", requireStaff, async (req, res) => {
         return res.status(500).json({ message: "Unable to save blood request." });
     }
 });
+
+
 
 module.exports = router;
