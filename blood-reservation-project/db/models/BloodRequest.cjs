@@ -9,7 +9,7 @@ const bloodRequestSchema = new mongoose.Schema(
         middleName: String,
         age: Number,
         sex: String,
-        hospital: String, // TODO: change. must reference facility id
+        hospital: String, // Sending hospital name, derived from the signed-in account.
         wardRoom: String,
         diagnosis: String,
         hemoglobin: Number,
@@ -21,13 +21,19 @@ const bloodRequestSchema = new mongoose.Schema(
         component: String,
         units: Number,
         urgency: String,
-        hospitalFacilityID: { // TODO: must be automatic based on logged in user's info
+        receivingFacilityID: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Facilities',
+            required: true,
+            index: true
+        },
+        hospitalFacilityID: { // Sending hospital: assigned staff facility, not the blood supplier.
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Facilities',
             default: null
         },
-        
-        requestedBy: { //TODO: must be automatic based on logged in user
+
+        requestedBy: { // Authenticated staff member who submitted the request.
 
 
 
@@ -35,7 +41,7 @@ const bloodRequestSchema = new mongoose.Schema(
             ref: 'Staff',
             default: null
         },
-        
+
         requestStatus: {
             type: String,
             enum: [
@@ -48,7 +54,12 @@ const bloodRequestSchema = new mongoose.Schema(
             ],
             default: 'Pending'
         },
-        
+
+        fulfilledUnits: {
+            type: Number,
+            default: 0,
+                min: 0
+        },
         fulfilledAt: {
             type: Date,
             default: null
