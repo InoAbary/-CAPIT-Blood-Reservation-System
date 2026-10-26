@@ -427,6 +427,78 @@ router.post('/supervisors', async (req, res) => {
   }
 });
 
+router.post('/change-owner/:id', requireStaff, requireRole('admin'), async (req, res) => {
+  try {
+
+    const { currentPassword, firstName, lastName, email } = req.body || {}
+    const userID = req.params.id
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    const cleanFirst = String(firstName || '').trim();
+    const cleanLast = String(lastName || '').trim();
+
+    const curOwner = await Staff.findById(userID).select('+password')
+    if (!curOwner || curOwner.isActive === false) {
+      return res.status(401).json({ error: 'Authentication required.' });
+    }
+    if (curOwner.role !== 'admin') {
+      return res.status(401).json({ error: 'No authorization to perform admin transfer.' });
+    }
+
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Enter your current password to confirm the transfer.' });
+    }
+    if (!cleanFirst || !normalizedEmail) {
+      return res.status(400).json({ error: 'First name and email are required for the new owner.' });
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return res.status(400).json({ error: 'Enter a valid email address.' });
+    }
+    if (normalizedEmail === curOwner.email.toLowerCase()) {
+      return res.status(400).json({ error: 'The new owner must be a different account.' });
+    }
+
+    const duplicate = await Promise.all([
+      Staff.exists({ email }),
+      Donor.exists({ email }),
+    ]).then((r) => r.some(Boolean));
+    if (duplicate) {
+      return res.status(409).json({ error: 'An account with this email already exists.' });
+    }
+
+    const passwordMatch = await bcrypt.compare(currentPassword, curOwner.password);
+    if (!passwordMatch) {
+      return res.status(401).json({ error: 'Current password is incorrect.' });
+    }
+
+    const tempPassword = crypto.randomBytes(18).toString('base64url');
+
+    const newOwner = await Staff.create({
+      firstName: cleanFirst,
+      lastName: cleanLast,
+      email: normalizedEmail,
+      role: 'admin',
+      isActive: true,
+      password: await bcrypt.hash(tempPassword, 10),
+    });
+
+    curOwner.role = 'staff';
+
+    await curOwner.save();
+
+    return res.status(201).json({
+      success: true,
+      message: 'Ownership transferred.',
+      ownerId: newOwner._id,
+      tempPassword,
+    })
+    
+
+
+    } catch (err) {
+      res.status(400).json({error: 'Failed to transfer ownership.'})
+    }
+})
+
 router.post('/supervisors/:id/generate-password', async (req, res, next) => {
   try {
     const isMongoUser = req.params.id.startsWith('staff:');

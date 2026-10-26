@@ -10,6 +10,7 @@ const navigation = [
   { to: '/admin/provision-supervisor', label: 'Create Account', icon: '🛡️' },
   { to: '/admin/audit-log', label: 'Audit Log', icon: '🕒', end: true },
   { to: '/BloodBankMap', label: 'Blood Bank Map', icon: '🕒', end: true },
+  { to: '/admin/change-owner', label: 'Change Ownership', icon: '🕒', end: true },
 ];
 
 const pageDetails = {

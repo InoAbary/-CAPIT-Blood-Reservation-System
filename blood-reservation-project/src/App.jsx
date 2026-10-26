@@ -24,11 +24,13 @@ import FormPending from './pages/FormPending';
 import BloodRequestForm from './pages/Bloodrequestform';
 import BloodRequestsAdmin from './components/BloodRequestsAdmin';
 import RegisterSuccess from './pages/RegisterSuccess';
+
 import AdminLayout from './pages/admin/AdminLayout';
 import OverviewPage from './pages/admin/OverviewPage';
 import UserDirectoryPage from './pages/admin/UserDirectoryPage';
 import ProvisionSupervisorPage from './pages/admin/ProvisionSupervisorPage';
 import AuditLogPage from './pages/admin/AuditLogPage';
+import AdminChangeOwner from './pages/admin/AdminChangeOwner';
 
 import { AuthProvider } from './context/AuthContext'
 
@@ -153,6 +155,14 @@ function App() {
           element={
             <ProtectedRoute require="staff"  allowedRoles={['admin']}>
               <ProvisionSupervisorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/change-owner"
+          element={
+            <ProtectedRoute require="staff"  allowedRoles={['admin']}>
+              <AdminChangeOwner />
             </ProtectedRoute>
           }
         />
