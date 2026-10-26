@@ -1,22 +1,18 @@
 import { useEffect, useState } from 'react';
 
 import HospitalUtilization from './HospitalUtilization';
-
+import BSFUtilization from './BSFUtilization';
 
 function Utilization() {
-
-    const [user, setUser] = useState(null);
+    const [side, setSide] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-
     useEffect(() => {
-
-        const fetchUser = async () => {
+        const loadAccess = async () => {
             try {
-
                 const response = await fetch(
-                    'http://localhost:3000/api/auth/me/staff',
+                    '/api/utilization/access',
                     {
                         credentials: 'include'
                     }
@@ -27,54 +23,58 @@ function Utilization() {
                 if (!response.ok) {
                     throw new Error(
                         data.message ||
-                        'Failed to load staff account.'
+                        'Unable to load utilization access.'
                     );
                 }
 
-                setUser(data.user);
-
+                setSide(data.side);
             } catch (error) {
-
                 console.error(
-                    'Failed to load utilization user:',
+                    'Failed to load utilization access:',
                     error
                 );
 
-                setError(error.message);
-
+                setError(
+                    error.message ||
+                    'Unable to load utilization.'
+                );
             } finally {
                 setLoading(false);
             }
         };
 
-
-        fetchUser();
-
+        loadAccess();
     }, []);
 
-
     if (loading) {
-        return <p>Loading utilization...</p>;
+        return (
+            <div>
+                Loading utilization...
+            </div>
+        );
     }
-
 
     if (error) {
-        return <p>{error}</p>;
+        return (
+            <div>
+                {error}
+            </div>
+        );
     }
 
-
-    if (user?.role === 'hospital') {
+    if (side === 'hospital') {
         return <HospitalUtilization />;
     }
 
+    if (side === 'bsf') {
+        return <BSFUtilization />;
+    }
 
     return (
         <div>
-            <h1>BSF Utilization</h1>
-            <p>BSF utilization page will be added next.</p>
+            This account does not have access to utilization.
         </div>
     );
 }
-
 
 export default Utilization;
