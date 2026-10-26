@@ -1,0 +1,1085 @@
+/* ============================================================
+   HOSPITAL UTILIZATION
+   ============================================================ */
+
+   .hospital-utilization-page {
+    width: 100%;
+    min-height: 100vh;
+    background: #f8fafc;
+    color: #0f172a;
+    font-family: inherit;
+    text-align: left;
+}
+
+.hospital-utilization-page *,
+.hospital-utilization-page *::before,
+.hospital-utilization-page *::after {
+    box-sizing: border-box;
+}
+
+.hospital-utilization-page button,
+.hospital-utilization-page input,
+.hospital-utilization-page select,
+.hospital-utilization-page textarea {
+    font-family: inherit;
+}
+
+
+/* PAGE */
+
+.hospital-utilization-page .hu-page-shell {
+    width: calc(100% - 40px);
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 0 36px;
+}
+
+.hospital-utilization-page .hu-page-header {
+    margin-bottom: 20px;
+}
+
+.hospital-utilization-page .hu-page-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    color: #dc2626;
+    font-size: 11px !important;
+    line-height: 16px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+
+.hospital-utilization-page .hu-page-eyebrow-dot {
+    width: 7px;
+    height: 7px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: #dc2626;
+}
+
+.hospital-utilization-page .hu-page-title {
+    margin: 0;
+    color: #0f172a;
+    font-size: 27px !important;
+    line-height: 34px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.025em;
+}
+
+.hospital-utilization-page .hu-page-description {
+    max-width: 700px;
+    margin-top: 5px;
+    color: #64748b;
+    font-size: 13px !important;
+    line-height: 20px !important;
+}
+
+
+/* STAT WIDGETS */
+
+.hospital-utilization-page .hu-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+}
+
+.hospital-utilization-page .hu-stat-card {
+    position: relative;
+    min-height: 108px;
+    overflow: hidden;
+    padding: 17px 18px;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.hospital-utilization-page .hu-stat-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto;
+    height: 3px;
+}
+
+.hospital-utilization-page .hu-stat-card--red::before {
+    background: #dc2626;
+}
+
+.hospital-utilization-page .hu-stat-card--dark::before {
+    background: #0f172a;
+}
+
+.hospital-utilization-page .hu-stat-label {
+    color: #64748b;
+    font-size: 12px !important;
+    line-height: 18px !important;
+    font-weight: 500 !important;
+}
+
+.hospital-utilization-page .hu-stat-value {
+    margin-top: 7px;
+    color: #0f172a;
+    font-size: 28px !important;
+    line-height: 31px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.03em;
+}
+
+.hospital-utilization-page .hu-stat-description {
+    margin-top: 5px;
+    color: #94a3b8;
+    font-size: 11px !important;
+    line-height: 16px !important;
+}
+
+
+/* MAIN MODULE */
+
+.hospital-utilization-page .hu-module-card {
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 13px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.hospital-utilization-page .hu-module-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 15px 18px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.hospital-utilization-page .hu-module-title {
+    color: #0f172a;
+    font-size: 15px !important;
+    line-height: 21px !important;
+    font-weight: 600 !important;
+}
+
+.hospital-utilization-page .hu-module-description {
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 12px !important;
+    line-height: 17px !important;
+}
+
+.hospital-utilization-page .hu-module-body {
+    padding: 18px;
+}
+
+
+/* TABS */
+
+.hospital-utilization-page .hu-tabs {
+    display: grid;
+    grid-template-columns: repeat(2, auto);
+    gap: 5px;
+    padding: 4px;
+    border-radius: 10px;
+    background: #f1f5f9;
+}
+
+.hospital-utilization-page .hu-tab {
+    appearance: none !important;
+    min-height: 36px;
+    margin: 0 !important;
+    padding: 8px 13px !important;
+    border: 0 !important;
+    border-radius: 7px !important;
+    background: transparent;
+    color: #64748b;
+    font-size: 11px !important;
+    line-height: 16px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    outline: none !important;
+    cursor: pointer;
+}
+
+.hospital-utilization-page .hu-tab.is-active {
+    background: #fff;
+    color: #b91c1c;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.hospital-utilization-page .hu-tab-count {
+    display: inline-flex;
+    min-width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #e2e8f0;
+    color: #64748b;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+}
+
+.hospital-utilization-page .hu-tab-count.is-active {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+
+/* SECTION HEADING */
+
+.hospital-utilization-page .hu-section-header {
+    margin-bottom: 15px;
+    padding: 0 2px;
+}
+
+.hospital-utilization-page .hu-section-title-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 9px;
+}
+
+.hospital-utilization-page .hu-section-title {
+    color: #0f172a;
+    font-size: 15px !important;
+    line-height: 20px !important;
+    font-weight: 600 !important;
+}
+
+.hospital-utilization-page .hu-section-count {
+    display: inline-flex;
+    min-height: 25px;
+    align-items: center;
+    padding: 4px 9px;
+    border-radius: 7px;
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 10px !important;
+    line-height: 15px !important;
+    font-weight: 600 !important;
+    white-space: nowrap;
+}
+
+.hospital-utilization-page .hu-section-description {
+    max-width: 650px;
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 12px !important;
+    line-height: 18px !important;
+}
+
+
+/* DATA GRID */
+
+.hospital-utilization-page .hu-desktop-data {
+    display: none;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.hospital-utilization-page .hu-request-grid {
+    display: grid;
+    grid-template-columns:
+        minmax(82px, .85fr)
+        minmax(130px, 1.35fr)
+        minmax(60px, .55fr)
+        minmax(125px, 1.15fr)
+        minmax(50px, .45fr)
+        minmax(95px, .78fr)
+        minmax(80px, .65fr);
+    align-items: center;
+    column-gap: 12px;
+}
+
+.hospital-utilization-page .hu-report-grid {
+    display: grid;
+    grid-template-columns:
+        minmax(90px, .8fr)
+        minmax(110px, .95fr)
+        minmax(60px, .5fr)
+        minmax(120px, 1.05fr)
+        minmax(90px, .75fr)
+        minmax(145px, 1.25fr)
+        minmax(80px, .65fr);
+    align-items: center;
+    column-gap: 12px;
+}
+
+.hospital-utilization-page .hu-request-grid > *,
+.hospital-utilization-page .hu-report-grid > * {
+    min-width: 0;
+}
+
+.hospital-utilization-page .hu-data-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #94a3b8;
+    font-size: 10px !important;
+    line-height: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: .055em;
+    text-transform: uppercase;
+}
+
+.hospital-utilization-page .hu-data-list > * + * {
+    border-top: 1px solid #f1f5f9;
+}
+
+.hospital-utilization-page .hu-data-row {
+    min-height: 58px;
+    padding: 11px 14px;
+    background: #fff;
+    transition: background-color 150ms ease;
+}
+
+.hospital-utilization-page .hu-data-row:hover {
+    background: #f8fafc;
+}
+
+.hospital-utilization-page .hu-action-heading,
+.hospital-utilization-page .hu-row-action {
+    text-align: right;
+    justify-self: end;
+}
+
+
+/* CELLS */
+
+.hospital-utilization-page .hu-code {
+    overflow: hidden;
+    color: #64748b;
+    font-family:
+        ui-monospace,
+        SFMono-Regular,
+        Menlo,
+        Monaco,
+        Consolas,
+        monospace;
+    font-size: 11px !important;
+    line-height: 16px !important;
+    font-weight: 600 !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hospital-utilization-page .hu-primary-cell {
+    overflow: hidden;
+    color: #1e293b;
+    font-size: 12px !important;
+    line-height: 17px !important;
+    font-weight: 600 !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hospital-utilization-page .hu-normal-cell {
+    overflow: hidden;
+    color: #475569;
+    font-size: 12px !important;
+    line-height: 17px !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hospital-utilization-page .hu-secondary-cell {
+    overflow: hidden;
+    margin-top: 2px;
+    color: #94a3b8;
+    font-size: 10px !important;
+    line-height: 14px !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hospital-utilization-page .hu-date-cell {
+    overflow: hidden;
+    color: #64748b;
+    font-size: 10px !important;
+    line-height: 15px !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hospital-utilization-page .hu-blood-badge {
+    display: inline-flex;
+    min-width: 38px;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: #fef2f2;
+    color: #b91c1c;
+    font-size: 11px !important;
+    line-height: 15px !important;
+    font-weight: 700 !important;
+}
+
+.hospital-utilization-page .hu-component-badge {
+    display: inline-flex;
+    padding: 5px 8px;
+    border-radius: 6px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 10px !important;
+    line-height: 15px !important;
+    font-weight: 600 !important;
+}
+
+
+/* STATUS */
+
+.hospital-utilization-page .hu-status-badge {
+    display: inline-flex;
+    min-height: 27px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 10px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 11px !important;
+    line-height: 15px !important;
+    font-weight: 600 !important;
+    white-space: nowrap;
+}
+
+.hospital-utilization-page .hu-status-dot {
+    width: 5px;
+    height: 5px;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: currentColor;
+}
+
+.hospital-utilization-page .hu-status-badge[data-status="Used"],
+.hospital-utilization-page .hu-status-badge[data-status="Fulfilled"] {
+    border-color: #a7f3d0;
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.hospital-utilization-page .hu-status-badge[data-status="Wasted"] {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.hospital-utilization-page .hu-status-badge[data-status="Expired"] {
+    border-color: #fde68a;
+    background: #fffbeb;
+    color: #b45309;
+}
+
+.hospital-utilization-page .hu-status-badge[data-status="Unused"] {
+    border-color: #cbd5e1;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+
+/* BUTTONS */
+
+.hospital-utilization-page .hu-button {
+    appearance: none !important;
+    display: inline-flex;
+    width: auto;
+    min-width: 74px;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    margin: 0 !important;
+    padding: 8px 14px !important;
+    border: 1px solid !important;
+    border-radius: 8px !important;
+    font-size: 11px !important;
+    line-height: 16px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.hospital-utilization-page .hu-button--primary {
+    border-color: #dc2626 !important;
+    background: #dc2626 !important;
+    color: #fff !important;
+}
+
+.hospital-utilization-page .hu-button--primary:hover:not(:disabled) {
+    border-color: #b91c1c !important;
+    background: #b91c1c !important;
+}
+
+.hospital-utilization-page .hu-button--secondary,
+.hospital-utilization-page .hu-button--outline {
+    border-color: #cbd5e1 !important;
+    background: #fff !important;
+    color: #475569 !important;
+}
+
+.hospital-utilization-page .hu-button--outline:hover:not(:disabled) {
+    border-color: #fecaca !important;
+    background: #fef2f2 !important;
+    color: #b91c1c !important;
+}
+
+.hospital-utilization-page .hu-button--full {
+    width: 100% !important;
+}
+
+.hospital-utilization-page .hu-button:disabled {
+    cursor: not-allowed;
+    opacity: .55;
+}
+
+.hospital-utilization-page .hu-close-button {
+    appearance: none !important;
+    display: inline-flex;
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    align-items: center;
+    justify-content: center;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    color: #64748b !important;
+    font-size: 20px !important;
+    line-height: 1 !important;
+    cursor: pointer;
+}
+
+.hospital-utilization-page .hu-close-button:hover:not(:disabled) {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+}
+
+
+/* MOBILE DATA */
+
+.hospital-utilization-page .hu-mobile-data {
+    display: grid;
+    gap: 12px;
+}
+
+.hospital-utilization-page .hu-mobile-card {
+    padding: 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.hospital-utilization-page .hu-mobile-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.hospital-utilization-page .hu-mobile-request {
+    min-width: 0;
+}
+
+.hospital-utilization-page .hu-mobile-patient {
+    margin-top: 4px;
+    overflow: hidden;
+    color: #0f172a;
+    font-size: 13px !important;
+    line-height: 18px !important;
+    font-weight: 600 !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hospital-utilization-page .hu-mobile-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.hospital-utilization-page .hu-mobile-info-grid--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.hospital-utilization-page .hu-mobile-info {
+    min-width: 0;
+    padding: 9px 10px;
+    border-radius: 7px;
+    background: #f8fafc;
+}
+
+.hospital-utilization-page .hu-mobile-info-label {
+    color: #94a3b8;
+    font-size: 9px !important;
+    line-height: 13px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+}
+
+.hospital-utilization-page .hu-mobile-info-value {
+    margin-top: 3px;
+    overflow: hidden;
+    color: #475569;
+    font-size: 11px !important;
+    line-height: 16px !important;
+    font-weight: 600 !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.hospital-utilization-page .hu-mobile-reported {
+    margin-top: 12px;
+    color: #94a3b8;
+    font-size: 9px !important;
+}
+
+.hospital-utilization-page .hu-mobile-reported strong {
+    display: block;
+    margin-top: 3px;
+    color: #475569;
+    font-size: 10px !important;
+    line-height: 15px !important;
+    font-weight: 500 !important;
+}
+
+.hospital-utilization-page .hu-mobile-action {
+    margin-top: 12px !important;
+}
+
+
+/* EMPTY / ALERT */
+
+.hospital-utilization-page .hu-empty-state,
+.hospital-utilization-page .hu-state-box {
+    display: flex;
+    min-height: 150px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    background: #f8fafc;
+    color: #64748b;
+    text-align: center;
+}
+
+.hospital-utilization-page .hu-empty-icon {
+    display: flex;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #059669;
+    font-size: 16px !important;
+}
+
+.hospital-utilization-page .hu-empty-title {
+    color: #1e293b;
+    font-size: 13px !important;
+    line-height: 18px !important;
+    font-weight: 600 !important;
+}
+
+.hospital-utilization-page .hu-empty-description,
+.hospital-utilization-page .hu-state-box {
+    font-size: 11px !important;
+    line-height: 17px !important;
+}
+
+.hospital-utilization-page .hu-empty-description {
+    max-width: 380px;
+    margin-top: 4px;
+    color: #64748b;
+}
+
+.hospital-utilization-page .hu-alert {
+    margin-bottom: 14px;
+    padding: 10px 12px;
+    border: 1px solid;
+    border-radius: 9px;
+    font-size: 11px !important;
+    line-height: 17px !important;
+    font-weight: 500 !important;
+}
+
+.hospital-utilization-page .hu-alert--error {
+    border-color: #fecaca;
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.hospital-utilization-page .hu-alert--success {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #047857;
+}
+
+.hospital-utilization-page .hu-loading-card {
+    padding: 36px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    background: #fff;
+    color: #64748b;
+    font-size: 12px !important;
+    text-align: center;
+}
+
+
+/* MODALS */
+
+.hu-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, .5);
+    backdrop-filter: blur(2px);
+}
+
+.hospital-utilization-page .hu-form-modal,
+.hospital-utilization-page .hu-detail-modal {
+    display: flex;
+    width: 100%;
+    max-height: calc(100vh - 48px);
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, .2);
+}
+
+.hospital-utilization-page .hu-form-modal {
+    max-width: 780px;
+}
+
+.hospital-utilization-page .hu-detail-modal {
+    max-width: 620px;
+}
+
+.hospital-utilization-page .hu-modal-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 18px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.hospital-utilization-page .hu-modal-eyebrow {
+    color: #dc2626;
+    font-size: 10px !important;
+    line-height: 14px !important;
+    font-weight: 700 !important;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.hospital-utilization-page .hu-modal-title {
+    margin-top: 3px;
+    color: #0f172a;
+    font-size: 16px !important;
+    line-height: 21px !important;
+    font-weight: 600 !important;
+}
+
+.hospital-utilization-page .hu-modal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.hospital-utilization-page .hu-modal-body,
+.hospital-utilization-page .hu-detail-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+    background: #f8fafc;
+}
+
+.hospital-utilization-page .hu-modal-footer {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 18px 16px;
+    border-top: 1px solid #e2e8f0;
+}
+
+
+/* DETAILS / SUMMARY */
+
+.hospital-utilization-page .hu-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.hospital-utilization-page .hu-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.hospital-utilization-page .hu-detail-card {
+    min-width: 0;
+    padding: 13px 14px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.hospital-utilization-page .hu-detail-label {
+    color: #94a3b8;
+    font-size: 9px !important;
+    line-height: 13px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+}
+
+.hospital-utilization-page .hu-detail-value {
+    margin-top: 5px;
+    color: #334155;
+    font-size: 11px !important;
+    line-height: 17px !important;
+    font-weight: 600 !important;
+    overflow-wrap: anywhere;
+}
+
+.hospital-utilization-page .hu-detail-status {
+    margin-top: 7px;
+}
+
+.hospital-utilization-page .hu-detail-full {
+    margin-top: 12px;
+}
+
+.hospital-utilization-page .hu-text-red {
+    color: #b91c1c !important;
+}
+
+.hospital-utilization-page .hu-text-green {
+    color: #047857 !important;
+}
+
+
+/* REPORT FORM */
+
+.hospital-utilization-page .hu-unit-list {
+    display: grid;
+    gap: 12px;
+}
+
+.hospital-utilization-page .hu-unit-card {
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.hospital-utilization-page .hu-unit-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.hospital-utilization-page .hu-unit-label {
+    color: #94a3b8;
+    font-size: 9px !important;
+    line-height: 13px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+}
+
+.hospital-utilization-page .hu-unit-id {
+    margin-top: 3px;
+    color: #1e293b;
+    font-size: 11px !important;
+    line-height: 16px !important;
+    font-weight: 600 !important;
+}
+
+.hospital-utilization-page .hu-unit-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.hospital-utilization-page .hu-unit-form-grid {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px;
+}
+
+.hospital-utilization-page .hu-field-label {
+    display: block;
+    margin-bottom: 5px;
+    color: #475569;
+    font-size: 11px !important;
+    line-height: 15px !important;
+    font-weight: 600 !important;
+}
+
+.hospital-utilization-page .hu-required {
+    margin-left: 3px;
+    color: #dc2626;
+}
+
+.hospital-utilization-page .hu-optional {
+    margin-left: 5px;
+    color: #94a3b8;
+    font-weight: 400 !important;
+}
+
+.hospital-utilization-page .hu-form-control {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    color: #334155;
+    font-size: 11px !important;
+    line-height: 16px !important;
+    outline: none;
+}
+
+.hospital-utilization-page .hu-form-control:focus {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .08);
+}
+
+.hospital-utilization-page .hu-textarea {
+    min-height: 64px;
+    resize: vertical;
+}
+
+.hospital-utilization-page .hu-submit-error {
+    margin-top: 12px;
+}
+
+
+/* RESPONSIVE */
+
+@media (min-width: 1100px) {
+    .hospital-utilization-page .hu-desktop-data {
+        display: block;
+    }
+
+    .hospital-utilization-page .hu-mobile-data {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .hospital-utilization-page .hu-page-shell {
+        max-width: 820px;
+    }
+
+    .hospital-utilization-page .hu-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .hospital-utilization-page .hu-unit-form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .hospital-utilization-page .hu-page-shell {
+        width: calc(100% - 24px);
+        padding: 18px 0 28px;
+    }
+
+    .hospital-utilization-page .hu-page-title {
+        font-size: 23px !important;
+        line-height: 29px !important;
+    }
+
+    .hospital-utilization-page .hu-stat-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .hospital-utilization-page .hu-module-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .hospital-utilization-page .hu-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .hospital-utilization-page .hu-section-title-row {
+        gap: 7px;
+    }
+
+    .hospital-utilization-page .hu-mobile-info-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .hospital-utilization-page .hu-summary-grid {
+        padding: 12px;
+        gap: 8px;
+    }
+
+    .hu-modal-backdrop {
+        padding: 10px;
+    }
+
+    .hospital-utilization-page .hu-modal-header,
+    .hospital-utilization-page .hu-modal-body,
+    .hospital-utilization-page .hu-detail-modal-body {
+        padding: 14px;
+    }
+
+    .hospital-utilization-page .hu-detail-grid {
+        grid-template-columns: 1fr;
+        gap: 9px;
+    }
+
+    .hospital-utilization-page .hu-unit-header {
+        flex-direction: column;
+    }
+
+    .hospital-utilization-page .hu-unit-form-grid {
+        padding: 12px;
+        gap: 10px;
+    }
+
+    .hospital-utilization-page .hu-modal-footer {
+        padding: 11px 14px 14px;
+    }
+}
