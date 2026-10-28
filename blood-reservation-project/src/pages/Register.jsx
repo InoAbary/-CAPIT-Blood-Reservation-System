@@ -34,6 +34,7 @@ function Register(){
         age: '',
         civilStatus: '',
         sex: '',
+        bloodType: '',
         houseNumber: '',
         street: '',
         barangay: '',
@@ -139,6 +140,19 @@ function Register(){
                             <option value="" disabled>{t('donorData.selectSex', 'Select Sex')}</option>
                             <option value="Male">{t('donorData.male', 'Male')}</option>
                             <option value="Female">{t('donorData.female', 'Female')}</option>
+                        </select>
+                    </label>
+                    <label>{t('donorData.bloodType', 'Blood Type')}
+                        <select required {...bind('bloodType')}>
+                            <option value="" disabled>{t('donorData.selectBloodType', 'Select Blood Type')}</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
                         </select>
                     </label>
                 </div>

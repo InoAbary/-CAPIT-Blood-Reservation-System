@@ -26,7 +26,6 @@ router.post("/", requireStaff, async (req, res) => {
         }
 
         if (!staff.facilityID){
-            console.log("FAH")
             return res.status(400).json({
                 message: "Hospital staff account is not assigned to a hospital/facility."
             });
