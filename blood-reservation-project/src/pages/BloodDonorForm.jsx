@@ -86,14 +86,7 @@ function DonorTopMenu() {
                 ))}
             </nav>
 
-            <div className="menu-footer">
-                <button
-                    className="quick-action-btn"
-                    onClick={() => navigate('/donor/new-donation')}
-                >
-                    + New Donation
-                </button>
-            </div>
+            
         </header>
     );
 }

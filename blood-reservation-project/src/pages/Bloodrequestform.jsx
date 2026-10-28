@@ -124,7 +124,8 @@ export default function BloodRequestForm() {
         },
         body: JSON.stringify(payload)
       });
-      if (!response.ok) throw new Error("Server could not save the request.");
+      console.log(response.error)
+      if (!response.ok) throw new Error(response.message);
       const result = await response.json();
       setSavedRecord(result.bloodRequest);
     } catch (error) {

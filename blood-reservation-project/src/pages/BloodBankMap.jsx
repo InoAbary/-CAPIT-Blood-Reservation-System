@@ -13,12 +13,7 @@ import {
   MapIcon,
   ListIcon,
 } from '../components/Icons';
-// import {
-//   BLOOD_TYPES,
-//   COMPONENTS,
-//   FACILITIES_DATA,
-//   CITIES,
-// } from '../data/prcFacilitiesData';
+
 import '../styles/BloodLocator.css';
 import {useAuth} from '../context/AuthContext'
 
@@ -50,8 +45,14 @@ export default function BloodBankMap() {
   const [hierarchyMode, setHierarchyMode] = useState('prc-first'); // 'prc-first', 'prc-only', 'bsf-only'
   const [hideUnavailable, setHideUnavailable] = useState(false);
   const [viewMode, setViewMode] = useState('split'); // 'split', 'map-only', 'list-only'
-  const [currentOrigin, setCurrentOrigin] = useState(''); // City of Manila
+  const [currentOrigin, setCurrentOrigin] = useState({
+    name: 'City of Manila',
+    lat: 14.5888,
+    lon: 120.9744,
+  });
 
+  const [isLocating, setIsLocating] = useState(false)
+  const [locationError, setLocationError] = useState(null)
   // Selected facility for map interaction / details modal
   const [selectedFacility, setSelectedFacility] = useState(null);
 
@@ -68,7 +69,71 @@ export default function BloodBankMap() {
 
   const {donor, staff, loading} = useAuth();
   const isAdmin = !donor && staff?.role === 'admin'
+  
 
+  const handleUseMyLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      setTimeout(() => setLocationError(null), 4000)
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const lat = pos?.coords?.latitude
+        const lon = pos?.coords?.longitude
+
+        if (typeof lat !== 'number' || typeof lon !== 'number' ||
+            Number.isNaN(lat) || Number.isNaN(lon)) {
+          setLocationError('Could not read coordinates from your device.');
+          setIsLocating(false);
+          setTimeout(() => setLocationError(null), 4000);
+          return;
+        }
+       
+
+        let name = `My Location (${lat.toFixed(4)}, ${lon.toFixed(4)})`;
+        try {
+
+          const res = await fetch( `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`,
+            { headers: {'Accept-Language': 'en'}}
+          )
+
+          if (res.ok) {
+            const data = await res.json();
+            const addr = data.address || {}
+            name =
+              addr.city ||
+              addr.town ||
+              addr.village ||
+              addr.suburb ||
+              addr.county ||
+              data.display_name?.split(',')[0] ||
+              name;
+          }
+        } catch (err) {
+          console.warn('Reverse geocode failed:', err)
+        }
+        setCurrentOrigin({name, lat: lat, lon: lon})
+        setIsLocating(false)
+      }, 
+      (err) => {
+        console.warn('Geolocation error:', err);
+        setLocationError(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location permission denied. Please enable it in your browser settings.'
+            : 'Unable to retrieve your location. Try again.'
+        );
+        setIsLocating(false);
+        setTimeout(() => setLocationError(null), 4000);
+      
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    )
+  }
   // Fetch facilities from MongoDB / git store on mount
   useEffect(() => {
     const fetchRemoteFacilities = async () => {
@@ -367,6 +432,21 @@ export default function BloodBankMap() {
               <span>Change Location</span>
             </button>
 
+            <button
+              type="button"
+              className="btn-change-location"
+              onClick={handleUseMyLocation}
+              disabled={isLocating}
+              title="Detect my current location"
+            >
+              {isLocating ? (
+                <RefreshIcon size={14} spinning />
+              ) : (
+                <PinIcon size={14} /> 
+              )}
+              <span>{isLocating ? 'Locating…' : 'Use My Location'}</span>
+            </button>
+
             <div className="radius-select-box">
               <span className="radius-label">Radius:</span>
               <select
@@ -595,7 +675,17 @@ export default function BloodBankMap() {
       {showLocationModal && (
         <ChangeLocationModal
           currentOrigin={currentOrigin}
-          onSelectCity={(city) => setCurrentOrigin(city)}
+          facilities={facilitiesList}              
+          onSelectCity={(city) =>
+            setCurrentOrigin({
+              name: city.name,
+              lat: Number(city.lat),
+              lon: Number(city.lon),
+              region: city.region,
+            })
+          }
+          onUseMyLocation={handleUseMyLocation}    
+          isLocating={isLocating}                  
           onClose={() => setShowLocationModal(false)}
         />
       )}
@@ -613,6 +703,13 @@ export default function BloodBankMap() {
         <div className="bbis-toast">
           <RefreshIcon size={16} />
           <span>{syncToast}</span>
+        </div>
+      )}
+
+      {locationError && (
+        <div className="bbis-toast" style={{ background: '#dc2626', borderColor: '#991b1b' }}>
+          <ShieldAlertIcon size={16} />
+          <span>{locationError}</span>
         </div>
       )}
     </div>

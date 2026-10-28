@@ -166,7 +166,7 @@ function InventoryHistory({ facilityID }) {
 
             try {
                 const response = await fetch(
-                    `${API_URL}/api/facilities/${facilityID}/blood-unit-history`,
+                    `${API_URL}/api/bloodUnits/${facilityID}/blood-unit-history`,
                     {
                         signal: controller.signal,
                         credentials: 'include'

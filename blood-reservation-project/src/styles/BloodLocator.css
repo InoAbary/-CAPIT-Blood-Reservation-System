@@ -226,10 +226,22 @@
 
 .search-origin-row {
   display: grid;
-  grid-template-columns: 2fr 1.3fr auto 1.3fr;
+  grid-template-columns: 2fr 1.4fr auto auto 1.4fr;
   gap: 1rem;
   align-items: center;
   margin-bottom: 1.25rem;
+}
+
+@media (max-width: 1024px) {
+  .search-origin-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .search-origin-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .search-input-wrapper {
@@ -1657,4 +1669,74 @@
   .card-components-grid {
     grid-template-columns: repeat(3, 1fr);
   }
+}
+
+/* ==========================================================================
+   LOCATION MODAL — centered dialog (overrides any global .modal-overlay)
+   ========================================================================== */
+
+.location-modal-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  padding: 1rem;
+  margin: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 1200;
+
+  animation: overlayFadeIn 0.15s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* The card itself — no slide-up, no bottom-pinning */
+.location-modal-overlay .location-modal-content {
+  position: relative !important;
+  top: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  margin: auto !important;
+  transform: none !important;
+
+  max-height: 85vh;
+  width: min(92vw, 680px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.35);
+
+  animation: locationModalIn 0.2s ease-out;
+}
+
+@keyframes locationModalIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* Header + footer stay fixed; body scrolls */
+.location-modal-overlay .location-modal-content .request-modal-header,
+.location-modal-overlay .location-modal-content .matrix-modal-footer {
+  flex-shrink: 0;
+}
+
+.location-modal-overlay .location-modal-content .location-modal-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  max-height: none;
 }

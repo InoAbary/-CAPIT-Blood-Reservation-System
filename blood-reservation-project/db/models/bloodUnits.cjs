@@ -66,7 +66,7 @@ bloodUnitsSchema.pre('save', function (next) {
     if (!this.isNew) {
         this.lastUpdated = new Date();
     }
-    next();
+
 });
 
 module.exports = mongoose.model('BloodUnits', bloodUnitsSchema);

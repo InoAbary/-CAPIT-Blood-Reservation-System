@@ -500,7 +500,7 @@ function BloodUnitsTab({
 
             try {
                 const response = await fetch(
-                    `${API_URL}/api/bloodUnits/${facilityID}/blood-units`,
+                    `/api/bloodUnits/${facilityID}/blood-units`,
                     {
                         signal: controller.signal,
                         credentials: "include"

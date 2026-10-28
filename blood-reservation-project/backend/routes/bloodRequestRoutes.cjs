@@ -8,10 +8,12 @@ const requireStaff = require("../middleware/requireStaff.cjs");
 const router = express.Router();
 
 router.post("/", requireStaff, async (req, res) => {
+    
     try {
         const staff = await Staff.findById(req.user.id).select("facilityID role");
 
         if(!staff){
+            
             return res.status(401).json({
                 message: "Invalid staff account."
             });
@@ -24,6 +26,7 @@ router.post("/", requireStaff, async (req, res) => {
         }
 
         if (!staff.facilityID){
+            console.log("FAH")
             return res.status(400).json({
                 message: "Hospital staff account is not assigned to a hospital/facility."
             });
@@ -54,6 +57,7 @@ router.post("/", requireStaff, async (req, res) => {
             bloodRequest: request
         })
     } catch (error) {
+        
         console.error("Failed to save blood request:", error);
         return res.status(500).json({ message: "Unable to save blood request." });
     }
