@@ -4,6 +4,7 @@ const Facility = require('./../../db/models/facilities.cjs');   // adjust paths 
 const Inventory = require('../../db/models/inventories.cjs');
 const syncInventory = require('../services/syncInventory.cjs');
 const Counter = require('../../db/models/counters.cjs');
+const BloodUnits = require('../../db//models/bloodUnits.cjs')
 
 const router = express.Router();
 
@@ -62,6 +63,8 @@ router.get('/:id/inventory', validateId, async (req, res) => {
         if (!facility) {
             return res.status(404).json({ message: 'Facility not found.' });
         }
+
+        
        
 
         await syncInventory(facility);
@@ -75,6 +78,54 @@ router.get('/:id/inventory', validateId, async (req, res) => {
         console.error(err);
         res.status(500).json({ message: 'Failed to load inventory.' });
     }
+});
+
+router.post('/availability/batch', async (req, res) => {
+  try {
+    const { facilityIDs = [], bloodType, component } = req.body || {};
+
+    if (!Array.isArray(facilityIDs) || facilityIDs.length === 0) {
+      return res.json({ success: true, availability: {} });
+    }
+
+    const match = {
+      facilityID: { $in: facilityIDs },
+      status: 'In-stock',
+      expiryDate: { $gt: new Date() },
+    };
+    if (bloodType) match.bloodType = bloodType;
+    if (component) match.component = component;
+
+    const rows = await BloodUnits.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: {
+            facilityID: '$facilityID',
+            bloodType: '$bloodType',
+            component: '$component',
+          },
+          units: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Shape: { [facilityID]: { [bloodType]: { [component]: unitCount } } }
+    const availability = {};
+    for (const r of rows) {
+      const f = r._id.facilityID;
+      const bt = r._id.bloodType;
+      const ck = r._id.component;
+      availability[f] = availability[f] || {};
+      availability[f][bt] = availability[f][bt] || {};
+      availability[f][bt][ck] = r.units;
+    }
+
+    res.json({ success: true, availability });
+  } catch (err) {
+    console.error('POST /availability/batch failed:', err);
+    res.status(500).json({ message: 'Failed to load availability.' });
+  }
 });
 
 router.post('/', requireStaff, requireRole("admin"), async(req,res) => {
