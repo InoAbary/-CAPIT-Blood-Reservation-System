@@ -6,15 +6,24 @@ import {useAuth} from '../context/AuthContext'
 
 function StaffDashboard() {
 
-    const navigate = useNavigate()
-    const { user, logoutStaff } = useAuth();
-    const navItems = [
-    { label: 'Overview', path: '/staff/overview', icon: '📊' },
-    { label: 'Blood Utilization Reports', path: '/Utilization', icon: '📊' },
-    { label: 'Inventory', path: '/Inventory', icon: '📊' },
-    { label: 'Request Forms', path: '/Request', icon: '💝' },
-    { label: 'Profile Settings', path: '/staff/profile', icon: '⚙️' },
+  const navigate = useNavigate()
+  const { staff, logoutStaff } = useAuth();
+
+  
+  const navItems = [
+    { label: 'Overview', path: '/staff/overview', icon: '📊', roles: ['staff', 'hospital'] },
+    { label: 'Blood Utilization Reports', path: '/Utilization', icon: '📊', roles: ['staff']   },
+    { label: 'Inventory', path: '/Inventory', icon: '📊', roles: ['staff']  },
+    { label: 'Request Forms', path: '/Request', icon: '💝', roles: ['hospital']  },
+    { label: 'Profile Settings', path: '/staff/profile', icon: '⚙️', roles: ['staff', 'hospital']  },
   ];
+
+
+
+  const visibleNav = useMemo(()=> 
+    navItems.filter((item)=>item.roles.includes(staff?.role)),
+    [staff?.role]
+  )
 
   const handleLogout = async () => {
     await logoutStaff();
@@ -30,7 +39,7 @@ function StaffDashboard() {
         </div>
 
         <nav className="nav-links">
-          {navItems.map((item) => (
+          {visibleNav.map((item) => (
             <Link
               key={item.path}
               to={item.path}
