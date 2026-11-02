@@ -93,18 +93,23 @@ const bloodUnitHistorySchema = new mongoose.Schema({
         ]
     },
 
+    releaseOperationID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'FulfillmentOperation',
+        default: null
+    },
     requestID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'BloodRequest',
         default: null
     },
-    
+
     releasedToFacilityID: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Facilities',
         default: null
     },
-    
+
     releasedAt: {
         type: Date,
         default: null
@@ -142,9 +147,9 @@ const bloodUnitHistorySchema = new mongoose.Schema({
 function getSnapshot(unit) {
 
     const data =
-        typeof unit.toObject === 'function'
-            ? unit.toObject()
-            : unit;
+    typeof unit.toObject === 'function'
+    ? unit.toObject()
+    : unit;
 
     return {
         bloodUnitID: data.bloodUnitID,
@@ -168,10 +173,10 @@ function valuesAreEqual(first, second) {
     if (first instanceof Date || second instanceof Date) {
 
         const firstTime =
-            first ? new Date(first).getTime() : null;
+        first ? new Date(first).getTime() : null;
 
         const secondTime =
-            second ? new Date(second).getTime() : null;
+        second ? new Date(second).getTime() : null;
 
         return firstTime === secondTime;
     }
@@ -256,7 +261,7 @@ async function (before, after, options = {}) {
         facilityID: options.facilityID,
         ...afterSnapshot,
         releasedToFacilityID:
-            options.releasedToFacilityID || null,
+        options.releasedToFacilityID || null,
         action: 'Updated',
         changes,
         performedBy: options.performedBy || null
@@ -293,6 +298,12 @@ bloodUnitHistorySchema.index({
     date: -1
 });
 
+
+// One fulfillment history entry per released unit and operation; retries upsert.
+bloodUnitHistorySchema.index(
+    { releaseOperationID: 1, bloodUnitID: 1 },
+    { unique: true, partialFilterExpression: { releaseOperationID: { $type: 'objectId' } } }
+);
 
 module.exports = mongoose.model(
     'BloodUnitHistory',

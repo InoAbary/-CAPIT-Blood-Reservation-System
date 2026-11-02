@@ -1,3 +1,4 @@
+require('dotenv').config();
 
 const express = require('express');
 const connectDB = require('./dbconnection.cjs');
@@ -12,6 +13,8 @@ const authRoutes = require('./routes/auth.cjs');
 const utilizationRoutes = require('./routes/utilizationRoutes.cjs');
 const bloodRequestRoutes = require('./routes/bloodRequestRoutes.cjs');
 const adminRoutes = require('./routes/adminRoutes.cjs');
+const bloodRequestAdminRoutes = require('./routes/bloodRequestAdminRoutes.cjs');
+const inventoryFulfillmentRoutes = require('./routes/inventoryFulfillmentRoutes.cjs');
 
 const requireDonor = require('./middleware/requireDonor.cjs');
 const requireStaff = require('./middleware/requireStaff.cjs');
@@ -19,7 +22,6 @@ const requireRole = require('./middleware/requireRole.cjs');
 
 const app = express();
 
-require('dotenv').config();
 
 connectDB();
 
@@ -38,9 +40,13 @@ app.use('/api/auth', authRoutes)
 app.use('/api/bloodForm', requireDonor, bloodFormRoutes)
 app.use('/api/inventories', requireStaff, inventoryRoutes);
 app.use('/api/facilities', facilityRoutes);
+app.use('/api/bloodUnit', requireStaff, bloodUnitRoutes);
 app.use('/api/bloodUnits', requireStaff, bloodUnitRoutes);
 app.use('/api/utilization', requireStaff, utilizationRoutes);
-app.use('/api/bloodRequest',requireStaff,bloodRequestRoutes);
-app.use('/api/admin',requireStaff, requireRole('admin'), adminRoutes);
+app.use('/api/inventory-fulfillment', inventoryFulfillmentRoutes);
+// Both paths use the same facility-scoped router; keep the legacy alias safe.
+app.use('/api/blood-requests', bloodRequestAdminRoutes);
+app.use('/api/bloodRequest', bloodRequestAdminRoutes);
+app.use('/api/admin', requireStaff, requireRole('admin'), adminRoutes);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
