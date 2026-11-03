@@ -8,6 +8,8 @@ import './i18n.cjs'
 
 import Register from './pages/Register'
 import Login from './pages/Login'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import RegisterStaff from './pages/RegisterStaff'
 import LoginStaff from './pages/LoginStaff'
 
@@ -45,6 +47,8 @@ function App() {
     <Route path="/Register/Success" element={<RegisterSuccess />} />
     <Route path="/Register/Staff" element={<RegisterStaff />} />
     <Route path="/Login" element={<Login />} />
+    <Route path="/ForgotPassword" element={<ForgotPassword />} />
+    <Route path="/resetPassword" element={<ResetPassword />} />
     <Route path="/Login/Staff" element={<LoginStaff />} />
 
     {/* ---- Donor-only ---- */}
@@ -99,73 +103,73 @@ function App() {
     }
     />
 
-        {/* ---- Staff-only ---- */}
-        <Route
-          path="/StaffDashboard"
-          element={
-            <ProtectedRoute require="staff" >
-              <StaffDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/Inventory"
-          element={
-            <ProtectedRoute require="staff" >
-              <Inventory />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/Utilization"
-          element={
-            <ProtectedRoute require="staff" >
-              <Utilization />
-            </ProtectedRoute>
-          }
-        />
+    {/* ---- Staff-only ---- */}
+    <Route
+    path="/StaffDashboard"
+    element={
+      <ProtectedRoute require="staff" >
+      <StaffDashboard />
+      </ProtectedRoute>
+    }
+    />
+    <Route
+    path="/Inventory"
+    element={
+      <ProtectedRoute require="staff" >
+      <Inventory />
+      </ProtectedRoute>
+    }
+    />
+    <Route
+    path="/Utilization"
+    element={
+      <ProtectedRoute require="staff" >
+      <Utilization />
+      </ProtectedRoute>
+    }
+    />
 
-        {/* ----- ADMIN ONLY ------ */}
-        <Route
-        path="/Request-admin"
-        element={
-          <ProtectedRoute require="staff" allowedRoles={['staff', 'supervisor', 'admin']}>
-          <BloodRequestsAdmin />
-          </ProtectedRoute>
-        }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute require="staff"  allowedRoles={['admin']}>
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/user-directory"
-          element={
-            <ProtectedRoute require="staff"  allowedRoles={['admin']}>
-              <UserDirectoryPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/provision-supervisor"
-          element={
-            <ProtectedRoute require="staff"  allowedRoles={['admin']}>
-              <ProvisionSupervisorPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/change-owner"
-          element={
-            <ProtectedRoute require="staff"  allowedRoles={['admin']}>
-              <AdminChangeOwner />
-            </ProtectedRoute>
-          }
-        />
+    {/* ----- ADMIN ONLY ------ */}
+    <Route
+    path="/Request-admin"
+    element={
+      <ProtectedRoute require="staff" allowedRoles={['staff', 'supervisor', 'admin']}>
+      <BloodRequestsAdmin />
+      </ProtectedRoute>
+    }
+    />
+    <Route
+    path="/admin"
+    element={
+      <ProtectedRoute require="staff"  allowedRoles={['admin']}>
+      <AdminLayout />
+      </ProtectedRoute>
+    }
+    />
+    <Route
+    path="/admin/user-directory"
+    element={
+      <ProtectedRoute require="staff"  allowedRoles={['admin']}>
+      <UserDirectoryPage />
+      </ProtectedRoute>
+    }
+    />
+    <Route
+    path="/admin/provision-supervisor"
+    element={
+      <ProtectedRoute require="staff"  allowedRoles={['admin']}>
+      <ProvisionSupervisorPage />
+      </ProtectedRoute>
+    }
+    />
+    <Route
+    path="/admin/change-owner"
+    element={
+      <ProtectedRoute require="staff"  allowedRoles={['admin']}>
+      <AdminChangeOwner />
+      </ProtectedRoute>
+    }
+    />
 
     {/* ---- Fallback ---- */}
     <Route path="*" element={<Navigate to="/Login" replace />} />

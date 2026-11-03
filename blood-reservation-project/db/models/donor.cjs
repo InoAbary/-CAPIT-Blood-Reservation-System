@@ -1,6 +1,13 @@
 const mongoose = require('mongoose')
 const bcrypt = require('bcrypt')
 
+// Hidden from normal donor queries, including the /me profile response.
+const passwordResetSchema = new mongoose.Schema({
+    tokenHash: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
+    passwordFingerprint: { type: String, required: true }
+}, { _id: false });
+
 const donorSchema = new mongoose.Schema({
 
     // Personal Information
@@ -12,10 +19,10 @@ const donorSchema = new mongoose.Schema({
     age:            { type: Number, required: true, min: 16, max: 65 },
     civilStatus:    { type: String, required: true, trim: true },
     sex:            {   type: String, trim: true, enum: ["Male", "Female"]},
-    bloodType:      { type: String, 
-                        required: true, 
-                        enum: ["A+" , "A-", "B+" , "B-", "O+" , "O-", "AB+" , "AB-"]
-                    },
+    bloodType:      { type: String,
+        required: true,
+        enum: ["A+" , "A-", "B+" , "B-", "O+" , "O-", "AB+" , "AB-"]
+    },
 
     // Address
     houseNumber:    { type: String, required: true, trim: true },
@@ -46,9 +53,14 @@ const donorSchema = new mongoose.Schema({
     driverID:       { type: String, trim: true },
     govID:          { type: String, trim: true },
     otherID:        { type: String, trim: true },
-    
+
     password:       { type: String, required: true},
     role:           { type: String, default: "donor"},
+    passwordReset: {
+        type: passwordResetSchema,
+        select: false,
+        default: undefined
+    },
     badges: [{
         badgeClassId: String,
         assertionId: String,
