@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "../styles/Bloodrequestform.css";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 const BLOOD_TYPES = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
@@ -22,6 +22,7 @@ const INITIAL = {
   sex: "",
   hospital: "",
   receivingFacilityID: "",
+  fulfillmentMethod: "",
   wardRoom: "",
   diagnosis: "",
   hemoglobin: "",
@@ -57,6 +58,7 @@ function validate(v) {
   if (v.priorTransfusion === "yes" && v.priorTransfusionDate && v.priorTransfusionDate > todayLocalISO())
     e.priorTransfusionDate = "The date cannot be in the future.";
   if (!v.receivingFacilityID) e.receivingFacilityID = "Select a receiving BSF or PRC facility.";
+  if (!['Pickup', 'Delivery'].includes(v.fulfillmentMethod)) e.fulfillmentMethod = "Choose pickup or delivery.";
   if (!v.bloodType) e.bloodType = "Select a blood type.";
   v.products.forEach((product) => {
     if (!COMPONENTS.some(option => option.value === product.component))
@@ -79,6 +81,18 @@ export default function BloodRequestForm() {
   const [loadingFacilities, setLoadingFacilities] = useState(true);
   const [facilityError, setFacilityError] = useState("");
   const [facilityRefresh, setFacilityRefresh] = useState(0);
+  useEffect(() => {
+    let active = true;
+    fetch(`${API_URL}/api/blood-requests/context`, { credentials: 'include' })
+      .then(async (response) => {
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.message || 'Could not load the assigned hospital.');
+        return body;
+      })
+      .then((body) => { if (active) setValues(previous => ({ ...previous, hospital: body.hospitalName || '' })); })
+      .catch((error) => { if (active) setFacilityError(error.message); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
@@ -255,6 +269,7 @@ export default function BloodRequestForm() {
         </dd>
         <dt>Facility supplying the blood</dt>
         <dd>{receivingFacilities.find(facility => facility._id === s.receivingFacilityID)?.facilityName || "Selected facility"}</dd>
+        <dt>Requested method</dt><dd>{s.fulfillmentMethod}</dd>
         <dt>Request</dt>
         <dd>
         <ul style={{ margin: 0, paddingLeft: 20 }}>
@@ -363,7 +378,7 @@ export default function BloodRequestForm() {
 
     <div className="brf-row">
     <Field label="Requesting hospital" error={errors.hospital} invalid={bad("hospital")} grow>
-    <input name="hospital" value={values.hospital} onChange={onChange} autoComplete="off" />
+    <input name="hospital" value={values.hospital || 'Loading assigned hospital…'} readOnly aria-readonly="true" />
     </Field>
     <Field label="Ward / room" optional width="md">
     <input name="wardRoom" value={values.wardRoom} onChange={onChange} autoComplete="off" />
@@ -481,6 +496,14 @@ export default function BloodRequestForm() {
     {facilityError && <div role="alert"><p className="brf-error">{facilityError}</p><button type="button" className="brf-btn brf-btn--quiet" onClick={() => setFacilityRefresh(value => value + 1)}>Retry facilities</button></div>}
     <p style={{ fontSize: "0.9em", marginTop: 4 }}>Choose the BSF or PRC chapter that will receive this request and supply the blood. This is separate from the requesting hospital.</p>
     {!loadingFacilities && !facilityError && receivingFacilities.length === 0 && <p className="brf-error" role="status">No active BSF or PRC facilities are available.</p>}
+
+    <Field label="How will blood be received?" error={errors.fulfillmentMethod} invalid={bad("fulfillmentMethod")}>
+      <select name="fulfillmentMethod" value={values.fulfillmentMethod} onChange={onChange}>
+        <option value="">Choose pickup or delivery</option>
+        <option value="Pickup">Hospital pickup</option>
+        <option value="Delivery">Delivery to hospital</option>
+      </select>
+    </Field>
 
 
     <div className="brf-row">

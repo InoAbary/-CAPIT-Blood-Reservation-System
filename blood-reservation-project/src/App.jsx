@@ -4,7 +4,7 @@ import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
-import './i18n.cjs'
+import './i18n.js'
 
 import Register from './pages/Register'
 import Login from './pages/Login'
@@ -33,6 +33,8 @@ import UserDirectoryPage from './pages/admin/UserDirectoryPage';
 import ProvisionSupervisorPage from './pages/admin/ProvisionSupervisorPage';
 import AuditLogPage from './pages/admin/AuditLogPage';
 import AdminChangeOwner from './pages/admin/AdminChangeOwner';
+import BranchAdminLayout from './pages/branch-admin/BranchAdminLayout';
+import BranchDashboard from './pages/branch-admin/BranchDashboard';
 
 import { AuthProvider } from './context/AuthContext'
 
@@ -112,6 +114,16 @@ function App() {
       </ProtectedRoute>
     }
     />
+    <Route
+    path="/branch-admin"
+    element={
+      <ProtectedRoute require="staff" allowedRoles={['branch-admin']}>
+      <BranchAdminLayout />
+      </ProtectedRoute>
+    }
+    >
+      <Route index element={<BranchDashboard />} />
+    </Route>
     <Route
     path="/Inventory"
     element={

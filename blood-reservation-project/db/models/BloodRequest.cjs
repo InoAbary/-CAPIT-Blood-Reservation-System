@@ -27,6 +27,20 @@ const bloodRequestSchema = new mongoose.Schema(
             required: true,
             index: true
         },
+        fulfillmentMethod: { type: String, enum: ['Pickup', 'Delivery'], required: true },
+        confirmedFulfillmentMethod: { type: String, enum: ['Pickup', 'Delivery'], default: null },
+        fulfillmentMethodNote: { type: String, trim: true, maxlength: 1000, default: '' },
+        fulfillmentStatus: { type: String, enum: ['Preparing', 'On the Way', 'Delivered', 'Ready for Pickup', 'Picked Up'], default: null },
+        fulfillmentDetails: {
+            pickupLocation: { type: String, trim: true, maxlength: 300, default: '' },
+            staffContactName: { type: String, trim: true, maxlength: 150, default: '' },
+        },
+        fulfillmentEvents: [{
+            status: { type: String, required: true },
+            note: { type: String, trim: true, maxlength: 1000, default: '' },
+            updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', default: null },
+            updatedAt: { type: Date, default: Date.now },
+        }],
         hospitalFacilityID: { // Sending hospital: assigned staff facility, not the blood supplier.
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Facilities',
@@ -46,6 +60,7 @@ const bloodRequestSchema = new mongoose.Schema(
             type: String,
             enum: [
                 'Pending',
+                'Awaiting Hospital Confirmation',
                 'Approved',
                 'Partially Fulfilled',
                 'Fulfilled',

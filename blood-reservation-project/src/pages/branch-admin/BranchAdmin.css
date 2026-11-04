@@ -1,0 +1,434 @@
+.branch-dashboard {
+  display: grid;
+  gap: 20px;
+}
+
+.branch-workspace-nav {
+  gap: 6px;
+}
+
+.branch-workspace-tab {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.branch-workspace-tab:focus-visible {
+  outline: 3px solid #fda4af;
+  outline-offset: 2px;
+}
+
+.branch-tab-panel {
+  min-width: 0;
+}
+
+.branch-tab-panel:focus-visible {
+  outline: 2px solid #fda4af;
+  outline-offset: 3px;
+}
+
+.branch-utilization-heading {
+  display: flex;
+  align-items: center;
+}
+
+.branch-utilization-table {
+  min-width: 680px;
+}
+
+.branch-utilization-report-form {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.35fr) minmax(150px, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 490px;
+}
+
+.branch-utilization-report-form .btn-action {
+  min-height: 40px;
+}
+
+.branch-existing-report {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+}
+
+.branch-existing-report small {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.branch-facility-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.branch-eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  color: #9f1239;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.branch-facility-type {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+  padding: 14px 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff8f8;
+}
+
+.branch-type-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  background: #ffe4e6;
+  font-size: 20px;
+}
+
+.branch-facility-type div {
+  display: grid;
+  gap: 4px;
+}
+
+.branch-facility-type strong {
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.branch-facility-type span:last-child {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.branch-create-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  align-items: end;
+  gap: 14px;
+  margin: 20px 0;
+}
+
+.branch-create-form .btn-action {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 42px;
+}
+
+.branch-user-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(160px, 0.45fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin: 18px 0 14px;
+}
+
+.branch-user-count {
+  margin: 0 0 12px;
+  color: #64748b;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.branch-request-toolbar {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(170px, 0.45fr) auto;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.branch-request-list-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  align-items: start;
+  gap: 20px;
+}
+
+.branch-request-table {
+  min-width: 850px;
+}
+
+.branch-request-selected {
+  background: #fff7f8;
+}
+
+.branch-request-row {
+  cursor: pointer;
+}
+
+.branch-request-row:hover,
+.branch-request-row:focus-visible {
+  background: #fff1f2;
+  outline: 2px solid #fecdd3;
+  outline-offset: -2px;
+}
+
+.branch-request-select {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9f1239;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.branch-request-select:hover {
+  text-decoration: underline;
+}
+
+.branch-request-select:focus-visible {
+  outline: 2px solid #fda4af;
+  outline-offset: 3px;
+}
+
+.branch-urgency {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.branch-urgency.urgent {
+  color: #b91c1c;
+}
+
+.branch-request-details {
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.branch-request-details h3 {
+  margin: 0 0 6px;
+  color: #1e293b;
+  font-size: 17px;
+}
+
+.branch-request-details dl {
+  display: grid;
+  grid-template-columns: minmax(95px, 0.7fr) minmax(0, 1fr);
+  gap: 10px 12px;
+  margin: 18px 0 0;
+  font-size: 12px;
+}
+
+.branch-request-details dt {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.branch-request-details dd {
+  margin: 0;
+  color: #1e293b;
+  overflow-wrap: anywhere;
+}
+
+.branch-request-decision {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.hospital-request-cards {
+  display: grid;
+  gap: 14px;
+}
+
+.hospital-request-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.hospital-request-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.hospital-request-card-head h3 {
+  margin: 5px 0;
+  color: #1e293b;
+  font-size: 17px;
+}
+
+.hospital-request-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 28px;
+}
+
+.hospital-request-summary > div,
+.hospital-request-progress,
+.hospital-pickup-details {
+  display: grid;
+  gap: 5px;
+}
+
+.hospital-request-summary span,
+.hospital-request-progress > span,
+.hospital-pickup-details > span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.hospital-request-summary strong,
+.hospital-request-progress > strong {
+  color: #1e293b;
+  font-size: 13px;
+}
+
+.hospital-request-progress,
+.hospital-pickup-details,
+.hospital-request-action,
+.hospital-request-reason {
+  padding: 12px 14px;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.hospital-request-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.hospital-request-action p,
+.hospital-request-reason {
+  margin: 0;
+  color: #334155;
+  font-size: 13px;
+}
+
+.hospital-request-history summary {
+  color: #475569;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hospital-request-history ol {
+  display: grid;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding-left: 20px;
+}
+
+.hospital-request-history li {
+  padding-left: 3px;
+  color: #334155;
+  font-size: 12px;
+}
+
+.hospital-request-history li span {
+  margin-left: 10px;
+  color: #64748b;
+}
+
+.hospital-request-history li p {
+  margin: 4px 0 0;
+  color: #64748b;
+}
+
+.branch-credentials {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 20px;
+  padding: 16px;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.branch-credentials code {
+  width: fit-content;
+  padding: 5px 8px;
+  border-radius: 5px;
+  background: #dcfce7;
+  font-size: 14px;
+}
+
+.branch-credentials span {
+  font-size: 12px;
+}
+
+.branch-user-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.branch-delete-button {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.branch-delete-button:hover {
+  background: #fef2f2;
+}
+
+@media (max-width: 760px) {
+  .branch-facility-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .branch-create-form {
+    grid-template-columns: 1fr;
+  }
+
+  .branch-user-filters {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .branch-user-count {
+    margin: 0;
+  }
+
+  .branch-request-toolbar,
+  .branch-request-list-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .hospital-request-card-head {
+    flex-direction: column;
+  }
+}

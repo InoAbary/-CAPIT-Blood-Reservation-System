@@ -15,6 +15,7 @@ function StaffDashboard() {
     { label: 'Blood Utilization Reports', path: '/Utilization', icon: '📊', roles: ['staff']   },
     { label: 'Inventory', path: '/Inventory', icon: '📊', roles: ['staff']  },
     { label: 'Request Forms', path: '/Request', icon: '💝', roles: ['hospital']  },
+    { label: 'Branch Admin Workspace', path: '/branch-admin', icon: '🏥', roles: ['branch-admin'] },
     { label: 'Profile Settings', path: '/staff/profile', icon: '⚙️', roles: ['staff', 'hospital']  },
   ];
 
