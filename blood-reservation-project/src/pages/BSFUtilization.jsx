@@ -353,11 +353,7 @@ function BSFUtilization() {
                             Blood Utilization Reports
                         </div>
 
-                        <div className="bu-page-description">
-                            Monitor how released blood units are utilized
-                            by hospitals and review submitted or
-                            system-generated utilization records.
-                        </div>
+                       
                     </div>
 
                     <button

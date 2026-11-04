@@ -314,9 +314,7 @@ function HospitalUtilization() {
                                 Utilization Management
                             </div>
 
-                            <div className="hu-module-description">
-                                Manage hospital blood utilization records.
-                            </div>
+                
                         </div>
 
                         <div className="hu-tabs">
