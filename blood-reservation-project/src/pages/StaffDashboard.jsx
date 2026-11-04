@@ -11,11 +11,11 @@ function StaffDashboard() {
 
   
   const navItems = [
-    { label: 'Overview', path: '/staff/overview', icon: '📊', roles: ['staff', 'hospital'] },
-    { label: 'Blood Utilization Reports', path: '/Utilization', icon: '📊', roles: ['staff']   },
-    { label: 'Inventory', path: '/Inventory', icon: '📊', roles: ['staff']  },
-    { label: 'Request Forms', path: '/Request', icon: '💝', roles: ['hospital']  },
-    { label: 'Profile Settings', path: '/staff/profile', icon: '⚙️', roles: ['staff', 'hospital']  },
+    { label: 'Overview', path: '/staff/overview', icon: '📊', roles: ['staff', 'hospital', 'branch-admin'] },
+    { label: 'Blood Utilization Reports', path: '/Utilization', icon: '📊', roles: ['staff', 'branch-admin']   },
+    { label: 'Inventory', path: '/Inventory', icon: '📊', roles: ['staff', 'branch-admin']  },
+    { label: 'Request Forms', path: '/Request', icon: '💝', roles: ['hospital', 'branch-admin']  },
+    { label: 'Profile Settings', path: '/staff/profile', icon: '⚙️', roles: ['staff', 'hospital', 'branch-admin']  },
   ];
 
 

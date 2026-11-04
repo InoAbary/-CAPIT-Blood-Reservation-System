@@ -24,7 +24,7 @@ import BloodDonorForm from './pages/BloodDonorForm';
 import FormDeny from './pages/FormDeny';
 import FormPending from './pages/FormPending';
 import BloodRequestForm from './pages/Bloodrequestform';
-import BloodRequestsAdmin from './components/Bloodrequestsadmin';
+import BloodRequestsAdmin from './pages/Bloodrequestsadmin';
 import RegisterSuccess from './pages/RegisterSuccess';
 
 import AdminLayout from './pages/admin/AdminLayout';
@@ -133,7 +133,7 @@ function App() {
     <Route
     path="/Request-admin"
     element={
-      <ProtectedRoute require="staff" allowedRoles={['staff', 'supervisor', 'admin']}>
+      <ProtectedRoute require="staff" allowedRoles={['staff', 'supervisor', 'branch-admin', 'admin']}>
       <BloodRequestsAdmin />
       </ProtectedRoute>
     }
