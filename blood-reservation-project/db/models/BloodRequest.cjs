@@ -21,6 +21,14 @@ const bloodRequestSchema = new mongoose.Schema(
         component: String,
         units: Number,
         urgency: String,
+        reviewedBy: { // Authenticated staff member who reviewed the request.
+
+
+
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Staff',
+            default: null
+        },
         receivingFacilityID: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Facilities',

@@ -546,6 +546,9 @@ router.post('/users', async (req, res) => {
       staffId = `STF-${crypto.randomBytes(5).toString('hex').toUpperCase()}`;
     }
 
+    const facilityType = context.facility.facilityType
+    const userRole = facilityType === 'hospital' ? 'hospital' : 'staff'
+
     const [firstName, ...lastNameParts] = name.split(/\s+/);
     const temporaryPassword = crypto.randomBytes(18).toString('base64url');
     const user = await Staff.create({
@@ -554,7 +557,7 @@ router.post('/users', async (req, res) => {
       email,
       mobile,
       staffId,
-      role: 'staff',
+      role: userRole,
       facilityID: context.facility._id,
       isActive: true,
       password: await bcrypt.hash(temporaryPassword, 10),
