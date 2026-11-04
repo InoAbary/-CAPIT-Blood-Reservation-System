@@ -10,7 +10,7 @@ const COMPONENTS = ['Packed RBC', 'Platelets', 'Plasma', 'Whole Blood'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const PATIENT_FIELDS = ['firstName', 'lastName', 'middleName', 'age', 'sex', 'wardRoom', 'diagnosis',
 'hemoglobin', 'platelets', 'priorTransfusion', 'priorTransfusionDate', 'priorTransfusionNotes',
-'bloodType', 'component', 'units', 'urgency', 'receivingFacilityID'];
+'bloodType', 'component', 'units', 'urgency', 'receivingFacilityID', 'fulfillmentMethod'];
 const populateReceiver = query => query.populate('receivingFacilityID', 'facilityName facilityType');
 const fail = (res, status, message) => res.status(status).json({ success: false, message });
 router.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
@@ -21,6 +21,18 @@ async function assignedFacility(req) {
     if (!id || !mongoose.isObjectIdOrHexString(id)) return null;
     return Facility.findOne({ _id: id, isActive: true }).lean();
 }
+router.get('/context', async (req, res) => {
+    if (!['hospital', 'branch-admin'].includes(req.requestStaff.role)) return fail(res, 403, 'A hospital account is required.');
+    try {
+        const hospital = await assignedFacility(req);
+        if (!hospital || hospital.facilityType !== 'hospital') return fail(res, 403, 'Your account needs an active hospital facility assignment.');
+        return res.json({ success: true, hospitalName: hospital.facilityName, hospitalFacilityID: String(hospital._id) });
+    } catch (error) {
+        console.error('Hospital request context error:', error.name);
+        return fail(res, 500, 'Could not load your hospital details.');
+    }
+});
+
 async function requireReviewer(req, res, next) {
     if (!REVIEW_ROLES.has(req.requestStaff.role)) return fail(res, 403, 'This account cannot review receiving-facility requests.');
     try {
@@ -39,7 +51,7 @@ async function requireReviewer(req, res, next) {
 // Active destinations only; the selected value is the facility MongoDB _id.
 // Registered before /:id so this path is not treated as an ObjectId.
 router.get('/receiving-facilities', async (req, res) => {
-    if (!['hospital', ...REVIEW_ROLES].includes(req.requestStaff.role)) return fail(res, 403, 'Staff access required.');
+    if (!['hospital', 'branch-admin', ...REVIEW_ROLES].includes(req.requestStaff.role)) return fail(res, 403, 'Staff access required.');
     try {
         const facilities = await Facility.find({ isActive: true, facilityType: { $in: RECEIVER_TYPES } })
         .select('_id facilityName facilityType address').sort({ facilityName: 1 }).lean();
@@ -53,7 +65,7 @@ router.get('/receiving-facilities', async (req, res) => {
 // One request document per component/unit row. Shared fields are supplied again
 // by the multi-product form. Identity and source hospital come from the session.
 router.post('/', async (req, res) => {
-    if (req.requestStaff.role !== 'hospital') return fail(res, 403, 'Only hospital accounts may submit blood requests.');
+    if (!['hospital', 'branch-admin'].includes(req.requestStaff.role)) return fail(res, 403, 'Only hospital accounts may submit blood requests.');
     // Fail before creating anything if this process loaded an older model file.
     if (!BloodRequest.schema.path('receivingFacilityID')) {
         return fail(res, 500, 'The loaded BloodRequest model is missing receivingFacilityID. Update the model file imported by this route and restart the backend.');
@@ -61,6 +73,7 @@ router.post('/', async (req, res) => {
     const body = req.body;
     if (!body || typeof body !== 'object' || Array.isArray(body)) return fail(res, 400, 'Invalid request body.');
     if (!mongoose.isObjectIdOrHexString(body.receivingFacilityID)) return fail(res, 400, 'Select a valid receiving facility.');
+    if (!['Pickup', 'Delivery'].includes(body.fulfillmentMethod)) return fail(res, 400, 'Choose pickup or delivery.');
     if (!COMPONENTS.includes(body.component) || !BLOOD_TYPES.includes(body.bloodType)) return fail(res, 400, 'Select a valid blood type and component.');
     if (typeof body.units !== 'number' || !Number.isSafeInteger(body.units) || body.units < 1) return fail(res, 400, 'Units must be a positive whole number.');
     if (['firstName', 'lastName', 'diagnosis'].some(field => typeof body[field] !== 'string' || !body[field].trim())) return fail(res, 400, 'Patient name and diagnosis are required.');

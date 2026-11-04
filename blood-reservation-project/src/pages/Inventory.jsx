@@ -20,9 +20,9 @@ const TABS = [
 { id: 'fulfillment', label: 'Release to Requests' },
 ];
 
-function Inventory() {
+function Inventory({ fixedFacilityId = '' }) {
     const [facilities, setFacilities] = useState([]);
-    const [selectedId, setSelectedId] = useState('');
+    const [selectedId, setSelectedId] = useState(fixedFacilityId);
     const [facility, setFacility] = useState(null);
     const [inventory, setInventory] = useState(null);
     const [activeTab, setActiveTab] = useState('overview');
@@ -30,7 +30,26 @@ function Inventory() {
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [error, setError] = useState('');
 
-    // Load dropdown options once
+    async function loadFacilityInventory(id) {
+        if (!id) return;
+        setError('');
+        setLoadingDetails(true);
+        try {
+            const [facRes, invRes] = await Promise.all([
+                apiFetch(`/api/facilities/${id}`), apiFetch(`/api/facilities/${id}/inventory`),
+            ]);
+            const facBody = await facRes.json();
+            if (!facRes.ok) throw new Error(facBody.message || 'Could not load facility.');
+            const invBody = await invRes.json();
+            if (!invRes.ok) throw new Error(invBody.message || 'Could not load inventory.');
+            setFacility(facBody);
+            setInventory(invBody);
+            setActiveTab('overview');
+        } catch (err) { setError(err.message); }
+        finally { setLoadingDetails(false); }
+    }
+
+    // Load available facilities once; branch administrators are locked to their assigned facility.
     useEffect(() => {
         const controller = new AbortController();
 
@@ -41,10 +60,14 @@ function Inventory() {
                 });
                 if (!res.ok) throw new Error('Could not load facilities.');
                 const data = await res.json();
-                setFacilities(data.facilities);
-
-
-                if (data.facilities.length > 0) setSelectedId(data.facilities[0]._id);
+                const available = fixedFacilityId
+                    ? data.facilities.filter((item) => item._id === fixedFacilityId)
+                    : data.facilities;
+                setFacilities(available);
+                if (fixedFacilityId && available.length) {
+                    setSelectedId(fixedFacilityId);
+                    loadFacilityInventory(fixedFacilityId);
+                } else if (available.length > 0) setSelectedId(available[0]._id);
 
             } catch (err) {
                 if (err.name !== 'AbortError') setError(err.message);
@@ -54,34 +77,13 @@ function Inventory() {
         })();
 
         return () => controller.abort();
-    }, []);
+    }, [fixedFacilityId]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!selectedId) return;
 
-        setError('');
-        setLoadingDetails(true);
-
-        try {
-            const [facRes, invRes] = await Promise.all([
-                apiFetch(`/api/facilities/${selectedId}`), apiFetch(`/api/facilities/${selectedId}/inventory`),
-            ]);
-
-            const facBody = await facRes.json();
-            if (!facRes.ok) throw new Error(facBody.message || 'Could not load facility.');
-
-            const invBody = await invRes.json();
-            if (!invRes.ok) throw new Error(invBody.message || 'Could not load inventory.');
-
-            setFacility(facBody);
-            setInventory(invBody);
-            setActiveTab('overview');
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoadingDetails(false);
-        }
+        await loadFacilityInventory(selectedId);
     };
 
     const refreshInventory = async () => {
@@ -107,6 +109,7 @@ function Inventory() {
     };
 
     const handleChangeFacility = () => {
+        if (fixedFacilityId) return;
         setFacility(null);
         setInventory(null);
         setError('');
@@ -136,7 +139,7 @@ function Inventory() {
             *Facility
             </label>
 
-            <div className="inv-select-wrap">
+            {fixedFacilityId ? <p className="inv-branch-facility">{facilities.find((item) => item._id === fixedFacilityId)?.facilityName || 'Loading assigned facility…'}</p> : <div className="inv-select-wrap">
             <select
             id="facility"
             className="inv-select"
@@ -168,7 +171,7 @@ function Inventory() {
             >
             <polyline points="4 8 12 16 20 8" />
             </svg>
-            </div>
+            </div>}
 
             <button type="submit" className="inv-submit" disabled={!selectedId || loadingDetails}>
             {loadingDetails ? 'Loading…' : 'Submit'}
@@ -228,13 +231,13 @@ function Inventory() {
             </div>
 
 
-            <button
+            {!fixedFacilityId && <button
             type="button"
             className="inv-change"
             onClick={handleChangeFacility}
             >
             Change Facility
-            </button>
+            </button>}
 
             </div>
 

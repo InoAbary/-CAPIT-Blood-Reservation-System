@@ -9,15 +9,15 @@ async function loadAccess(req, res, next) {
         if (!mongoose.isObjectIdOrHexString(req.user?.id)) return deny(res, 401, 'Invalid staff session.');
         const account = await Staff.findById(req.user.id).select('_id role isActive facilityID').lean();
         if (!account || account.isActive !== true) return deny(res, 401, 'Staff account is unavailable.');
-        if (!['staff', 'admin'].includes(account.role)) return deny(res, 403, 'Inventory access is limited to staff and administrators.');
+        if (!['staff', 'branch-admin', 'admin'].includes(account.role)) return deny(res, 403, 'Inventory access is limited to branch staff and administrators.');
         let facility = null;
-        if (account.role === 'staff') {
+        if (['staff', 'branch-admin'].includes(account.role)) {
             if (!mongoose.isObjectIdOrHexString(account.facilityID)) return deny(res, 403, 'Your account has no assigned facility.');
             facility = await Facility.findOne({ _id: account.facilityID, isActive: true, facilityType: { $in: ['bsf', 'prc_chapter'] } }).lean();
             if (!facility) return deny(res, 403, 'Your account needs an active BSF or PRC facility assignment.');
         }
         // Role and facility are taken from the CURRENT account, not client input.
-        req.inventoryAccess = { account, facility, canEdit: account.role === 'staff' };
+        req.inventoryAccess = { account, facility, canEdit: ['staff', 'branch-admin'].includes(account.role) };
         req.user = { ...req.user, id: String(account._id), role: account.role };
         res.set('Cache-Control', 'no-store');
         return next();

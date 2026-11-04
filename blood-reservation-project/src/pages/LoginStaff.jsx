@@ -26,7 +26,7 @@ export default function Login() {
       const loggedInUser = await loginStaff(email, password, "staff");
       setPassword("");
 
-      const dest = loggedInUser.role === 'admin' && "/admin" || "/StaffDashboard" 
+      const dest = loggedInUser.role === 'admin' ? "/admin" : loggedInUser.role === 'branch-admin' ? "/branch-admin" : "/StaffDashboard";
 
       navigate(dest, { replace: true });
     } catch (err) {
@@ -70,7 +70,7 @@ export default function Login() {
               type="button"
               onClick={() =>
                 navigate(
-                  user.role === "staff" ? "/StaffDashboard" : "/DonorDashboard",
+                  user.role === "admin" ? "/admin" : user.role === "branch-admin" ? "/branch-admin" : user.role === "staff" || user.role === "hospital" ? "/StaffDashboard" : "/DonorDashboard",
                   { replace: true }
                 )
               }
