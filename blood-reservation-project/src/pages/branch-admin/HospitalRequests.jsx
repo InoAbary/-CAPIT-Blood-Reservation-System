@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import './BranchAdmin.css';
+import '../../styles/BranchAdmin.css';
 
 function formatDate(value) {
   if (!value) return '—';

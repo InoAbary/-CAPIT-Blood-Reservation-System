@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
-import './BranchAdmin.css';
+import '../../styles/BranchAdmin.css';
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -24,8 +24,15 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
 }
 
-export default function BranchUtilization() {
-  const { facilityType } = useOutletContext();
+export default function BranchUtilization({
+  basePath,          
+  facilityType: facilityTypeProp,
+}) {
+
+  const outletContext = useOutletContext() || {};
+  const facilityType = facilityTypeProp ?? outletContext.facilityType;
+  const apiBase = basePath ?? '/api/branch-admin';
+
   const [data, setData] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [loading, setLoading] = useState(true);

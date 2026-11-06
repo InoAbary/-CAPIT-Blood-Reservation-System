@@ -6,7 +6,7 @@ import BranchRequests from './BranchRequests';
 import BranchUtilization from './BranchUtilization';
 import HospitalRequests from './HospitalRequests';
 import Inventory from '../Inventory';
-import './BranchAdmin.css';
+import '../../styles/BranchAdmin.css';
 
 async function request(path, options = {}) {
   const response = await fetch(path, {

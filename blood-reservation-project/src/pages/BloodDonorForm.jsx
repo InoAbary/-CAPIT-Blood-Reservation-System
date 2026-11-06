@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 import '../styles/Dashboard.css';
@@ -85,8 +85,6 @@ function DonorTopMenu() {
                     </Link>
                 ))}
             </nav>
-
-            
         </header>
     );
 }
@@ -100,6 +98,7 @@ function BloodDonorForm() {
 
     const {donor, loading} = useAuth()
     const userSex = donor?.sex
+    const printRef = useRef(null);
     const [questionsState, setQuestionsState] = useState(
         QUESTION_LIST.map(q => ({ ...q, answer: '', remark: '', date: '' }))
     );
@@ -112,7 +111,6 @@ function BloodDonorForm() {
     const curQuestion = questions[stepIndex];
     const isLastStep = stepIndex === questions.length - 1;
 
-
     const progress = useMemo(
         () => Math.round(((stepIndex + 1) / questions.length) * 100),
         [stepIndex, questions.length]
@@ -124,7 +122,17 @@ function BloodDonorForm() {
         );
     };
 
+    // ── Can the user advance from the current question? ──
+    const canProceed = useMemo(() => {
+        if (!curQuestion) return false;
+        if (DATE_ONLY.includes(curQuestion.id)) {
+            return !!curQuestion.date;         // date must be filled
+        }
+        return curQuestion.answer === 'yes' || curQuestion.answer === 'no';
+    }, [curQuestion]);
+
     const goNext = () => {
+        if (!canProceed) return;               // safety guard
         if (isLastStep) {
             submitForm();
         } else {
@@ -133,35 +141,29 @@ function BloodDonorForm() {
     };
 
     const goBack = () => {
-        if (stepIndex > 0) {
-            updateQuestion(stepIndex, 'answer', '');
-            setStepIndex(i => i - 1);
-            if (!DATE_ONLY.includes(stepIndex)) {
-                updateQuestion(curQuestion.id, 'answer', '');
-            }
+        if (stepIndex === 0) return;
+
+        // Clear only the current question's answer (by id, not index)
+        updateQuestion(curQuestion.id, 'answer', '');
+        if (DATE_ONLY.includes(curQuestion.id)) {
+            updateQuestion(curQuestion.id, 'date', '');
         }
+
+        setStepIndex(i => i - 1);
     };
 
-    
-
+    // ── Answer selection no longer auto-advances ──
     const handleAnswer = (answer) => {
         updateQuestion(curQuestion.id, 'answer', answer);
 
+        // Rejection still happens immediately — no "Next" needed
         if (ShouldDeny(curQuestion, answer)) {
             setRejected(true);
-            return;
         }
-
-        queueMicrotask(() => goNext());
     };
 
     const handleDateChange = (value) => {
         updateQuestion(curQuestion.id, 'date', value);
-    };
-
-    const handleDateNext = (value) => {
-        updateQuestion(curQuestion.id, 'date', value);
-        queueMicrotask(() => goNext());
     };
 
     const submitForm = async () => {
@@ -195,7 +197,18 @@ function BloodDonorForm() {
             });
             if (!answersRes.ok) throw new Error(answersRes.error);
 
-            navigate(rejected ? '/FormDeny' : '/FormPending');
+            navigate('/FormPending', {
+                state: {
+                    answers: questions.map(q => ({
+                        id: q.id,
+                        answer: q.answer,
+                        remark: q.remark || '',
+                        date: q.date || '',
+                    })),
+                    donorName: donor?.name || donor?.email || '',
+                    submittedAt: new Date().toISOString(),
+                },
+            });
         } catch (err) {
             console.error(err);
             alert(err.message);
@@ -270,7 +283,6 @@ function BloodDonorForm() {
     /* ---------- Per-step rendering ---------- */
     const isDateQuestion = DATE_ONLY.includes(curQuestion.id);
 
-    
     return (
         <div className="dashboard-container top-menu-layout">
             <DonorTopMenu />
@@ -361,18 +373,17 @@ function BloodDonorForm() {
                                 {t('common.back', 'Back')}
                             </button>
 
-                            {isDateQuestion && (
-                                <button
-                                    type="button"
-                                    className="submit-btn"
-                                    onClick={handleDateNext}
-                                    disabled={submitting}
-                                >
-                                    {(isLastStep)
-                                        ? t('common.submit', 'Submit')
-                                        : t('common.next', 'Next')}
-                                </button>
-                            )}
+                            {/* Single Next / Submit button, disabled until answer is valid */}
+                            <button
+                                type="button"
+                                className="submit-btn"
+                                onClick={goNext}
+                                disabled={!canProceed || submitting}
+                            >
+                                {isLastStep
+                                    ? t('common.submit', 'Submit')
+                                    : t('common.next', 'Next')}
+                            </button>
                         </div>
                     </div>
                 </div>

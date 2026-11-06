@@ -13,29 +13,33 @@ const Counter = require('../../db/models/counters.cjs');
 const router = express.Router();
 const managedRoles = ['staff', 'hospital'];
 
+const requireRole = require('../middleware/requireRole.cjs');
+
+const STAFF_ROLES = ['staff', 'hospital', 'branch-admin']
+
 async function getBranchContext(req, res) {
-  const branchAdmin = await Staff.findOne({
+  const staff = await Staff.findOne({
     _id: req.user.id,
-    role: 'branch-admin',
+    role: {$in: STAFF_ROLES},
     isActive: true,
   }).select('facilityID firstName lastName email').lean();
 
-  if (!branchAdmin) {
-    res.status(401).json({ error: 'Your branch administrator account is unavailable.' });
+  if (!staff) {
+    res.status(401).json({ error: 'Invalid staff account.' });
     return null;
   }
-  if (!branchAdmin.facilityID) {
+  if (!staff.facilityID) {
     res.status(409).json({ error: 'Your account is not assigned to a facility.' });
     return null;
   }
 
-  const facility = await Facility.findById(branchAdmin.facilityID).lean();
+  const facility = await Facility.findById(staff.facilityID).lean();
   if (!facility) {
     res.status(409).json({ error: 'Your assigned facility could not be found.' });
     return null;
   }
 
-  return { branchAdmin, facility };
+  return { staff, facility };
 }
 
 function formatUser(user) {
@@ -78,7 +82,7 @@ async function getLatestHospitalReports(unitIds) {
   return latestByUnit;
 }
 
-router.get('/dashboard', async (req, res) => {
+router.get('/dashboard', requireRole('branch-admin'), async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
@@ -509,7 +513,7 @@ router.post('/utilization/reports', async (req, res) => {
   }
 });
 
-router.post('/users', async (req, res) => {
+router.post('/users', requireRole('branch-admin'), async (req, res) => {
   const body = req.body || {};
   const name = String(body.name || '').trim();
   const email = String(body.email || '').trim().toLowerCase();
@@ -526,6 +530,9 @@ router.post('/users', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
+    if (context.role !== 'branch-admin') {
+      return res.status(403).json({ error: 'Only branch administrators can create staff accounts.' });
+    }
     if (context.facility.isActive === false) {
       return res.status(409).json({ error: 'Users cannot be created for an inactive facility.' });
     }
@@ -579,7 +586,7 @@ router.post('/users', async (req, res) => {
   }
 });
 
-router.patch('/users/:id/status', async (req, res) => {
+router.patch('/users/:id/status', requireRole('branch-admin'), async (req, res) => {
   const { id } = req.params;
   const { status } = req.body || {};
 
@@ -594,6 +601,9 @@ router.patch('/users/:id/status', async (req, res) => {
     const context = await getBranchContext(req, res);
     if (!context) return;
 
+    if (context.role !== 'branch-admin') {
+      return res.status(403).json({ error: 'Only branch administrators can create staff accounts.' });
+    }
     const user = await Staff.findOneAndUpdate(
       {
         _id: id,
@@ -614,7 +624,7 @@ router.patch('/users/:id/status', async (req, res) => {
   }
 });
 
-router.delete('/users/:id', async (req, res) => {
+router.delete('/users/:id', requireRole('branch-admin'), async (req, res) => {
   const { id } = req.params;
 
   if (!isValidUserId(id)) {
@@ -624,6 +634,9 @@ router.delete('/users/:id', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
+    if (context.role !== 'branch-admin') {
+      return res.status(403).json({ error: 'Only branch administrators can create staff accounts.' });
+    }
 
     const deleted = await Staff.findOneAndDelete({
       _id: id,

@@ -130,3 +130,30 @@
         font-size: 1.1rem;
     }
 }
+
+.print-only { display: none; }
+
+@media print {
+  body * { visibility: hidden; }
+  .print-only, .print-only * { visibility: visible; }
+  .print-only {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 1cm;
+    font-size: 12px;
+    color: #000;
+  }
+  .answers-table { width: 100%; border-collapse: collapse; }
+  .answers-table th,
+  .answers-table td {
+    border: 1px solid #444;
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  .answers-table th { background: #eee; }
+  @page { margin: 1cm; }
+}

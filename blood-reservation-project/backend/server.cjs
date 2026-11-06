@@ -17,6 +17,7 @@ const bloodRequestAdminRoutes = require('./routes/bloodRequestAdminRoutes.cjs');
 const inventoryFulfillmentRoutes = require('./routes/inventoryFulfillmentRoutes.cjs');
 const forgotPasswordEmailRoutes = require('./routes/forgotPasswordEmailRoutes.cjs');
 const branchAdminRoutes = require('./routes/branchAdminRoutes.cjs');
+const staffRoutes = require('./routes/staffRoutes.cjs');
 
 const requireDonor = require('./middleware/requireDonor.cjs');
 const requireStaff = require('./middleware/requireStaff.cjs');
@@ -45,7 +46,8 @@ app.use('/api/facilities', facilityRoutes);
 app.use('/api/bloodUnit', requireStaff, bloodUnitRoutes);
 app.use('/api/bloodUnits', requireStaff, bloodUnitRoutes);
 app.use('/api/utilization', requireStaff, utilizationRoutes);
-app.use('/api/branch-admin', requireStaff, requireRole('branch-admin'), branchAdminRoutes);
+app.use('/api/branch-admin', requireStaff, branchAdminRoutes);
+app.use('/api/staff', requireStaff, staffRoutes)
 app.use('/api/inventory-fulfillment', inventoryFulfillmentRoutes);
 // Both paths use the same facility-scoped router; keep the legacy alias safe.
 app.use('/api/blood-requests', bloodRequestAdminRoutes);

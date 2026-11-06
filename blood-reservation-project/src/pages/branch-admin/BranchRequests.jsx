@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import './BranchAdmin.css';
+import '../../styles/BranchAdmin.css';
 
 async function request(path) {
   const response = await fetch(path, { credentials: 'include' });

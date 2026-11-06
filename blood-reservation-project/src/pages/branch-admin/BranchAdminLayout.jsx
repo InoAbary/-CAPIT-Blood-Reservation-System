@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/AdminDashboard.css';
-import './BranchAdmin.css';
+import '../../styles/BranchAdmin.css';
 
 const workspaceTabs = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
