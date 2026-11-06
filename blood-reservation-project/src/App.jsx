@@ -21,6 +21,7 @@ import BloodBankMap from './pages/BloodBankMap'
 import Inventory from './pages/Inventory';
 import Utilization from './pages/Utilization';
 import BloodDonorForm from './pages/BloodDonorForm';
+import BookAppointment from './pages/BookAppointment';
 import FormDeny from './pages/FormDeny';
 import FormPending from './pages/FormPending';
 import BloodRequestForm from './pages/Bloodrequestform';
@@ -83,6 +84,14 @@ function App() {
     element={
       <ProtectedRoute require="donor" >
       <FormPending />
+      </ProtectedRoute>
+    }
+    />
+    <Route
+    path="/BookAppointment"
+    element={
+      <ProtectedRoute require="donor" >
+      <BookAppointment />
       </ProtectedRoute>
     }
     />

@@ -4,6 +4,7 @@ import BloodBankMap from '../BloodBankMap';
 import BloodRequestForm from '../Bloodrequestform';
 import BranchRequests from './BranchRequests';
 import BranchUtilization from './BranchUtilization';
+import StaffAppointments from '../StaffAppointments';
 import HospitalRequests from './HospitalRequests';
 import Inventory from '../Inventory';
 import '../../styles/BranchAdmin.css';
@@ -426,6 +427,18 @@ function BranchDashboard() {
           <BloodRequestForm embedded />
         </section>
       )}
+
+      {activeTab === 'appointments' && (
+            <section
+              id="staff-panel-appointments"
+              className="branch-tab-panel"
+              role="tabpanel"
+              aria-labelledby="staff-tab-appointments"
+              tabIndex={0}
+            >
+              <StaffAppointments />
+            </section>
+          )}
 
       {activeTab === 'branch-requests' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <BranchRequests />}
       {activeTab === 'my-requests' && facility?.facilityType === 'hospital' && <HospitalRequests />}

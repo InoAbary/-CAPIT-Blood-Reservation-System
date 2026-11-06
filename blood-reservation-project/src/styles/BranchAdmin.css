@@ -432,3 +432,118 @@
     flex-direction: column;
   }
 }
+
+.appointment-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin: 1.5rem 0;
+}
+
+.appointment-form label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.9rem;
+  font-weight: 600;
+  gap: 0.35rem;
+}
+
+.appointment-form input,
+.appointment-form select {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #d5d9e2;
+  border-radius: 6px;
+  font-size: 0.95rem;
+}
+
+.appointment-section { margin-top: 2rem; }
+.appointment-section h3 { margin-bottom: 0.75rem; }
+
+.appointment-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.appointment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border: 1px solid #e4e7ee;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.appointment-item > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.appointment-venue { font-size: 0.9rem; color: #555; }
+.appointment-note { font-size: 0.85rem; color: #b34a00; }
+
+.appointment-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-badge {
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.status-pending   { background: #fff4d6; color: #8a5a00; }
+.status-approved  { background: #e4f6e8; color: #1f7a3a; }
+.status-denied,
+.status-cancelled { background: #fde7e7; color: #a02121; }
+.status-completed { background: #e8eefc; color: #2c4a99; }
+
+.muted { color: #888; }
+
+.segmented-tabs {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1rem 0 1.25rem;
+  flex-wrap: wrap;
+}
+.segmented-btn {
+  padding: 0.45rem 0.9rem;
+  border: 1px solid #d5d9e2;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.segmented-btn--active {
+  background: #b5172b;
+  border-color: #b5172b;
+  color: #fff;
+}
+
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50;
+}
+.modal-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  width: min(420px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.modal-card label { display: flex; flex-direction: column; gap: 0.35rem; font-weight: 600; font-size: 0.9rem; }
+.modal-card textarea { padding: 0.5rem; border: 1px solid #d5d9e2; border-radius: 6px; resize: vertical; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }

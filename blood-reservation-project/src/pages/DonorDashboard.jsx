@@ -10,7 +10,9 @@ function DonorDashboard() {
     { label: 'Overview', path: '/DonorDashboard', icon: '📊' },
     { label: 'Blood Bank Map', path: '/BloodBankMap', icon: '🗺️' },
     { label: 'Donor Application Form', path: '/BloodDonorForm', icon: '💝' },
+    { label: 'Book Appointment', path: '/BookAppointment', icon: '⚙️' },
     { label: 'Profile Settings', path: '/donor/profile', icon: '⚙️' },
+    
   ];
 
   const [badges, setBadges] = useState([])

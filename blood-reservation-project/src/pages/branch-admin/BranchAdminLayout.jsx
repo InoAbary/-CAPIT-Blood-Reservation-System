@@ -32,12 +32,17 @@ export default function BranchAdminLayout() {
   const inventoryTab = ['bsf', 'prc_chapter'].includes(facilityType)
     ? { id: 'inventory', label: 'Inventory', icon: '🩸' }
     : null;
+  const appointmentsTab = ['bsf', 'prc_chapter'].includes(facilityType)
+    ? { id: 'appointments', label: 'Appointments', icon: '🩸' }
+    : null;
+    
   const tabs = [
     ...workspaceTabs,
     ...(reservationTab ? [reservationTab] : []),
     ...(inventoryTab ? [inventoryTab] : []),
     ...(hospitalRequestsTab ? [hospitalRequestsTab] : []),
     ...(utilizationTab ? [utilizationTab] : []),
+    ...(appointmentsTab ? [appointmentsTab] : []),
   ];
 
   useEffect(() => {

@@ -6,6 +6,7 @@ import BranchRequests from './branch-admin/BranchRequests';
 import BranchUtilization from './branch-admin/BranchUtilization';
 import HospitalRequests from './branch-admin/HospitalRequests';
 import Inventory from './Inventory';
+import StaffAppointments from './StaffAppointments'
 import { useAuth } from '../context/AuthContext';
 import '../styles/BranchAdmin.css';
 
@@ -34,6 +35,7 @@ const STAFF_TABS = [
   { key: 'my-requests', label: 'My Requests', icon: '📋', facilityTypes: ['hospital'] },
   { key: 'branch-requests', label: 'Incoming Requests', icon: '📥', facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'inventory', label: 'Inventory', icon: '🩸', facilityTypes: ['bsf', 'prc_chapter'] },
+  { key: 'appointments', label: 'Appointments', icon: '📅', facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'profile', label: 'Profile Settings', icon: '⚙️' },
 ];
 
@@ -252,6 +254,18 @@ function StaffDashboard() {
           {activeTab === 'branch-requests' && ['bsf', 'prc_chapter'].includes(facilityType) && <BranchRequests />}
 
           {activeTab === 'my-requests' && facilityType === 'hospital' && <HospitalRequests />}
+
+          {activeTab === 'appointments' && (
+            <section
+              id="staff-panel-appointments"
+              className="branch-tab-panel"
+              role="tabpanel"
+              aria-labelledby="staff-tab-appointments"
+              tabIndex={0}
+            >
+              <StaffAppointments />
+            </section>
+          )}
 
           {activeTab === 'profile' && (
             <section
