@@ -7,6 +7,8 @@ const Appointment = require('../../db/models/appointmentSchedules.cjs')
 const Facility = require('../../db/models/facilities.cjs')
 const Staff = require('../../db/models/staff.cjs')
 
+const {sendAppointmentEmail} = require('../utils/appointSchedEmail.cjs')
+
 const requireDonor = require('../middleware/requireDonor.cjs');
 const requireStaff = require('../middleware/requireStaff.cjs');
 
@@ -211,11 +213,62 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
     if (action === 'deny' && note) appt.note = note;
     await appt.save();
 
-    const populated = await appt.populate('donor', 'firstName lastName email bloodType');
-    return res.json({ appointment: populated });
+
+    const populated = await appt.populate([
+      { path: 'donor', select: 'firstName lastName email' },
+      { path: 'venue', select: 'facilityName address' },
+    ]);
+
+      
+    res.json({ appointment: populated });
+
+    if (action === 'approve') {
+      // Lazy-require to avoid circular deps and to keep module load fast
+  
+
+      // NOTE: date-only appointment → default to 9:00–10:00 AM.
+      // If your Appointment schema has a real time field, use that instead.
+      const startTime = new Date(populated.date);
+      startTime.setHours(9, 0, 0, 0);
+      const endTime = new Date(startTime);
+      endTime.setHours(10, 0, 0, 0);
+
+      // Make sure we have what we need before sending
+      if (populated.donor?.email) {
+        sendAppointmentEmail({
+          email: populated.donor.email,
+          subject: 'Your Blood Donation Appointment is Confirmed',
+          message: `
+            <p>Dear ${populated.donor.firstName || 'Donor'},</p>
+            <p>Your appointment at <strong>${populated.venue?.facilityName || 'the facility'}</strong> has been approved.</p>
+            <p>Date: ${startTime.toDateString()}</p>
+            <p>Please add it to your calendar using the invite attached below.</p>
+          `,
+          text:
+            `Your appointment at ${populated.venue?.facilityName || 'the facility'} ` +
+            `has been approved for ${startTime.toDateString()}.`,
+          event: {
+            start: startTime,
+            end: endTime,
+            summary: 'Blood Donation Appointment',
+            location: populated.venue?.address || populated.venue?.facilityName || '',
+            description: `Appointment ID: ${populated._id}`,
+          },
+        }).catch((emailErr) => {
+          console.error('Failed to send appointment confirmation email:', emailErr);
+        });
+      } else {
+        console.warn(
+          `Appointment ${populated._id} approved but donor has no email address.`
+        );
+      }
+    }
   } catch (err) {
     console.error('PATCH /staff-appointments/:id failed:', err);
-    return res.status(500).json({ error: 'Unable to update that appointment.' });
+    // Only reached if the DB update threw before res.json was called
+    if (!res.headersSent) {
+      return res.status(500).json({ error: 'Unable to update that appointment.' });
+    }
   }
 });
 
