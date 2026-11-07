@@ -1,5 +1,11 @@
 const mongoose = require('mongoose');
 
+const passwordResetSchema = new mongoose.Schema({
+    tokenHash: { type: String, required: true },
+    expiresAt: { type: Date, required: true },
+    passwordFingerprint: { type: String, required: true }
+}, { _id: false });
+
 const staffSchema = new mongoose.Schema({
 
     facilityID: {
@@ -35,9 +41,14 @@ const staffSchema = new mongoose.Schema({
     password: {
         type: String,
         required: true
+    },
+    passwordReset: {
+        type: passwordResetSchema,
+        select: false,
+        default: undefined
     }
 
-    
+
 
 })
 

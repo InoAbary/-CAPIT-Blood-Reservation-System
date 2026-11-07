@@ -12,6 +12,8 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import RegisterStaff from './pages/RegisterStaff'
 import LoginStaff from './pages/LoginStaff'
+import ForgotPasswordStaff from './pages/ForgotPasswordStaff'
+import ResetPasswordStaff from './pages/ResetPasswordStaff'
 
 import DonorDashboard from './pages/DonorDashboard'
 import StaffDashboard from './pages/StaffDashboard'
@@ -53,6 +55,8 @@ function App() {
     <Route path="/ForgotPassword" element={<ForgotPassword />} />
     <Route path="/resetPassword" element={<ResetPassword />} />
     <Route path="/Login/Staff" element={<LoginStaff />} />
+    <Route path="/ForgotPassword/Staff" element={<ForgotPasswordStaff />} />
+    <Route path="/ResetPassword/Staff" element={<ResetPasswordStaff />} />
 
     {/* ---- Donor-only ---- */}
     <Route
@@ -131,7 +135,7 @@ function App() {
       </ProtectedRoute>
     }
     >
-      <Route index element={<BranchDashboard />} />
+    <Route index element={<BranchDashboard />} />
     </Route>
     <Route
     path="/Inventory"

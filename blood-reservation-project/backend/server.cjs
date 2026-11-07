@@ -16,6 +16,7 @@ const adminRoutes = require('./routes/adminRoutes.cjs');
 const bloodRequestAdminRoutes = require('./routes/bloodRequestAdminRoutes.cjs');
 const inventoryFulfillmentRoutes = require('./routes/inventoryFulfillmentRoutes.cjs');
 const forgotPasswordEmailRoutes = require('./routes/forgotPasswordEmailRoutes.cjs');
+const staffPasswordRecoveryRoutes = require('./routes/staffPasswordRecoveryRoutes.cjs');
 const branchAdminRoutes = require('./routes/branchAdminRoutes.cjs');
 const staffRoutes = require('./routes/staffRoutes.cjs');
 const appointmentRoutes = require('./routes/appointmentRoutes.cjs')
@@ -56,6 +57,7 @@ app.use('/api/bloodRequest', bloodRequestAdminRoutes);
 app.use('/api/admin', requireStaff, requireRole('admin'), adminRoutes);
 // Public recovery endpoints: users cannot sign in until their password is reset.
 app.use('/api/donor', forgotPasswordEmailRoutes);
+app.use('/api/staff-recovery', staffPasswordRecoveryRoutes);
 app.use('/api/appointments', appointmentRoutes);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
