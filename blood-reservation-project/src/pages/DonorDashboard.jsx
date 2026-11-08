@@ -2,6 +2,7 @@ import React, {useState, useEffect} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {useAuth} from '../context/AuthContext'
 import '../styles/Dashboard.css';
+import DonorNotificationSettings from '../components/DonorNotificationSettings';
 
 function DonorDashboard() {
   const navigate = useNavigate();
@@ -77,6 +78,7 @@ function DonorDashboard() {
               <p className="stat">May 15</p>
             </div>
           </div>
+          <DonorNotificationSettings />
           <div className="badges-section">
               <h3>My Badges</h3>
               <div className="badges-grid">

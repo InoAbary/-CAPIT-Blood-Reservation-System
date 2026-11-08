@@ -28,7 +28,14 @@ const requireRole = require('./middleware/requireRole.cjs');
 const app = express();
 
 
-connectDB();
+connectDB().then(async () => {
+    try {
+        const { startDonationReminders } = require('./services/donationReminders.cjs');
+        await startDonationReminders();
+    } catch (error) {
+        console.error('Donation reminders could not start:', error.message);
+    }
+});
 
 
 
@@ -57,6 +64,9 @@ app.use('/api/bloodRequest', bloodRequestAdminRoutes);
 app.use('/api/admin', requireStaff, requireRole('admin'), adminRoutes);
 // Public recovery endpoints: users cannot sign in until their password is reset.
 app.use('/api/donor', forgotPasswordEmailRoutes);
+app.use('/api/donor', require('./routes/mobileNumberChangeRoutes.cjs'));
+app.use('/api/donor', require('./routes/donorNotificationRoutes.cjs'));
+app.use('/api/donor', require('./routes/donorProfileRoutes.cjs'));
 app.use('/api/staff-recovery', staffPasswordRecoveryRoutes);
 app.use('/api/appointments', appointmentRoutes);
 

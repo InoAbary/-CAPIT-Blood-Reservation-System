@@ -16,6 +16,8 @@ import ForgotPasswordStaff from './pages/ForgotPasswordStaff'
 import ResetPasswordStaff from './pages/ResetPasswordStaff'
 
 import DonorDashboard from './pages/DonorDashboard'
+import DonorProfile from './pages/DonorProfile'
+import ChangeMobileNumber, { ConfirmMobileNumber } from './pages/ChangeMobileNumber';
 import StaffDashboard from './pages/StaffDashboard'
 
 import ProtectedRoute from './components/ProtectedRoute';
@@ -48,6 +50,7 @@ function App() {
     <AuthProvider>
     <Routes>
     {/* ---- Public ---- */}
+    <Route path="/donor/change-number/confirm" element={<ConfirmMobileNumber />} />
     <Route path="/Register" element={<Register />} />
     <Route path="/Register/Success" element={<RegisterSuccess />} />
     <Route path="/Register/Staff" element={<RegisterStaff />} />
@@ -59,6 +62,8 @@ function App() {
     <Route path="/ResetPassword/Staff" element={<ResetPasswordStaff />} />
 
     {/* ---- Donor-only ---- */}
+    <Route path="/donor/change-number" element={<ProtectedRoute require="donor"><ChangeMobileNumber /></ProtectedRoute>} />
+    <Route path="/donor/profile" element={<ProtectedRoute require="donor"><DonorProfile /></ProtectedRoute>} />
     <Route
     path="/DonorDashboard"
     element={
