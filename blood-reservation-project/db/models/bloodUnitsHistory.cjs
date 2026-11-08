@@ -153,7 +153,8 @@ function getSnapshot(unit) {
 
     return {
         bloodUnitID: data.bloodUnitID,
-        donorID: data.donorID,
+        // Keep historical snapshots independent of donor population/deletion.
+        donorID: data.donorID ? String(data.donorID._id || data.donorID) : null,
         bloodType: data.bloodType,
         component: data.component,
         collectionDate: data.collectionDate,
