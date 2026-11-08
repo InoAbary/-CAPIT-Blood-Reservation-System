@@ -20,6 +20,7 @@ const staffPasswordRecoveryRoutes = require('./routes/staffPasswordRecoveryRoute
 const branchAdminRoutes = require('./routes/branchAdminRoutes.cjs');
 const staffRoutes = require('./routes/staffRoutes.cjs');
 const appointmentRoutes = require('./routes/appointmentRoutes.cjs')
+const donationRoutes = require('./routes/donationRoutes.cjs')
 
 const requireDonor = require('./middleware/requireDonor.cjs');
 const requireStaff = require('./middleware/requireStaff.cjs');
@@ -69,5 +70,6 @@ app.use('/api/donor', require('./routes/donorNotificationRoutes.cjs'));
 app.use('/api/donor', require('./routes/donorProfileRoutes.cjs'));
 app.use('/api/staff-recovery', staffPasswordRecoveryRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/donations', requireStaff, donationRoutes);
 
 app.listen(3000, () => console.log('Server running on port 3000'));
