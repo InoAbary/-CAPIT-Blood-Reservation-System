@@ -201,8 +201,8 @@ router.get('/donor-lookup', async (req, res) => {
 
     const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     const donors = await Donor.find(
-      { $or: [{ firstName: rx }, { lastName: rx }, { email: rx }] },
-      { firstName: 1, lastName: 1, email: 1, bloodType: 1 }
+      { $or: [{ firstName: rx }, { lastName: rx }, { email: rx }, { donorID: rx }] },
+      { firstName: 1, lastName: 1, email: 1, bloodType: 1, donorID: 1 }
     )
       .limit(10)
       .lean();

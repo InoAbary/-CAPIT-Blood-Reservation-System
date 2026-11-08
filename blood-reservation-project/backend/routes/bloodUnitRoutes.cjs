@@ -2,6 +2,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 
+const { validateDonorReference, normalizeDonorReference } = require('../utils/bloodUnitDonor.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const Inventory = require('../../db/models/inventories.cjs');
@@ -60,12 +61,6 @@ const getActorId = (req) => {
 
 const validatePayload = (body, isCreate = false) => {
     const errors = {};
-
-    if (isCreate || body.donorID !== undefined) {
-        if (typeof body.donorID !== 'string' || !body.donorID.trim()) {
-            errors.donorID = 'Donor ID is required.';
-        }
-    }
 
     if (isCreate || body.bloodType !== undefined) {
         if (!BLOOD_TYPES.includes(body.bloodType)) {
@@ -151,6 +146,7 @@ router.get('/:id/blood-units', validateFacilityId, async (req, res) => {
         const units = await BloodUnits.find({
             facilityID: facility._id.toString()
         })
+        .populate('donorID', 'donorID firstName lastName')
         .sort({ dateAdded: -1 })
         .lean();
 
@@ -226,6 +222,8 @@ router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
         }
 
         const errors = validatePayload(req.body, true);
+        const donorError = await validateDonorReference(req.body.donorID);
+        if (donorError) errors.donorID = donorError;
 
         if (Object.keys(errors).length) {
             return res.status(400).json({
@@ -238,7 +236,7 @@ router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
 
         const unit = new BloodUnits({
             bloodUnitID,
-            donorID: req.body.donorID.trim(),
+            donorID: normalizeDonorReference(req.body.donorID),
                                     facilityID: facility._id.toString(),
                                     bloodType: req.body.bloodType,
                                     component: req.body.component,
@@ -272,6 +270,7 @@ throw historyError;
         });
 
         await syncInventory(facility);
+        await unit.populate('donorID', 'donorID firstName lastName');
         res.status(201).json(unit);
     } catch (err) {
         console.error('Create blood unit:', err);
@@ -334,6 +333,8 @@ router.put(
             }
 
             const errors = validatePayload(req.body);
+            const donorError = await validateDonorReference(req.body.donorID);
+            if (donorError) errors.donorID = donorError;
 
             if (Object.keys(errors).length) {
                 return res.status(400).json({
@@ -361,7 +362,7 @@ router.put(
             for (const field of TRACKED_FIELDS) {
                 if (req.body[field] !== undefined) {
                     if (field === 'donorID') {
-                        unit[field] = req.body[field].trim();
+                        unit[field] = normalizeDonorReference(req.body[field]);
                     } else if (
                         field === 'collectionDate' ||
                         field === 'expiryDate'
@@ -410,6 +411,7 @@ router.put(
             });
 
             await syncInventory(facility);
+            await savedUnit.populate('donorID', 'donorID firstName lastName');
             res.json(savedUnit);
         } catch (err) {
             console.error('Update blood unit:', err);

@@ -1,6 +1,6 @@
 {
     "_id":{"$oid":"6ab1f5c6c1737b61e3f4b4ea"},
-    "bloodUnitID":"BU00000001","donorID":"D0000001",
+    "bloodUnitID":"BU00000001","donorID":null,
     "facilityID":"F00001",
     "bloodType":"O+",
     "component":"Packed RBC",
