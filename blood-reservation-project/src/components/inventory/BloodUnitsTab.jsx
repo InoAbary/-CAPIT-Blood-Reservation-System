@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { apiFetch } from '../../utils/api';
 
 const API_URL =
 (typeof process !== 'undefined' &&
@@ -25,6 +26,13 @@ const toISODate = (date) => {
     const pad = (n) => String(n).padStart(2, '0');
 
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const donorLabel = (donor) => {
+    if (!donor) return '';
+    if (typeof donor === 'string') return donor;
+    return `${donor.firstName || ''} ${donor.lastName || ''}`.trim() +
+        (donor.donorID ? ` (${donor.donorID})` : '');
 };
 
 const formatDate = (date) => {
@@ -133,9 +141,42 @@ function UnitModal({
     deleting,
     apiError
 }) {
-    const [form, setForm] = useState(initial);
+    const [form, setForm] = useState(() => ({
+        ...initial,
+        donorID: initial.donorID?._id || initial.donorID || '',
+    }));
     const [errors, setErrors] = useState({});
     const [confirmingDelete, setConfirmingDelete] = useState(false);
+    const [donorQuery, setDonorQuery] = useState(() => donorLabel(initial.donorID));
+    const [donors, setDonors] = useState([]);
+    const [selectedDonor, setSelectedDonor] = useState(() => initial.donorID || null);
+    const [donorLoading, setDonorLoading] = useState(false);
+    const [donorError, setDonorError] = useState('');
+
+    useEffect(() => {
+        if (selectedDonor || donorQuery.trim().length < 2) return;
+        const controller = new AbortController();
+        const timer = setTimeout(async () => {
+            setDonorLoading(true);
+            try {
+                const response = await apiFetch(`/api/donations/donor-lookup?q=${encodeURIComponent(donorQuery.trim())}`, {
+                    signal: controller.signal,
+                });
+                const body = await response.json();
+                if (!response.ok) throw new Error(body.error || 'Could not search donors.');
+                if (!controller.signal.aborted) setDonors(body.donors || []);
+            } catch (error) {
+                if (!controller.signal.aborted) setDonorError(error.message);
+            } finally {
+                if (!controller.signal.aborted) setDonorLoading(false);
+            }
+        }, 300);
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [donorQuery, selectedDonor]);
+
 
     useEffect(() => {
         const onKey = (e) => {
@@ -165,8 +206,8 @@ function UnitModal({
 
         const next = {};
 
-        if (!form.donorID.trim()) {
-            next.donorID = 'Donor ID is required.';
+        if (donorQuery.trim() && !selectedDonor) {
+            next.donorID = 'Select a donor from the results or clear the search to leave it unlinked.';
         }
 
         if (!form.bloodType) {
@@ -195,7 +236,7 @@ function UnitModal({
         if (Object.keys(next).length === 0) {
             onSave({
                 ...form,
-                donorID: form.donorID.trim()
+                donorID: form.donorID || null
             });
         }
     };
@@ -240,18 +281,67 @@ function UnitModal({
     </Field>
 
     <Field
-    label="Donor ID"
+    label="Donor (optional)"
     htmlFor="bu-donor"
     error={errors.donorID}
     >
-    <input
-    id="bu-donor"
-    value={form.donorID}
-    onChange={set('donorID')}
-    aria-invalid={!!errors.donorID}
-    autoFocus
-    disabled={saving || deleting}
-    />
+    <>
+        <input
+            id="bu-donor"
+            type="search"
+            value={donorQuery}
+            placeholder="Search name, email, or donor ID"
+            autoComplete="off"
+            aria-describedby="bu-donor-help"
+            aria-invalid={!!errors.donorID}
+            autoFocus
+            disabled={saving || deleting}
+            onChange={(event) => {
+                setDonorQuery(event.target.value);
+                setSelectedDonor(null);
+                setDonors([]);
+                setDonorError('');
+                setDonorLoading(event.target.value.trim().length >= 2);
+                setForm((current) => ({ ...current, donorID: '' }));
+                setErrors((current) => ({ ...current, donorID: '' }));
+            }}
+        />
+        <p id="bu-donor-help" className="bu-donor-help" role="status">
+            {selectedDonor
+                ? `Selected donor: ${donorLabel(selectedDonor)}`
+                : donorLoading ? 'Searching donors…'
+                : donorQuery.trim().length < 2 ? 'Search for a donor, or leave blank if unknown.'
+                : donorError || (!donors.length ? 'No donors found.' : 'Select a donor below.')}
+        </p>
+        {!selectedDonor && donors.length > 0 && <ul className="bu-donor-results" aria-label="Matching donors">
+            {donors.map((donor) => <li key={donor._id}>
+                <button type="button" disabled={saving || deleting || !donor._id} onClick={() => {
+                    setSelectedDonor(donor);
+                    setDonorQuery(`${donor.firstName} ${donor.lastName} (${donor.donorID})`);
+                    setForm((current) => ({
+                        ...current,
+                        donorID: donor._id,
+                        ...(mode === 'add' ? { bloodType: BLOOD_TYPES.includes(donor.bloodType) ? donor.bloodType : '' } : {}),
+                    }));
+                    setDonors([]);
+                    setDonorLoading(false);
+                    setErrors((current) => ({ ...current, donorID: '', ...(mode === 'add' ? { bloodType: '' } : {}) }));
+                }}>
+                    <strong>{donor.firstName} {donor.lastName}</strong>
+                    <span>{donor.donorID} · {donor.email} · {donor.bloodType}</span>
+                </button>
+            </li>)}
+        </ul>}
+    </>
+    {donorQuery && <button type="button" className="bu-donor-clear" disabled={saving || deleting} onClick={() => {
+        setDonorQuery('');
+        setSelectedDonor(null);
+        setDonors([]);
+        setDonorLoading(false);
+        setDonorError('');
+        setForm((current) => ({ ...current, donorID: '' }));
+        setErrors((current) => ({ ...current, donorID: '' }));
+    }}>Clear donor</button>}
     </Field>
 
     <Field
@@ -570,7 +660,8 @@ function BloodUnitsTab({
 
             return [
                 unit.bloodUnitID,
-                unit.donorID,
+                donorLabel(unit.donorID),
+                unit.donorID?._id,
                 unit.bloodType,
                 unit.component
             ].some((value) =>
@@ -657,7 +748,7 @@ function BloodUnitsTab({
 
             if (!response.ok) {
                 throw new Error(
-                    body.message || 'Could not create blood unit.'
+                    body.errors?.donorID || body.message || 'Could not create blood unit.'
                 );
             }
 
@@ -720,7 +811,7 @@ function BloodUnitsTab({
 
             if (!response.ok) {
                 throw new Error(
-                    body.message || 'Could not update blood unit.'
+                    body.errors?.donorID || body.message || 'Could not update blood unit.'
                 );
             }
 
@@ -1268,6 +1359,53 @@ function BloodUnitsTab({
                 color: #b3261e;
             }
 
+            .bu-donor-clear {
+                padding: 4px 0;
+                border: none;
+                background: transparent;
+                color: var(--accent);
+                font: inherit;
+                font-size: 12px;
+                text-decoration: underline;
+                cursor: pointer;
+            }
+
+            .bu-donor-help {
+                margin: 6px 0;
+                font-size: 12px;
+                color: var(--muted);
+            }
+
+            .bu-donor-results {
+                list-style: none;
+                margin: 8px 0 0;
+                padding: 0;
+                max-height: 200px;
+                overflow-y: auto;
+                border: 1px solid var(--accent-soft);
+                border-radius: 10px;
+            }
+
+            .bu-donor-results button {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                width: 100%;
+                padding: 10px;
+                border: none;
+                background: white;
+                text-align: left;
+                font: inherit;
+                font-size: 12px;
+                overflow-wrap: anywhere;
+                cursor: pointer;
+            }
+
+            .bu-donor-results button:hover,
+            .bu-donor-results button:focus-visible {
+                background: var(--accent-faint);
+            }
+
             .bu-modal-actions {
                 display: flex;
                 justify-content: flex-end;
@@ -1374,7 +1512,7 @@ function BloodUnitsTab({
                     <thead>
                     <tr>
                     <th scope="col">Unit ID</th>
-                    <th scope="col">Donor ID</th>
+                    <th scope="col">Donor</th>
                     <th scope="col">Blood type</th>
                     <th scope="col">Component</th>
                     <th scope="col">Collected</th>
@@ -1396,7 +1534,7 @@ function BloodUnitsTab({
                             </td>
 
                             <td>
-                            {unit.donorID}
+                            {donorLabel(unit.donorID) || 'No donor linked'}
                             </td>
 
                             <td className="bu-strong">

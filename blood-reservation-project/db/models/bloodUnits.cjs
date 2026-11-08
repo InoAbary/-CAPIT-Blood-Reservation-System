@@ -7,8 +7,9 @@ const bloodUnitsSchema = new mongoose.Schema({
         required: true
     },
     donorID: {
-        type: String,
-        required: true
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Donors',
+        default: null
     },
     facilityID: {
         type: String, // TODO: change, must reference facili†ês

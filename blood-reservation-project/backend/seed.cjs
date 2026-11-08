@@ -60,7 +60,7 @@ const bUnitData = [
     // ---- A+ ----
     {
         bloodUnitID: "B0001",
-        donorID: "D0001",
+        donorID: null,
         facilityID: "F0001",
         bloodType: "A+",
         component: "Packed RBC",
@@ -71,7 +71,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0002",
-        donorID: "D0002",
+        donorID: null,
         facilityID: "F0001",
         bloodType: "A+",
         component: "Plasma",
@@ -82,7 +82,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0003",
-        donorID: "D0003",
+        donorID: null,
         facilityID: "F0002",
         bloodType: "A+",
         component: "Platelets",
@@ -95,7 +95,7 @@ const bUnitData = [
     // ---- A- ----
     {
         bloodUnitID: "B0004",
-        donorID: "D0004",
+        donorID: null,
         facilityID: "F0002",
         bloodType: "A-",
         component: "Packed RBC",
@@ -106,7 +106,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0005",
-        donorID: "D0005",
+        donorID: null,
         facilityID: "F0003",
         bloodType: "A-",
         component: "Whole Blood",
@@ -119,7 +119,7 @@ const bUnitData = [
     // ---- B+ ----
     {
         bloodUnitID: "B0006",
-        donorID: "D0006",
+        donorID: null,
         facilityID: "F0001",
         bloodType: "B+",
         component: "Packed RBC",
@@ -130,7 +130,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0007",
-        donorID: "D0007",
+        donorID: null,
         facilityID: "F0002",
         bloodType: "B+",
         component: "Plasma",
@@ -141,7 +141,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0008",
-        donorID: "D0008",
+        donorID: null,
         facilityID: "F0003",
         bloodType: "B+",
         component: "Platelets",
@@ -154,7 +154,7 @@ const bUnitData = [
     // ---- B- ----
     {
         bloodUnitID: "B0009",
-        donorID: "D0009",
+        donorID: null,
         facilityID: "F0001",
         bloodType: "B-",
         component: "Packed RBC",
@@ -165,7 +165,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0010",
-        donorID: "D0010",
+        donorID: null,
         facilityID: "F0002",
         bloodType: "B-",
         component: "Whole Blood",
@@ -178,7 +178,7 @@ const bUnitData = [
     // ---- O+ ----
     {
         bloodUnitID: "B0011",
-        donorID: "D0011",
+        donorID: null,
         facilityID: "F0001",
         bloodType: "O+",
         component: "Packed RBC",
@@ -189,7 +189,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0012",
-        donorID: "D0012",
+        donorID: null,
         facilityID: "F0003",
         bloodType: "O+",
         component: "Plasma",
@@ -200,7 +200,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0013",
-        donorID: "D0013",
+        donorID: null,
         facilityID: "F0002",
         bloodType: "O+",
         component: "Platelets",
@@ -213,7 +213,7 @@ const bUnitData = [
     // ---- O- ----
     {
         bloodUnitID: "B0014",
-        donorID: "D0014",
+        donorID: null,
         facilityID: "F0001",
         bloodType: "O-",
         component: "Packed RBC",
@@ -224,7 +224,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0015",
-        donorID: "D0015",
+        donorID: null,
         facilityID: "F0003",
         bloodType: "O-",
         component: "Whole Blood",
@@ -237,7 +237,7 @@ const bUnitData = [
     // ---- AB+ ----
     {
         bloodUnitID: "B0016",
-        donorID: "D0016",
+        donorID: null,
         facilityID: "F0002",
         bloodType: "AB+",
         component: "Packed RBC",
@@ -248,7 +248,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0017",
-        donorID: "D0017",
+        donorID: null,
         facilityID: "F0001",
         bloodType: "AB+",
         component: "Plasma",
@@ -261,7 +261,7 @@ const bUnitData = [
     // ---- AB- ----
     {
         bloodUnitID: "B0018",
-        donorID: "D0018",
+        donorID: null,
         facilityID: "F0003",
         bloodType: "AB-",
         component: "Packed RBC",
@@ -272,7 +272,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0019",
-        donorID: "D0019",
+        donorID: null,
         facilityID: "F0002",
         bloodType: "AB-",
         component: "Platelets",
@@ -285,7 +285,7 @@ const bUnitData = [
     // ---- Additional recent units for time-filter testing ----
     {
         bloodUnitID: "B0020",
-        donorID: "D0020",
+        donorID: null,
         facilityID: "F0001",
         bloodType: "O+",
         component: "Packed RBC",
@@ -296,7 +296,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0021",
-        donorID: "D0021",
+        donorID: null,
         facilityID: "F0002",
         bloodType: "A+",
         component: "Whole Blood",
@@ -307,7 +307,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0022",
-        donorID: "D0022",
+        donorID: null,
         facilityID: "F0003",
         bloodType: "B+",
         component: "Packed RBC",
@@ -318,7 +318,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0023",
-        donorID: "D0023",
+        donorID: null,
         facilityID: "F0001",
         bloodType: "O-",
         component: "Plasma",
@@ -329,7 +329,7 @@ const bUnitData = [
     },
     {
         bloodUnitID: "B0024",
-        donorID: "D0024",
+        donorID: null,
         facilityID: "F0002",
         bloodType: "AB+",
         component: "Platelets",
