@@ -21,6 +21,7 @@ const branchAdminRoutes = require('./routes/branchAdminRoutes.cjs');
 const staffRoutes = require('./routes/staffRoutes.cjs');
 const appointmentRoutes = require('./routes/appointmentRoutes.cjs')
 const donationRoutes = require('./routes/donationRoutes.cjs')
+const donorBadgeRoutes = require('./routes/donorBadgeRoutes.cjs');
 
 const requireDonor = require('./middleware/requireDonor.cjs');
 const requireStaff = require('./middleware/requireStaff.cjs');
@@ -36,6 +37,14 @@ connectDB().then(async () => {
     } catch (error) {
         console.error('Donation reminders could not start:', error.message);
     }
+
+    try {
+        const { startUtilizationAutoReports } = require('./services/utilizationAutoReports.cjs');
+        await startUtilizationAutoReports();
+    } catch (error) {
+        console.error('Automatic utilization reports could not start:', error.message);
+    }
+    
 });
 
 
@@ -64,6 +73,7 @@ app.use('/api/blood-requests', bloodRequestAdminRoutes);
 app.use('/api/bloodRequest', bloodRequestAdminRoutes);
 app.use('/api/admin', requireStaff, requireRole('admin'), adminRoutes);
 // Public recovery endpoints: users cannot sign in until their password is reset.
+app.use('/api/donor/badges', requireDonor, donorBadgeRoutes);
 app.use('/api/donor', forgotPasswordEmailRoutes);
 app.use('/api/donor', require('./routes/mobileNumberChangeRoutes.cjs'));
 app.use('/api/donor', require('./routes/donorNotificationRoutes.cjs'));
