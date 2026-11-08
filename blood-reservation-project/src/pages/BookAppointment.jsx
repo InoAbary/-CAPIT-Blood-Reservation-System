@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 import '../styles/BranchAdmin.css';
 
 async function request(path, options = {}) {
@@ -49,7 +50,13 @@ function BookAppointment() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const [date, setDate] = useState('');
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  });
   const [time, setTime] = useState('');
   const [venue, setVenue] = useState('');
 
@@ -76,7 +83,14 @@ function BookAppointment() {
     };
   }, [loadAll, authLoading, donor]);
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const today = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }, []);
 
   // Minimum time today: next 30-min slot after now (or first slot tomorrow if past 23:30)
   const minTimeToday = useMemo(() => {
@@ -191,7 +205,22 @@ function BookAppointment() {
   if (!donor) return <p>Please log in as a donor to book an appointment.</p>;
 
   return (
-    <div className="appointment-container content-card">
+
+    
+    
+      <div className="dashboard-container top-menu-layout">
+
+        <header className="dashboard-menu">
+            <div className="dashboard-logo"><h2>Donor Hub</h2></div>
+            <nav className="nav-links" aria-label="Donor navigation">
+            <Link className="nav-link" to="/DonorDashboard">Back to dashboard</Link>
+            <Link className="nav-link" to="/donor/profile" aria-current="page">Profile Settings</Link>
+            </nav>
+        </header>
+
+      
+      <main className="dashboard-content">
+      <div className="appointment-container content-card">
       <h2 className="card-title">Book a Blood Donation Appointment</h2>
       <p className="card-subtitle">
         Pick a venue, date, and start time. Your request will be pending until staff confirm it.
@@ -207,8 +236,7 @@ function BookAppointment() {
             type="date"
             value={date}
             min={today}
-            onChange={(e) => setDate(e.target.value)}
-            required
+            disabled
           />
         </label>
 
@@ -274,6 +302,8 @@ function BookAppointment() {
         )}
       </section>
     </div>
+    </main>
+  </div>
   );
 }
 

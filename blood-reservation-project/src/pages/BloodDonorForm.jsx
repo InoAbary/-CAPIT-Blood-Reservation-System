@@ -61,29 +61,13 @@ function ShouldDeny(q, answer) {
 
 /* Reusable top menu – matches DonorDashboard */
 function DonorTopMenu() {
-    const navigate = useNavigate();
-
-    const navItems = [
-        { label: 'Overview', path: '/DonorDashboard', icon: '📊' },
-        { label: 'Blood Bank Map', path: '/BloodBankMap', icon: '🗺️' },
-        { label: 'Donor Application Form', path: '/BloodDonorForm', icon: '💝' },
-        { label: 'Profile Settings', path: '/donor/profile', icon: '⚙️' },
-    ];
-
+    
     return (
         <header className="dashboard-menu">
-            <div className="dashboard-logo">
-                <h2>Donor Hub</h2>
-                <p className="welcome-text">Welcome back!</p>
-            </div>
-
-            <nav className="nav-links">
-                {navItems.map((item) => (
-                    <Link key={item.path} to={item.path} className="nav-link">
-                        <span className="nav-icon">{item.icon}</span>
-                        <span className="nav-label">{item.label}</span>
-                    </Link>
-                ))}
+            <div className="dashboard-logo"><h2>Donor Hub</h2></div>
+            <nav className="nav-links" aria-label="Donor navigation">
+            <Link className="nav-link" to="/DonorDashboard">Back to dashboard</Link>
+            <Link className="nav-link" to="/donor/profile" aria-current="page">Profile Settings</Link>
             </nav>
         </header>
     );

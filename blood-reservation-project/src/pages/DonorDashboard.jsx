@@ -1,6 +1,6 @@
-import React, {useState, useEffect} from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {useAuth} from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext';
 import '../styles/Dashboard.css';
 import DonorNotificationSettings from '../components/DonorNotificationSettings';
 
@@ -11,19 +11,18 @@ function DonorDashboard() {
     { label: 'Overview', path: '/DonorDashboard', icon: '📊' },
     { label: 'Blood Bank Map', path: '/BloodBankMap', icon: '🗺️' },
     { label: 'Donor Application Form', path: '/BloodDonorForm', icon: '💝' },
-    { label: 'Book Appointment', path: '/BookAppointment', icon: '⚙️' },
+    { label: 'Book Appointment', path: '/BookAppointment', icon: '📅' },
     { label: 'Profile Settings', path: '/donor/profile', icon: '⚙️' },
-    
   ];
 
-  const [badges, setBadges] = useState([])
+  const [badges, setBadges] = useState([]);
 
   useEffect(() => {
     if (donor?.email) {
-        fetch(`/api/badgr/donor-badges?email=${encodeURIComponent(donor.email)}`)
-            .then(res => res.json())
-            .then(data => setBadges(data.result || []))
-            .catch(console.error);
+      fetch(`/api/badgr/donor-badges?email=${encodeURIComponent(donor.email)}`)
+        .then((res) => res.json())
+        .then((data) => setBadges(data.result || []))
+        .catch(console.error);
     }
   }, [donor?.email]);
 
@@ -36,10 +35,12 @@ function DonorDashboard() {
     <div className="dashboard-container top-menu-layout">
       <header className="dashboard-menu">
         <div className="dashboard-logo">
-          <h2>Donor Hub</h2>
-          <p className="welcome-text">
-            Welcome back{donor?.firstName ? `, ${donor.firstName}` : '!'}
-          </p>
+          <h2>
+            Donor Hub
+            <span className="welcome-inline">
+              {donor?.firstName ? ` · Welcome, ${donor.firstName}` : ' · Welcome!'}
+            </span>
+          </h2>
         </div>
 
         <nav className="nav-links">
@@ -50,8 +51,6 @@ function DonorDashboard() {
             </Link>
           ))}
         </nav>
-
-        
 
         <div className="menu-footer">
           <button className="quick-action-btn" onClick={handleLogout}>
@@ -80,16 +79,16 @@ function DonorDashboard() {
           </div>
           <DonorNotificationSettings />
           <div className="badges-section">
-              <h3>My Badges</h3>
-              <div className="badges-grid">
-                  {badges.map(badge => (
-                      <div key={badge.entityId} className="badge-card">
-                          <img src={badge.image} alt={badge.badgeclassName} />
-                          <h4>{badge.badgeclassName}</h4>
-                          <p>{new Date(badge.issuedOn).toLocaleDateString()}</p>
-                      </div>
-                  ))}
-              </div>
+            <h3>My Badges</h3>
+            <div className="badges-grid">
+              {badges.map((badge) => (
+                <div key={badge.entityId} className="badge-card">
+                  <img src={badge.image} alt={badge.badgeclassName} />
+                  <h4>{badge.badgeclassName}</h4>
+                  <p>{new Date(badge.issuedOn).toLocaleDateString()}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </main>

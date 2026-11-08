@@ -303,14 +303,17 @@
 .top-menu-layout .nav-links {
   flex-direction: row;
   flex: 1;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.35rem;
+  overflow-x: auto;
+  min-width: 0;
 }
 
 .top-menu-layout .nav-link {
   padding: 0.55rem 0.9rem;
   font-size: 0.875rem;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* Hover movement looks odd on a horizontal bar – use vertical lift instead */
@@ -348,26 +351,28 @@
 /* Responsive: wrap the header on smaller screens */
 @media (max-width: 1024px) {
   .top-menu-layout .dashboard-menu {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 1rem;
   }
 
   .top-menu-layout .dashboard-logo {
     border-right: none;
-    border-bottom: 1px solid #334155;
+    border-bottom: none;
     padding-right: 0;
-    padding-bottom: 0.75rem;
-    width: 100%;
+    padding-bottom: 0;
+    width: auto;
+    flex-shrink: 0;
   }
 
   .top-menu-layout .nav-links {
-    flex: 1 1 100%;
-    order: 3;
+    flex: 1 1 0;
+    order: 0;
   }
 
   .top-menu-layout .menu-footer {
     border-left: none;
     padding-left: 0;
+    flex-shrink: 0;
   }
 }
 
@@ -376,15 +381,13 @@
     padding: 0.75rem 1rem;
   }
 
-  .top-menu-layout .nav-links {
-    flex-direction: column;
-  }
+  
 
   .top-menu-layout .nav-link {
-    width: 100%;
+    width: auto;
   }
 
   .top-menu-layout .quick-action-btn {
-    width: 100%;
+    width: auto;
   }
 }
