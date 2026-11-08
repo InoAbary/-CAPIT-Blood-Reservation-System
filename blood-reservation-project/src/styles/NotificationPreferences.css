@@ -1,0 +1,45 @@
+.donor-notification-settings {
+  margin-top: 2rem;
+  padding: clamp(1rem, 3vw, 2rem);
+  max-width: 760px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  color: #0f172a;
+  text-align: left;
+}
+.donor-notification-settings h2 { margin: 0 0 1.25rem; font-size: 1.3rem; }
+.notification-options { min-width: 0; border: 0; padding: 0; margin: 0; text-align: left; }
+.notification-options legend { font-weight: 700; margin-bottom: .5rem; font-size: 1.05rem; }
+.notification-options p { color: #475569; line-height: 1.6; margin: 0 0 1rem; }
+.notification-options .notification-choice,
+.register-page .register-form .notification-options .notification-choice {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: .8rem;
+  padding: 1rem;
+  margin: .6rem 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.notification-options .notification-choice:has(input:checked) { border-color: #a51f3a; background: #fff5f7; }
+.notification-options .notification-choice input {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex: 0 0 1.2rem;
+  margin: .15rem 0 0;
+  padding: 0;
+  accent-color: #a51f3a;
+}
+.notification-choice > span { display: grid; gap: .3rem; }
+.notification-choice strong { font-size: 1rem; color: #0f172a; }
+.notification-choice span span { color: #475569; font-size: .9rem; line-height: 1.5; }
+.notification-options .notification-note { font-size: .85rem; margin: 1rem 0; }
+.notification-contact { overflow-wrap: anywhere; color: #475569; font-size: .9rem; line-height: 1.7; margin-bottom: 1rem; }
+.notification-save { background: #a51f3a; color: white; padding: .8rem 1.2rem; border: 0; border-radius: 8px; font-weight: 600; cursor: pointer; }
+.notification-save:disabled { opacity: .5; cursor: default; }
+.notification-save:focus-visible, .notification-choice input:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.notification-status { color: #166534; margin-top: .75rem; line-height: 1.5; }
+.notification-error { color: #b91c1c; margin-top: .75rem; line-height: 1.5; }

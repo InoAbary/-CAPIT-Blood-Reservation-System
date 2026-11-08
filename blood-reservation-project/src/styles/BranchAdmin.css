@@ -547,3 +547,17 @@
 .modal-card label { display: flex; flex-direction: column; gap: 0.35rem; font-weight: 600; font-size: 0.9rem; }
 .modal-card textarea { padding: 0.5rem; border: 1px solid #d5d9e2; border-radius: 6px; resize: vertical; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+.card-header-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.donation-form { display: flex; flex-direction: column; gap: .75rem; padding: 1rem 0; border-bottom: 1px solid #eee; margin-bottom: 1rem; }
+.donation-form label { display: flex; flex-direction: column; gap: .35rem; font-weight: 500; }
+.donation-form input, .donation-form select, .donation-form textarea { padding: .5rem; border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+.donor-results { list-style: none; margin: 0; padding: 0; border: 1px solid #ddd; border-radius: 6px; max-height: 240px; overflow-y: auto; }
+.donor-results li button { display: block; width: 100%; text-align: left; padding: .5rem .75rem; background: transparent; border: none; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+.donor-results li button:hover { background: #f7f7f7; }
+.selected-donor { display: flex; justify-content: space-between; align-items: center; padding: .5rem .75rem; border: 1px solid #ddd; border-radius: 6px; background: #fafafa; }
+.donation-filters { display: flex; gap: .75rem; margin: 1rem 0; }
+.donation-filters input { flex: 1; padding: .5rem; border: 1px solid #ccc; border-radius: 6px; }
+.donation-filters select { padding: .5rem; border: 1px solid #ccc; border-radius: 6px; }
+.pagination-row { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1rem; }
+.muted.small { font-size: .85rem; }

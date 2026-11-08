@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:profile": "node --test backend/tests/donorProfile.test.cjs backend/tests/mobileNumberChange.test.cjs",
+    "test:reminders": "node --test backend/tests/donationReminders.test.cjs backend/tests/donorNotificationRoutes.test.cjs",
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",

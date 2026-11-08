@@ -35,6 +35,9 @@ export default function BranchAdminLayout() {
   const appointmentsTab = ['bsf', 'prc_chapter'].includes(facilityType)
     ? { id: 'appointments', label: 'Appointments', icon: '🩸' }
     : null;
+  const donationsTab = ['bsf', 'prc_chapter'].includes(facilityType)
+    ? { id: 'donations', label: 'Log Donations', icon: '🩸' }
+    : null;
     
   const tabs = [
     ...workspaceTabs,
@@ -43,6 +46,7 @@ export default function BranchAdminLayout() {
     ...(hospitalRequestsTab ? [hospitalRequestsTab] : []),
     ...(utilizationTab ? [utilizationTab] : []),
     ...(appointmentsTab ? [appointmentsTab] : []),
+    ...(donationsTab ? [donationsTab] : []),
   ];
 
   useEffect(() => {

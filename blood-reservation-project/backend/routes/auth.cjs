@@ -10,6 +10,7 @@ const bcrypt = require('bcryptjs');
 
 const requireDonor = require("../middleware/requireDonor.cjs");
 const requireStaff = require("../middleware/requireStaff.cjs");
+const { validNotificationPreferences } = require('../utils/notificationPreferences.cjs');
 
 
 
@@ -28,6 +29,10 @@ router.post('/register', async(req,res) => {
     try {
 
         const {password, confirmPassword, ...rest} = req.body
+
+        if (rest.notificationPreferences !== undefined && !validNotificationPreferences(rest.notificationPreferences)) {
+            return res.status(400).json({ error: 'Provide SMS and email preferences as true or false.' });
+        }
 
         if (password !== confirmPassword){
             return res.status(400).json({

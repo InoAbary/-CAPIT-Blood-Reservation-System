@@ -16,9 +16,11 @@ const adminRoutes = require('./routes/adminRoutes.cjs');
 const bloodRequestAdminRoutes = require('./routes/bloodRequestAdminRoutes.cjs');
 const inventoryFulfillmentRoutes = require('./routes/inventoryFulfillmentRoutes.cjs');
 const forgotPasswordEmailRoutes = require('./routes/forgotPasswordEmailRoutes.cjs');
+const staffPasswordRecoveryRoutes = require('./routes/staffPasswordRecoveryRoutes.cjs');
 const branchAdminRoutes = require('./routes/branchAdminRoutes.cjs');
 const staffRoutes = require('./routes/staffRoutes.cjs');
 const appointmentRoutes = require('./routes/appointmentRoutes.cjs')
+const donationRoutes = require('./routes/donationRoutes.cjs')
 
 const requireDonor = require('./middleware/requireDonor.cjs');
 const requireStaff = require('./middleware/requireStaff.cjs');
@@ -27,7 +29,14 @@ const requireRole = require('./middleware/requireRole.cjs');
 const app = express();
 
 
-connectDB();
+connectDB().then(async () => {
+    try {
+        const { startDonationReminders } = require('./services/donationReminders.cjs');
+        await startDonationReminders();
+    } catch (error) {
+        console.error('Donation reminders could not start:', error.message);
+    }
+});
 
 
 
@@ -56,6 +65,11 @@ app.use('/api/bloodRequest', bloodRequestAdminRoutes);
 app.use('/api/admin', requireStaff, requireRole('admin'), adminRoutes);
 // Public recovery endpoints: users cannot sign in until their password is reset.
 app.use('/api/donor', forgotPasswordEmailRoutes);
+app.use('/api/donor', require('./routes/mobileNumberChangeRoutes.cjs'));
+app.use('/api/donor', require('./routes/donorNotificationRoutes.cjs'));
+app.use('/api/donor', require('./routes/donorProfileRoutes.cjs'));
+app.use('/api/staff-recovery', staffPasswordRecoveryRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/donations', requireStaff, donationRoutes);
 
 app.listen(3000, () => console.log('Server running on port 3000'));

@@ -8,6 +8,16 @@ const passwordResetSchema = new mongoose.Schema({
     passwordFingerprint: { type: String, required: true }
 }, { _id: false });
 
+const mobileNumberChangeSchema = new mongoose.Schema({
+    tokenHash: { type: String, required: true },
+    newNumber: { type: String, required: true },
+    previousNumber: { type: String, default: '' },
+    email: { type: String, required: true },
+    passwordFingerprint: { type: String, required: true },
+    requestedAt: { type: Date, required: true },
+    expiresAt: { type: Date, required: true }
+}, { _id: false });
+
 const donorSchema = new mongoose.Schema({
 
     // Personal Information
@@ -45,6 +55,10 @@ const donorSchema = new mongoose.Schema({
     telephoneNumber:{ type: String, trim: true },
     mobileNumber:   { type: String, trim: true },
     email:          { type: String, required: true, trim: true, lowercase: true },
+    notificationPreferences: {
+        sms: { type: Boolean, default: true },
+        email: { type: Boolean, default: true }
+    },
 
     // IDs
     schoolID:       { type: String, trim: true },
@@ -58,6 +72,11 @@ const donorSchema = new mongoose.Schema({
     role:           { type: String, default: "donor"},
     passwordReset: {
         type: passwordResetSchema,
+        select: false,
+        default: undefined
+    },
+    mobileNumberChange: {
+        type: mobileNumberChangeSchema,
         select: false,
         default: undefined
     },

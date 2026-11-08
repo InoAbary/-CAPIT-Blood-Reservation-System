@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom'
 import '../styles/Register.css'
+import NotificationOptions from '../components/NotificationOptions';
 
 function calculateAge(birthDate) {
     if (!birthDate) return '';
@@ -49,6 +50,7 @@ function Register(){
         telephoneNumber: '',
         mobileNumber: '',
         email: '',
+        notificationPreferences: { sms: true, email: true },
         schoolID: '',
         companyID: '',
         prcID: '',
@@ -214,6 +216,12 @@ function Register(){
                         <input type="email" required {...bind('email')} />
                     </label>
                 </div>
+
+                <NotificationOptions
+                    value={donorData.notificationPreferences}
+                    onChange={notificationPreferences => setDonorData(current => ({ ...current, notificationPreferences }))}
+                    disabled={submitting}
+                />
 
                 {/* --- IDs + passwords --- */}
                 <div className="register-fieldgroup">

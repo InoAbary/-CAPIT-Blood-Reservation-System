@@ -73,6 +73,42 @@ export function AuthProvider({ children }) {
         setDonor(null);
     };
 
+    const saveNotificationPreferences = async (preferences) => {
+        const res = await fetch('/api/donor/notification-preferences', {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(preferences)
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.message || 'Could not save notification preferences.');
+        setDonor(current => current ? { ...current, notificationPreferences: body.notificationPreferences } : current);
+        return body.notificationPreferences;
+    };
+
+    const saveDonorProfile = async (profile) => {
+        const res = await fetch('/api/donor/profile', {
+            method: 'PATCH', credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(profile)
+        });
+        const body = await res.json();
+        if (!res.ok) {
+            const error = new Error(body.message || 'Could not save your profile.');
+            error.fields = body.errors || {};
+            throw error;
+        }
+        setDonor(current => current ? { ...current, ...body.user } : current);
+        return body.user;
+    };
+
+    const refreshDonorProfile = async () => {
+        const res = await fetch('/api/auth/me', { credentials: 'include' });
+        if (!res.ok) return;
+        const { user } = await res.json();
+        setDonor(current => current && user && String(current._id) === String(user._id) ? { ...current, ...user } : current);
+    };
+
     const logoutStaff = async () => {
         await fetch('/api/auth/logout/staff', { method: 'POST', credentials: 'include' });
         setStaff(null);
@@ -80,7 +116,7 @@ export function AuthProvider({ children }) {
 
     return (
         <AuthContext.Provider
-            value={{ donor, staff, loading, loginDonor, loginStaff, logoutDonor, logoutStaff }}
+            value={{ donor, staff, loading, loginDonor, loginStaff, logoutDonor, logoutStaff, saveNotificationPreferences, saveDonorProfile, refreshDonorProfile }}
         >
             {children}
         </AuthContext.Provider>

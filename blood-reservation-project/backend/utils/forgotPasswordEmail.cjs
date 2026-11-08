@@ -33,7 +33,7 @@ function escapeHTML(value) {
     }[character]));
 }
 
-function mailTemplate(content, buttonUrl, buttonText = 'Reset Password') {
+function mailTemplate(content, buttonUrl, buttonText = 'Reset Password', heading = 'Donor password reset') {
     const url = new URL(buttonUrl);
     if (!['https:', 'http:'].includes(url.protocol)) throw new Error('Invalid reset link protocol.');
     const link = escapeHTML(url.toString());
@@ -41,7 +41,7 @@ function mailTemplate(content, buttonUrl, buttonText = 'Reset Password') {
     <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
     <body style="margin:0;padding:28px 16px;background:#f7f5f6;font-family:Arial,sans-serif;color:#29262b">
     <div style="max-width:460px;margin:auto;background:white;padding:30px;border-radius:12px">
-    <h2 style="color:#a51f3a">Donor password reset</h2>
+    <h2 style="color:#a51f3a">${escapeHTML(heading)}</h2>
     <p style="line-height:1.7">${escapeHTML(content)}</p>
     <p style="margin:28px 0"><a href="${link}" style="display:inline-block;background:#a51f3a;color:#ffffff;padding:13px 22px;border-radius:7px;text-decoration:none;font-weight:bold">${escapeHTML(buttonText)}</a></p>
     <p style="font-size:13px;line-height:1.6">If the button does not open, copy and paste this link into your browser:</p>

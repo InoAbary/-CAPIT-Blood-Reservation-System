@@ -7,6 +7,7 @@ import BranchUtilization from './branch-admin/BranchUtilization';
 import HospitalRequests from './branch-admin/HospitalRequests';
 import Inventory from './Inventory';
 import StaffAppointments from './StaffAppointments'
+import StaffDonations from './StaffDonations'
 import { useAuth } from '../context/AuthContext';
 import '../styles/BranchAdmin.css';
 
@@ -36,6 +37,7 @@ const STAFF_TABS = [
   { key: 'branch-requests', label: 'Incoming Requests', icon: '📥', facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'inventory', label: 'Inventory', icon: '🩸', facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'appointments', label: 'Appointments', icon: '📅', facilityTypes: ['bsf', 'prc_chapter'] },
+  { key: 'donations', label: 'Log Donations', icon: '📅', facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'profile', label: 'Profile Settings', icon: '⚙️' },
 ];
 
@@ -266,6 +268,8 @@ function StaffDashboard() {
               <StaffAppointments />
             </section>
           )}
+
+          {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(facilityType) && <StaffDonations />}
 
           {activeTab === 'profile' && (
             <section
