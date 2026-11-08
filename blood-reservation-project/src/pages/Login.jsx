@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/Login.css";
 
@@ -105,6 +105,10 @@ export default function Login() {
       onChange={(e) => setPassword(e.target.value)}
       required
       />
+
+      <div className="login-forgot-link" style={{ textAlign: 'right', margin: '8px 0 14px' }}>
+      <Link to="/ForgotPassword/" state={{ email }}>Forgot password?</Link>
+      </div>
 
       <button type="submit" disabled={loading}>
       {loading ? "Signing in..." : "Log in"}

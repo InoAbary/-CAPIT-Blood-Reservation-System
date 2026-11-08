@@ -6,6 +6,7 @@ import BranchRequests from './BranchRequests';
 import BranchUtilization from './BranchUtilization';
 import StaffAppointments from '../StaffAppointments';
 import HospitalRequests from './HospitalRequests';
+import StaffDonations from '../StaffDonations';
 import Inventory from '../Inventory';
 import '../../styles/BranchAdmin.css';
 
@@ -442,6 +443,7 @@ function BranchDashboard() {
 
       {activeTab === 'branch-requests' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <BranchRequests />}
       {activeTab === 'my-requests' && facility?.facilityType === 'hospital' && <HospitalRequests />}
+      {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonations />}
     </section>
   );
 }

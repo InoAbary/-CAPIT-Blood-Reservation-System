@@ -392,7 +392,7 @@ router.get('/utilization', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-
+    
     if (context.facility.facilityType === 'hospital') {
       const requests = await BloodRequest.find({ hospitalFacilityID: context.facility._id })
         .select('_id').lean();
@@ -422,8 +422,9 @@ router.get('/utilization', async (req, res) => {
       return res.status(409).json({ error: 'Utilization is not available for this facility type.' });
     }
 
+    
     const units = await BloodUnits.find({
-      facilityID: context.facility.facilityID,
+      facilityID: context.facility._id,
       status: 'Released',
     }).select('bloodUnitID bloodType component releasedAt requestID').populate({
       path: 'requestID',
@@ -431,7 +432,8 @@ router.get('/utilization', async (req, res) => {
       populate: { path: 'hospitalFacilityID', select: 'facilityName' },
     }).sort({ releasedAt: -1 }).lean();
     const reportsByUnit = await getLatestHospitalReports(units.map((unit) => unit._id));
-
+   
+    
     return res.json({
       mode: 'provider',
       facilityName: context.facility.facilityName,
@@ -445,6 +447,8 @@ router.get('/utilization', async (req, res) => {
         report: reportsByUnit.get(String(unit._id)) || null,
       })),
     });
+
+    
   } catch (error) {
     console.error('Branch-admin utilization failed:', error);
     return res.status(500).json({ error: 'Failed to load utilization information.' });
