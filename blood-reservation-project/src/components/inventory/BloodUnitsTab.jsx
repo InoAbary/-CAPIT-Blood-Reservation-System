@@ -15,6 +15,29 @@ const COMPONENTS = ['Packed RBC', 'Plasma', 'Platelets', 'Whole Blood'];
 const STATUSES = ['In-stock', 'Released', 'Expired', 'Removed'];
 const PAGE_SIZE = 8;
 
+const EXPIRY_DAYS = {
+    'Packed RBC': 21,
+    Platelets: 5,
+    'Whole Blood': 21
+};
+
+const calculateExpiryDate = (component, collectionDate) => {
+    if (!component || !collectionDate) return '';
+
+    const date = new Date(`${collectionDate}T00:00:00.000Z`);
+    if (Number.isNaN(date.getTime())) return '';
+
+    if (component === 'Plasma') {
+        date.setUTCFullYear(date.getUTCFullYear() + 1);
+    } else {
+        const days = EXPIRY_DAYS[component];
+        if (!days) return '';
+        date.setUTCDate(date.getUTCDate() + days);
+    }
+
+    return date.toISOString().slice(0, 10);
+};
+
 
 /* ---------- Helpers ---------- */
 
@@ -146,6 +169,7 @@ function UnitModal({
         donorID: initial.donorID?._id || initial.donorID || '',
     }));
     const [errors, setErrors] = useState({});
+    const [expiryVerified, setExpiryVerified] = useState(false);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [donorQuery, setDonorQuery] = useState(() => donorLabel(initial.donorID));
     const [donors, setDonors] = useState([]);
@@ -195,11 +219,31 @@ function UnitModal({
     }, [onClose, confirmingDelete]);
 
     const set = (field) => (e) => {
-        setForm((current) => ({
-            ...current,
-            [field]: e.target.value
-        }));
+        const value = e.target.value;
+    
+        setForm((current) => {
+            const next = { ...current, [field]: value };
+    
+            if (field === 'component' || field === 'collectionDate') {
+                next.expiryDate = calculateExpiryDate(
+                    next.component,
+                    next.collectionDate
+                );
+            }
+    
+            return next;
+        });
+    
+        if (['component', 'collectionDate', 'expiryDate'].includes(field)) {
+            setExpiryVerified(false);
+            setErrors((current) => ({
+                ...current,
+                expiryVerified: ''
+            }));
+        }
     };
+
+    
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -231,12 +275,17 @@ function UnitModal({
             next.expiryDate = 'Expiry must be after the collection date.';
         }
 
+        if (!expiryVerified) {
+            next.expiryVerified = 'Please verify the expiry date before saving.';
+        }
+
         setErrors(next);
 
         if (Object.keys(next).length === 0) {
             onSave({
                 ...form,
-                donorID: form.donorID || null
+                donorID: form.donorID || null,
+                expiryVerified
             });
         }
     };
@@ -436,6 +485,37 @@ function UnitModal({
     </select>
     </Field>
     </div>
+
+    <p className="bu-expiry-note">
+    The expiry date is automatically suggested based on the blood
+    component and collection date. Please adjust it according to
+    the blood bag label, preservative, and storage conditions.
+        </p>
+
+        <label className="bu-expiry-check">
+            <input
+                type="checkbox"
+                checked={expiryVerified}
+                onChange={(e) => {
+                    setExpiryVerified(e.target.checked);
+                    setErrors((current) => ({
+                        ...current,
+                        expiryVerified: ''
+                    }));
+                }}
+                disabled={saving || deleting}
+            />
+            <span>
+                I have checked and confirmed that the expiry date
+                matches the blood unit label.
+            </span>
+        </label>
+
+        {errors.expiryVerified && (
+            <p className="bu-field-error" role="alert">
+                {errors.expiryVerified}
+            </p>
+        )}
 
     {confirmingDelete ? (
         <div className="bu-confirm" role="alert">
@@ -1418,6 +1498,31 @@ function BloodUnitsTab({
                     grid-template-columns: 1fr;
                 }
             }
+
+            .bu-expiry-note {
+                margin: 16px 0 10px;
+                color: var(--muted);
+                font-size: 12px;
+                line-height: 1.5;
+            }
+            
+            .bu-expiry-check {
+                display: flex;
+                align-items: flex-start;
+                gap: 10px;
+                font-size: 13px;
+                line-height: 1.5;
+                color: var(--ink);
+                cursor: pointer;
+            }
+            
+            .bu-expiry-check input {
+                width: 16px;
+                height: 16px;
+                margin-top: 2px;
+                flex-shrink: 0;
+                accent-color: var(--accent);
+            }
             `}</style>
 
 
@@ -1534,7 +1639,7 @@ function BloodUnitsTab({
                             </td>
 
                             <td>
-                            {donorLabel(unit.donorID) || 'No donor linked'}
+                                {donorLabel(unit.donorID) || 'No donor linked'}
                             </td>
 
                             <td className="bu-strong">

@@ -59,8 +59,16 @@ const getActorId = (req) => {
     : null;
 };
 
-const validatePayload = (body, isCreate = false) => {
+const validatePayload = (
+    body,
+    isCreate = false,
+    requireExpiryVerification = false
+) => {
     const errors = {};
+
+    if (requireExpiryVerification && body.expiryVerified !== true) {
+        errors.expiryVerified = 'Expiry date verification is required.';
+    }
 
     if (isCreate || body.bloodType !== undefined) {
         if (!BLOOD_TYPES.includes(body.bloodType)) {
@@ -221,7 +229,7 @@ router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
             });
         }
 
-        const errors = validatePayload(req.body, true);
+        const errors = validatePayload(req.body, true, true);
         const donorError = await validateDonorReference(req.body.donorID);
         if (donorError) errors.donorID = donorError;
 
@@ -332,7 +340,7 @@ router.put(
                 });
             }
 
-            const errors = validatePayload(req.body);
+            const errors = validatePayload(req.body, false, true);
             const donorError = await validateDonorReference(req.body.donorID);
             if (donorError) errors.donorID = donorError;
 

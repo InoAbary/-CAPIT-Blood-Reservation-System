@@ -103,6 +103,7 @@ function Inventory({ fixedFacilityId = '' }) {
             }
 
             setInventory(body);
+            setError('');
         } catch (err) {
             setError(err.message);
         }
@@ -244,6 +245,12 @@ function Inventory({ fixedFacilityId = '' }) {
             </div>
 
 
+            {error && (
+                <p className="inv-error" role="alert">
+                    {error}
+                </p>
+            )}
+
             <div className="inv-tabs" role="tablist" aria-label="Inventory sections">
             {TABS.map((tab) => (
                 <button
@@ -254,7 +261,13 @@ function Inventory({ fixedFacilityId = '' }) {
                 aria-selected={activeTab === tab.id}
                 aria-controls="inv-panel"
                 className="inv-tab"
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                    setActiveTab(tab.id);
+                
+                    if (tab.id === 'overview') {
+                        refreshInventory();
+                    }
+                }}
                 >
                 {tab.label}
                 </button>

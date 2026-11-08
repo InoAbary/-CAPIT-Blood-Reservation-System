@@ -90,7 +90,7 @@ async function syncInventory(facility, { readOnly = false } = {}) {
                 facilityID: facility._id.toString(), // bloodUnits store the custom ID, e.g. 'F00001'
                 status: /^In-stock$/i,
                 requestID: null,
-                collectionDate: { $lte: now },
+                collectionDate: { $lte: startOfToday },
                 expiryDate: { $gte: startOfToday },
             },
         },
