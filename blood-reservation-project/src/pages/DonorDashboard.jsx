@@ -108,9 +108,10 @@ function DonorDashboard() {
 
           {badgeStats ? (
             <DonorBadges
-              totalDonations={badgeStats.totalDonations}
-              donatedToday={badgeStats.donatedToday}
-            />
+            totalDonations={badgeStats.totalDonations}
+            donatedToday={badgeStats.donatedToday}
+            donorName={`${donor?.firstName || ''} ${donor?.lastName || ''}`.trim()}
+        />
           ) : !badgeError ? (
             <p>Loading your badges…</p>
           ) : null}
