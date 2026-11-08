@@ -1639,7 +1639,9 @@ function BloodUnitsTab({
                             </td>
 
                             <td>
-                                {donorLabel(unit.donorID) || 'No donor linked'}
+                                {unit.donorID?.firstName && unit.donorID?.lastName
+                                    ? `${unit.donorID.firstName} ${unit.donorID.lastName}`
+                                    : 'No donor linked'}
                             </td>
 
                             <td className="bu-strong">
