@@ -391,3 +391,90 @@
     width: auto;
   }
 }
+
+/* ── Role selection popup ── */
+.role-popup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.role-popup {
+    background: #fff;
+    border-radius: 12px;
+    padding: 1.75rem 2rem;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    animation: rolePopIn 0.18s ease-out;
+}
+
+@keyframes rolePopIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to   { transform: scale(1);    opacity: 1; }
+}
+
+.role-popup h3 {
+    margin: 0 0 0.5rem;
+    color: #b71c1c;
+}
+
+.role-popup > p {
+    margin: 0 0 1.25rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+.role-popup-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+@media (max-width: 480px) {
+    .role-popup-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+.role-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.35rem;
+    padding: 1.25rem 1rem;
+    background: #fafafa;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+.role-option:hover {
+    border-color: #b71c1c;
+    background: #fff5f5;
+    transform: translateY(-2px);
+}
+
+.role-option-icon {
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.role-option-label {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #222;
+}
+
+.role-option-desc {
+    font-size: 0.8rem;
+    color: #666;
+    line-height: 1.3;
+}

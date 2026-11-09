@@ -24,7 +24,7 @@ export default function BranchAdminLayout() {
   const reservationTab = facilityType === 'hospital'
     ? { id: 'reservation', label: 'Blood reservation', icon: '📝' }
     : ['bsf', 'prc_chapter'].includes(facilityType)
-      ? { id: 'branch-requests', label: 'Requests for branch', icon: '📥' }
+      ? { id: 'branch-requests', label: 'Hospital Requests', icon: '📥' }
       : null;
   const hospitalRequestsTab = facilityType === 'hospital'
     ? { id: 'my-requests', label: 'My requests', icon: '🔔' }

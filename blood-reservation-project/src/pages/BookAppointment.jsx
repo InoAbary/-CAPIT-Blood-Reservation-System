@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
+import { useFormGate } from '../hooks/useFormGate';
 import '../styles/BranchAdmin.css';
 
 async function request(path, options = {}) {
@@ -62,6 +63,8 @@ function BookAppointment() {
 
   const { donor, loading: authLoading } = useAuth();
 
+  const { status: formStatus, error: formError } = useFormGate();
+
   const loadAll = useCallback(async () => {
     const [apptResult, venueResult] = await Promise.all([
       request('/api/appointments'),
@@ -91,6 +94,8 @@ function BookAppointment() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   }, []);
+
+  
 
   // Minimum time today: next 30-min slot after now (or first slot tomorrow if past 23:30)
   const minTimeToday = useMemo(() => {
@@ -147,7 +152,6 @@ function BookAppointment() {
         body: JSON.stringify({ date: combined.toISOString(), venue }),
       });
       setNotice('Appointment request sent. Staff will review it shortly.');
-      setDate('');
       setTime('');
       setVenue('');
       await loadAll();
@@ -201,8 +205,37 @@ function BookAppointment() {
     </li>
   );
 
-  if (authLoading) return <p>Loading…</p>;
-  if (!donor) return <p>Please log in as a donor to book an appointment.</p>;
+  if (authLoading) return <p>Loading...</p>;
+  if (!donor) return <p>Please log in as a donor to book an appointment.</p>
+
+  if (formStatus === 'loading') {
+    return <p>Checking form eligibility...</p>
+  }
+
+  if (formStatus === 'error') {
+    return (
+      <div className="dashboard-container top-menu-layout">
+        <main className="dashboard-content">
+          <div className="content-card">
+            <p className="form-message error-message" role="alert">
+              {formError || 'Could not verify your form status. Please try again later.'}
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (formStatus === 'needsForm') {
+    // Redirect to the blood donor form; remember where to send them back.
+    return (
+      <Navigate
+        to="/BloodDonorForm"
+        replace
+        state={{ returnTo: location.pathname, reason: 'appointment' }}
+      />
+    );
+  }
 
   return (
 

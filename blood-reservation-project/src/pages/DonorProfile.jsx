@@ -9,7 +9,7 @@ export default function DonorProfile() {
   return (
     <div className="dashboard-container top-menu-layout">
       <header className="dashboard-menu">
-        <div className="dashboard-logo"><h2>Donor Hub</h2></div>
+        <div className="dashboard-logo"><h2>User Hub</h2></div>
         <nav className="nav-links" aria-label="Donor navigation">
           <Link className="nav-link" to="/DonorDashboard">Back to dashboard</Link>
           <Link className="nav-link" to="/donor/profile" aria-current="page">Profile Settings</Link>

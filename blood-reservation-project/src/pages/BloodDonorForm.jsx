@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../styles/Dashboard.css';
 import '../styles/BloodDonorForm.css';
 import {useAuth} from '../context/AuthContext'
@@ -75,10 +75,18 @@ function DonorTopMenu() {
 
 function BloodDonorForm() {
     const { t, i18n } = useTranslation();
+
+    const location = useLocation();
     const navigate = useNavigate();
+    const returnTo = location.state?.returnTo
+
     const [submitting, setSubmitting] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
     const [rejected, setRejected] = useState(false);
+
+    // ── NEW: confirmation modal state ──
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [hasConfirmed, setHasConfirmed] = useState(false);
 
     const {donor, loading} = useAuth()
     const userSex = donor?.sex
@@ -118,7 +126,8 @@ function BloodDonorForm() {
     const goNext = () => {
         if (!canProceed) return;               // safety guard
         if (isLastStep) {
-            submitForm();
+            // ── NEW: show confirmation modal instead of submitting directly ──
+            setShowConfirm(true);
         } else {
             setStepIndex(i => i + 1);
         }
@@ -150,6 +159,18 @@ function BloodDonorForm() {
         updateQuestion(curQuestion.id, 'date', value);
     };
 
+    // ── NEW: confirmation handlers ──
+    const handleConfirmSubmit = () => {
+        setHasConfirmed(true);
+        setShowConfirm(false);
+        submitForm();
+    };
+
+    const handleCancelConfirm = () => {
+        setShowConfirm(false);
+        // leave hasConfirmed untouched (if they cancel, they haven't confirmed this submission)
+    };
+
     const submitForm = async () => {
         setSubmitting(true);
 
@@ -172,6 +193,8 @@ function BloodDonorForm() {
                         remarks: q.remark || undefined,
                     };
                 }),
+                // ── NEW: send confirmation flag ──
+                confirmedTrue: true,
             };
 
             const answersRes = await fetch('/api/bloodForm/form-answers', {
@@ -181,18 +204,23 @@ function BloodDonorForm() {
             });
             if (!answersRes.ok) throw new Error(answersRes.error);
 
-            navigate('/FormPending', {
-                state: {
-                    answers: questions.map(q => ({
-                        id: q.id,
-                        answer: q.answer,
-                        remark: q.remark || '',
-                        date: q.date || '',
-                    })),
-                    donorName: donor?.name || donor?.email || '',
-                    submittedAt: new Date().toISOString(),
-                },
-            });
+            if (returnTo) {
+                // Skip FormPending and send them straight back to where they were going.
+                navigate(returnTo, { replace: true });
+            } else {
+                navigate('/FormPending', {
+                    state: {
+                        answers: questions.map(q => ({
+                            id: q.id,
+                            answer: q.answer,
+                            remark: q.remark || '',
+                            date: q.date || '',
+                        })),
+                        donorName: donor?.name || donor?.email || '',
+                        submittedAt: new Date().toISOString(),
+                    },
+                });
+            }
         } catch (err) {
             console.error(err);
             alert(err.message);
@@ -224,6 +252,7 @@ function BloodDonorForm() {
         return (
             <div className="dashboard-container top-menu-layout">
                 <DonorTopMenu />
+                
                 <main className="dashboard-content">
                     <div className="donorform-container">
                         <div className="language-switcher">
@@ -372,6 +401,56 @@ function BloodDonorForm() {
                     </div>
                 </div>
             </main>
+
+            {/* ── NEW: Confirmation modal ── */}
+            {showConfirm && (
+                <div
+                    className="confirm-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="confirm-title"
+                    aria-describedby="confirm-desc"
+                >
+                    <div className="confirm-modal">
+                        <h3 id="confirm-title">
+                            {t('questionnaire.confirmTitle', 'Confirm your submission')}
+                        </h3>
+                        <p id="confirm-desc">
+                            {t(
+                                'questionnaire.confirmBody',
+                                'Please confirm that all the information you have provided is true and accurate. Submitting false information may affect your eligibility to donate blood.'
+                            )}
+                        </p>
+                        <p className="confirm-warning">
+                            {t(
+                                'questionnaire.confirmWarning',
+                                'I hereby declare that the answers I have given are true and correct to the best of my knowledge.'
+                            )}
+                        </p>
+
+                        <div className="confirm-actions">
+                            <button
+                                type="button"
+                                className="back-btn"
+                                onClick={handleCancelConfirm}
+                                disabled={submitting}
+                            >
+                                {t('common.cancel', 'Cancel')}
+                            </button>
+                            <button
+                                type="button"
+                                className="submit-btn"
+                                onClick={handleConfirmSubmit}
+                                disabled={submitting}
+                            >
+                                {submitting
+                                    ? t('common.submitting', 'Submitting…')
+                                    : t('questionnaire.confirmSubmit', 'Yes, I confirm and submit')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
