@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext.jsx';
 
 const navigation = [
   { to: '/admin', label: 'Overview', icon: '📊', end: true },
+  { to: '/admin/donors', label: 'Donors', icon: '🩸', end: true },
   { to: '/admin/user-directory', label: 'User Directory', icon: '👥' },
   { to: '/admin/provision-supervisor', label: 'Create Account', icon: '🛡️' },
   { to: '/admin/audit-log', label: 'Audit Log', icon: '🕒', end: true },
@@ -15,6 +16,8 @@ const navigation = [
 
 const pageDetails = {
   '/admin': ['Admin Dashboard', 'Manage supervisor accounts and review the CAPIT network at a glance.'],
+  '/admin/donors': ['Donor Directory', 'View and search all donor records.'],
+  '/admin/donors/add': ['Add Donor', 'Create a donor record for someone who has not registered.'],
   '/admin/user-directory': ['User Directory', 'View registered accounts, roles, and institution assignments.'],
   '/admin/provision-supervisor': ['Create Account', 'Create administrator and supervisor accounts.'],
   '/admin/audit-log': ['Audit Log', 'Review recorded administrative actions.'],
@@ -24,7 +27,7 @@ function AdminLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { staff, loading: authLoading, logoutStaff } = useAuth();
-  const [title, description] = pageDetails[pathname] || pageDetails['/admin'];
+  const [title, description] = pageDetails[pathname] || (/^\/admin\/donors\/[^/]+\/edit$/.test(pathname) ? ['Edit Donor', 'Update donor profile and contact information.'] : pageDetails['/admin']);
   const [backendStatus, setBackendStatus] = React.useState('Checking backend…');
   const currentUser = staff;
   const [displayUser, setDisplayUser] = React.useState(currentUser);

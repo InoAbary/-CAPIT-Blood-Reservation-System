@@ -32,6 +32,9 @@ import BloodRequestForm from './pages/Bloodrequestform';
 import BloodRequestsAdmin from './pages/Bloodrequestsadmin';
 import RegisterSuccess from './pages/RegisterSuccess';
 
+import DonorDirectoryPage from './pages/admin/DonorDirectoryPage';
+import EditDonorPage from './pages/admin/EditDonorPage';
+import AddDonorPage from './pages/admin/AddDonorPage';
 import AdminLayout from './pages/admin/AdminLayout';
 import OverviewPage from './pages/admin/OverviewPage';
 import UserDirectoryPage from './pages/admin/UserDirectoryPage';
@@ -175,7 +178,11 @@ function App() {
       <AdminLayout />
       </ProtectedRoute>
     }
-    />
+    >
+      <Route path="donors" element={<DonorDirectoryPage />} />
+      <Route path="donors/add" element={<AddDonorPage />} />
+      <Route path="donors/:id/edit" element={<EditDonorPage />} />
+    </Route>
     <Route
     path="/admin/user-directory"
     element={

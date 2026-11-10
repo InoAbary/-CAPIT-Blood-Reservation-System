@@ -62,6 +62,7 @@ app.use('/api/inventory-fulfillment', inventoryFulfillmentRoutes);
 // Both paths use the same facility-scoped router; keep the legacy alias safe.
 app.use('/api/blood-requests', bloodRequestAdminRoutes);
 app.use('/api/bloodRequest', bloodRequestAdminRoutes);
+app.use('/api/admin/donors', requireStaff, requireRole('admin'), require('./routes/adminDonorRoutes.cjs'));
 app.use('/api/admin', requireStaff, requireRole('admin'), adminRoutes);
 // Public recovery endpoints: users cannot sign in until their password is reset.
 app.use('/api/donor', forgotPasswordEmailRoutes);
