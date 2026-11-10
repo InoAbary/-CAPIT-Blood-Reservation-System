@@ -1,7 +1,9 @@
 /* Utilization.css - Temporary Design */
 
 .utilization-container {
-    max-width: 1200px;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
     margin: 0 auto;
     padding: 2rem;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;

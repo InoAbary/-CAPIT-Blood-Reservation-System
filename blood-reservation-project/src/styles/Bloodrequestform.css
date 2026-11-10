@@ -14,7 +14,7 @@
   font: 400 15px/1.55 Inter, "Segoe UI", system-ui, sans-serif;
 }
 .brf *, .brf *::before, .brf *::after { box-sizing: border-box; }
-.brf-wrap { max-width: 920px; margin: 0 auto; }
+.brf-wrap { width: 100%; max-width: none; margin: 0 auto; }
 .brf-header { margin-bottom: 27px; }
 .brf-brandline { display:flex; gap:12px; align-items:center; color:#595363; font-weight:750; letter-spacing:.12em; font-size:10px; margin-bottom:36px; }
 .brf-brandmark { display:grid; place-items:center; width:35px; height:35px; border-radius:11px; background:var(--red); color:#fff; box-shadow:0 6px 14px #ba315038; }

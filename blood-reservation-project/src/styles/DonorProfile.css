@@ -1,4 +1,4 @@
-.donor-profile-page { max-width: 1000px; }
+.donor-profile-page { width: 100%; max-width: none; }
 .donor-profile-card { margin-top: 1.5rem; padding: clamp(1rem, 3vw, 2rem); background: white; color: #0f172a; border: 1px solid #e2e8f0; border-radius: 16px; text-align: left; }
 .donor-profile-card-heading { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 1rem; padding-bottom: 1.5rem; }
 .donor-profile-card h2 { margin: 0 0 .5rem; font-size: 1.3rem; }

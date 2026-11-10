@@ -20,7 +20,8 @@
     --reg-font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
         "Helvetica Neue", Arial, sans-serif;
 
-    max-width: 1200px;
+    width: 100%;
+    max-width: none;
     margin: 2rem auto;
     padding: 0 1.25rem;
     font-family: var(--reg-font-sans);

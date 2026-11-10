@@ -1,6 +1,6 @@
 .dashboard-page { min-height:100vh; background:#f8f7fa; color:#24202a; padding:34px 22px; font-family:Inter, 'Segoe UI', system-ui, sans-serif; box-sizing:border-box; }
 .dashboard-page * { box-sizing:border-box; }
-.dashboard-container { max-width:970px; margin:0 auto; }
+.dashboard-container { width:100%; max-width:none; margin:0 auto; }
 .dashboard-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .dashboard-brand { display:flex; align-items:center; gap:10px; font-size:12px; letter-spacing:.08em; font-weight:800; color:#514550; }
 .dashboard-brand-icon { display:grid; place-items:center; width:35px; height:35px; border-radius:11px; background:#b72e49; color:white; font-size:21px; }
