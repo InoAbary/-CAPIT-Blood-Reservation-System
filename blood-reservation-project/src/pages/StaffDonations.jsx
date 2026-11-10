@@ -61,7 +61,8 @@ export default function StaffDonations() {
   const [page, setPage] = useState(1);
 
   // New donation form
-  const [showForm, setShowForm] = useState(false);
+  const [activeTab, setActiveTab] = useState('record');
+  const showForm = activeTab === 'record';
   const [donorQuery, setDonorQuery] = useState('');
   const [donorResults, setDonorResults] = useState([]);
   const [selectedDonor, setSelectedDonor] = useState(null);
@@ -94,8 +95,8 @@ export default function StaffDonations() {
   }, [page, search, typeFilter, fromDate, toDate]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (activeTab === 'history') load();
+  }, [load, activeTab]);
 
   useEffect(() => {
     if (!showForm) return;
@@ -158,10 +159,8 @@ export default function StaffDonations() {
         }),
       });
       setNotice('Donation recorded.');
-      setShowForm(false);
       resetForm();
       setPage(1);
-      await load();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -184,25 +183,42 @@ export default function StaffDonations() {
             Record and review donations at your facility.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn-action"
-          aria-expanded={showForm}
-          aria-controls="record-donation-form"
-          onClick={() => {
-            setShowForm((v) => !v);
-            setError('');
-            setNotice('');
-          }}
-        >
-          {showForm ? 'Cancel' : 'Record donation'}
-        </button>
+
+      </div>
+
+      <div className="sd-tabs" role="tablist" aria-label="Donation management">
+        {[
+          ['record', 'Record donation'],
+          ['history', 'Previous donations'],
+        ].map(([tab, label], index) => (
+          <button
+            key={tab}
+            id={`donation-tab-${tab}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            aria-controls={`donation-panel-${tab}`}
+            tabIndex={activeTab === tab ? 0 : -1}
+            onClick={() => { setActiveTab(tab); setError(''); }}
+            onKeyDown={event => {
+              const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End'];
+              if (!keys.includes(event.key)) return;
+              event.preventDefault();
+              const next = event.key === 'Home' ? 'record' : event.key === 'End' ? 'history' : index === 0 ? 'history' : 'record';
+              setActiveTab(next);
+              setError('');
+              document.getElementById(`donation-tab-${next}`)?.focus();
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {error && <p className="form-message error-message" role="alert">{error}</p>}
       {notice && <p className="form-message" role="status">{notice}</p>}
 
-      {showForm && (
+      <div id="donation-panel-record" role="tabpanel" aria-labelledby="donation-tab-record" hidden={!showForm}>
         <form id="record-donation-form" className="donation-form" onSubmit={submit}>
           <label>
             Donor
@@ -307,16 +323,18 @@ export default function StaffDonations() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => { setShowForm(false); resetForm(); }}
+              onClick={() => { resetForm(); setError(''); setNotice(''); }}
             >
-              Cancel
+              Clear form
             </button>
             <button type="submit" className="btn-action" disabled={saving || !selectedDonor || !screener || !extractor}>
               {saving ? 'Saving…' : 'Save donation'}
             </button>
           </div>
         </form>
-      )}
+      </div>
+
+      <div id="donation-panel-history" role="tabpanel" aria-labelledby="donation-tab-history" hidden={showForm}>
 
       <div className="sd-records-heading"><h3>Donation records</h3><span className="sd-count" role="status">{summary}</span></div>
       <div className="donation-filters">
@@ -424,6 +442,7 @@ export default function StaffDonations() {
           </button>
         </div>
       )}
+      </div>
     </section>
   );
 }
