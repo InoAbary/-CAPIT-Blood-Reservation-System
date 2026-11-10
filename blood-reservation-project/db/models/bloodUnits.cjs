@@ -49,6 +49,12 @@ const bloodUnitsSchema = new mongoose.Schema({
         type: Date,
         required: true,
     },
+    storageLocation: {
+        type: String,
+        trim: true,
+        maxlength: 200,
+        default: ''
+    },
     status: {
         type: String,
         required: true,

@@ -1,5 +1,6 @@
 
 const express = require('express');
+const { statusTransitionError } = require('../utils/bloodUnitStatus.cjs');
 const mongoose = require('mongoose');
 
 const { validateDonorReference, normalizeDonorReference } = require('../utils/bloodUnitDonor.cjs');
@@ -38,6 +39,7 @@ const TRACKED_FIELDS = [
 'component',
 'collectionDate',
 'expiryDate',
+'storageLocation',
 'status'
 ];
 
@@ -65,6 +67,10 @@ const validatePayload = (
     requireExpiryVerification = false
 ) => {
     const errors = {};
+    if (body.storageLocation !== undefined &&
+        (typeof body.storageLocation !== 'string' || body.storageLocation.trim().length > 200)) {
+        errors.storageLocation = 'Storage location must be text of at most 200 characters.';
+    }
 
     if (requireExpiryVerification && body.expiryVerified !== true) {
         errors.expiryVerified = 'Expiry date verification is required.';
@@ -254,6 +260,7 @@ router.post('/:id/blood-units', validateFacilityId, async (req, res) => {
                                     expiryDate: new Date(
                                         `${req.body.expiryDate}T00:00:00.000Z`
                                     ),
+                                    storageLocation: req.body.storageLocation?.trim() || '',
                                     status: req.body.status || 'In-stock'
         });
 
@@ -364,6 +371,10 @@ router.put(
 
             if (unit.status === 'Released' || unit.requestID || unit.releaseOperationID) {
                 return res.status(409).json({ message: 'Released blood units cannot be edited through inventory maintenance.' });
+            }
+            const statusError = statusTransitionError(unit.status, req.body.status);
+            if (statusError) {
+                return res.status(409).json({ message: statusError, errors: { status: statusError } });
             }
             const before = unit.toObject();
 

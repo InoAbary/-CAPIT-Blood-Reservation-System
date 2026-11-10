@@ -162,7 +162,8 @@ function UnitModal({
     onClose,
     saving,
     deleting,
-    apiError
+    apiError,
+    fromDonation = false
 }) {
     const [form, setForm] = useState(() => ({
         ...initial,
@@ -219,6 +220,7 @@ function UnitModal({
     }, [onClose, confirmingDelete]);
 
     const set = (field) => (e) => {
+        if (fromDonation && field !== 'storageLocation') return;
         const value = e.target.value;
     
         setForm((current) => {
@@ -255,7 +257,7 @@ function UnitModal({
         }
 
         if (!form.bloodType) {
-            next.bloodType = 'Select a blood type.';
+            next.bloodType = mode === 'add' ? 'Select a donor with a recorded blood type.' : 'Select a blood type.';
         }
 
         if (!form.component) {
@@ -320,23 +322,16 @@ function UnitModal({
     <form onSubmit={handleSubmit} noValidate>
     <div className="bu-grid">
 
-    <Field label="Unit ID" htmlFor="bu-id">
-    <input
-    id="bu-id"
-    value={unitId || 'Generated after saving'}
-    readOnly
-    className="bu-readonly"
-    />
-    </Field>
-
     <Field
-    label="Donor (optional)"
+    label="Donor"
     htmlFor="bu-donor"
     error={errors.donorID}
     >
     <>
         <input
             id="bu-donor"
+            readOnly={fromDonation}
+            className={fromDonation ? 'bu-readonly' : undefined}
             type="search"
             value={donorQuery}
             placeholder="Search name, email, or donor ID"
@@ -351,7 +346,7 @@ function UnitModal({
                 setDonors([]);
                 setDonorError('');
                 setDonorLoading(event.target.value.trim().length >= 2);
-                setForm((current) => ({ ...current, donorID: '' }));
+                setForm((current) => ({ ...current, donorID: '', ...(mode === 'add' ? { bloodType: '' } : {}) }));
                 setErrors((current) => ({ ...current, donorID: '' }));
             }}
         />
@@ -382,13 +377,13 @@ function UnitModal({
             </li>)}
         </ul>}
     </>
-    {donorQuery && <button type="button" className="bu-donor-clear" disabled={saving || deleting} onClick={() => {
+    {!fromDonation && donorQuery && <button type="button" className="bu-donor-clear" disabled={saving || deleting} onClick={() => {
         setDonorQuery('');
         setSelectedDonor(null);
         setDonors([]);
         setDonorLoading(false);
         setDonorError('');
-        setForm((current) => ({ ...current, donorID: '' }));
+        setForm((current) => ({ ...current, donorID: '', ...(mode === 'add' ? { bloodType: '' } : {}) }));
         setErrors((current) => ({ ...current, donorID: '' }));
     }}>Clear donor</button>}
     </Field>
@@ -398,6 +393,16 @@ function UnitModal({
     htmlFor="bu-type"
     error={errors.bloodType}
     >
+    {mode === 'add' ? (
+        <input
+            id="bu-type"
+            value={form.bloodType}
+            readOnly
+            className="bu-readonly"
+            placeholder="Select a donor to set blood type"
+            aria-invalid={!!errors.bloodType}
+        />
+    ) : (
     <select
     id="bu-type"
     value={form.bloodType}
@@ -413,6 +418,8 @@ function UnitModal({
         </option>
     ))}
     </select>
+    )}
+
     </Field>
 
     <Field
@@ -422,10 +429,11 @@ function UnitModal({
     >
     <select
     id="bu-component"
+    aria-readonly={fromDonation}
     value={form.component}
     onChange={set('component')}
     aria-invalid={!!errors.component}
-    disabled={saving || deleting}
+    disabled={saving || deleting || fromDonation}
     >
     <option value="">Select…</option>
 
@@ -447,6 +455,8 @@ function UnitModal({
     >
     <input
     id="bu-collected"
+    readOnly={fromDonation}
+    className={fromDonation ? 'bu-readonly' : undefined}
     type="date"
     value={form.collectionDate}
     onChange={set('collectionDate')}
@@ -462,6 +472,8 @@ function UnitModal({
     >
     <input
     id="bu-expiry"
+    readOnly="true"
+    className="bu-readonly"
     type="date"
     value={form.expiryDate}
     onChange={set('expiryDate')}
@@ -470,26 +482,45 @@ function UnitModal({
     />
     </Field>
 
+    <Field label="Storage location (optional)" htmlFor="bu-storage-location">
+        <input
+            id="bu-storage-location"
+            value={form.storageLocation || ''}
+            onChange={set('storageLocation')}
+            placeholder="e.g. Refrigerator 2, Shelf A"
+            maxLength={200}
+            disabled={saving || deleting}
+        />
+    </Field>
+
+    {mode !== 'add' && (
     <Field label="Status" htmlFor="bu-status">
     <select
     id="bu-status"
     value={form.status}
     onChange={set('status')}
-    disabled={saving || deleting}
+    disabled={saving || deleting || initial.status === 'Removed'}
     >
-    {STATUSES.filter(status => status !== 'Released').map((status) => (
+    {STATUSES.filter(status =>
+        status !== 'Released' &&
+        (initial.status !== 'Expired' || status !== 'In-stock') &&
+        (initial.status !== 'Removed' || status === 'Removed')
+    ).map((status) => (
         <option key={status} value={status}>
         {status}
         </option>
     ))}
     </select>
+    {initial.status === 'Removed' && <p className="bu-donor-help">Removed units cannot change status.</p>}
+    {initial.status === 'Expired' && <p className="bu-donor-help">Expired units cannot return to In-stock.</p>}
     </Field>
+    )}
     </div>
 
     <p className="bu-expiry-note">
-    The expiry date is automatically suggested based on the blood
-    component and collection date. Please adjust it according to
-    the blood bag label, preservative, and storage conditions.
+    {fromDonation
+        ? 'Donation details and the calculated expiry date are read-only. Enter the storage location and verify the expiry date before saving.'
+        : 'The expiry date is automatically suggested based on the blood component and collection date. Please adjust it according to the blood bag label, preservative, and storage conditions.'}
         </p>
 
         <label className="bu-expiry-check">
@@ -631,7 +662,9 @@ function FilterSelect({
 function BloodUnitsTab({
     facilityID,
     onInventoryChanged,
-    readOnly = false
+    readOnly = false,
+    initialBloodUnit = null,
+    onBloodUnitOpened,
 }) {
 
     const [units, setUnits] = useState([]);
@@ -643,7 +676,22 @@ function BloodUnitsTab({
 
     const [page, setPage] = useState(1);
 
-    const [modal, setModal] = useState(null);
+    const [modal, setModal] = useState(() =>
+        initialBloodUnit && !readOnly ? {
+            mode: 'add',
+            fromDonation: true,
+            initial: {
+                ...initialBloodUnit,
+                expiryDate: calculateExpiryDate(initialBloodUnit.component, initialBloodUnit.collectionDate),
+                storageLocation: '',
+                status: 'In-stock',
+            },
+            apiError: '',
+        } : null
+    );
+    useEffect(() => {
+        if (initialBloodUnit && !readOnly) onBloodUnitOpened?.();
+    }, []);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -801,6 +849,7 @@ function BloodUnitsTab({
         component: '',
         collectionDate: toISODate(new Date()),
         expiryDate: '',
+        storageLocation: '',
         status: 'In-stock'
     };
 
@@ -1746,6 +1795,7 @@ function BloodUnitsTab({
                 {!readOnly && modal && (
                     <UnitModal
                     mode={modal.mode}
+                    fromDonation={!!modal.fromDonation}
                     unitId={
                         modal.mode === 'edit'
                         ? modal.unit.bloodUnitID
@@ -1773,11 +1823,13 @@ function BloodUnitsTab({
                         modal.unit.expiryDate
                     ),
 
+                    storageLocation: modal.unit.storageLocation || '',
+
                     status:
                     modal.unit.status ||
                     'In-stock'
                 }
-                : emptyForm
+                : modal.initial || emptyForm
                     }
                     onSave={handleSave}
                     onDelete={handleDelete}

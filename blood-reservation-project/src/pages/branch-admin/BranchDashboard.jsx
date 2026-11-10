@@ -28,6 +28,7 @@ async function request(path, options = {}) {
 
 function BranchDashboard() {
   const { activeTab, setActiveTab, setFacilityType } = useOutletContext();
+  const [pendingBloodUnit, setPendingBloodUnit] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -413,7 +414,9 @@ function BranchDashboard() {
 
       {activeTab === 'inventory' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && (
         <section id="branch-panel-inventory" className="branch-tab-panel" role="tabpanel" aria-labelledby="branch-tab-inventory" tabIndex="0">
-          <Inventory fixedFacilityId={facility?.id} />
+          <Inventory fixedFacilityId={facility?.id}
+                initialBloodUnit={pendingBloodUnit}
+                onBloodUnitOpened={() => setPendingBloodUnit(null)} />
         </section>
       )}
 
@@ -443,7 +446,10 @@ function BranchDashboard() {
 
       {activeTab === 'branch-requests' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <BranchRequests />}
       {activeTab === 'my-requests' && facility?.facilityType === 'hospital' && <HospitalRequests />}
-      {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonations />}
+      {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonations onDonationRecorded={unit => {
+            setPendingBloodUnit(unit);
+            setActiveTab('inventory');
+          }} />}
     </section>
   );
 }

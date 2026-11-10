@@ -46,6 +46,7 @@ function StaffDashboard() {
   const { staff, logoutStaff } = useAuth();
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [pendingBloodUnit, setPendingBloodUnit] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -237,7 +238,9 @@ function StaffDashboard() {
               aria-labelledby="staff-tab-inventory"
               tabIndex={0}
             >
-              <Inventory fixedFacilityId={facility?.id} />
+              <Inventory fixedFacilityId={facility?.id}
+                initialBloodUnit={pendingBloodUnit}
+                onBloodUnitOpened={() => setPendingBloodUnit(null)} />
             </section>
           )}
 
@@ -269,7 +272,10 @@ function StaffDashboard() {
             </section>
           )}
 
-          {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(facilityType) && <StaffDonations />}
+          {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(facilityType) && <StaffDonations onDonationRecorded={unit => {
+            setPendingBloodUnit(unit);
+            setActiveTab('inventory');
+          }} />}
 
           {activeTab === 'profile' && (
             <section

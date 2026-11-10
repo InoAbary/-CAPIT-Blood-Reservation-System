@@ -20,12 +20,12 @@ const TABS = [
 { id: 'fulfillment', label: 'Release to Requests' },
 ];
 
-function Inventory({ fixedFacilityId = '' }) {
+function Inventory({ fixedFacilityId = '', initialBloodUnit = null, onBloodUnitOpened }) {
     const [facilities, setFacilities] = useState([]);
     const [selectedId, setSelectedId] = useState(fixedFacilityId);
     const [facility, setFacility] = useState(null);
     const [inventory, setInventory] = useState(null);
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState(initialBloodUnit ? 'update' : 'overview');
     const [loadingList, setLoadingList] = useState(true);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [error, setError] = useState('');
@@ -44,7 +44,7 @@ function Inventory({ fixedFacilityId = '' }) {
             if (!invRes.ok) throw new Error(invBody.message || 'Could not load inventory.');
             setFacility(facBody);
             setInventory(invBody);
-            setActiveTab('overview');
+            setActiveTab(initialBloodUnit ? 'update' : 'overview');
         } catch (err) { setError(err.message); }
         finally { setLoadingDetails(false); }
     }
@@ -284,6 +284,8 @@ function Inventory({ fixedFacilityId = '' }) {
                 (
                     <BloodUnitsTab
                     facilityID={selectedId}
+                    initialBloodUnit={initialBloodUnit}
+                    onBloodUnitOpened={onBloodUnitOpened}
                     onInventoryChanged={refreshInventory}
                     />
                 )

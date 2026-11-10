@@ -54,7 +54,7 @@ const donorSchema = new mongoose.Schema({
     // Contact
     telephoneNumber:{ type: String, trim: true },
     mobileNumber:   { type: String, trim: true },
-    email:          { type: String, required: true, trim: true, lowercase: true },
+    email:          { type: String, trim: true, lowercase: true },
     notificationPreferences: {
         sms: { type: Boolean, default: true },
         email: { type: Boolean, default: true }
@@ -68,7 +68,7 @@ const donorSchema = new mongoose.Schema({
     govID:          { type: String, trim: true },
     otherID:        { type: String, trim: true },
 
-    password:       { type: String, required: true},
+    password:       { type: String }, //donors without a password do not have an active account
     role:           { type: String, enum: ['donor', 'recipient'], default: "donor"},
     passwordReset: {
         type: passwordResetSchema,

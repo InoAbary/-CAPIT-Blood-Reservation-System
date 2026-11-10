@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import '../styles/BranchAdmin.css';
+import { donationBloodUnit } from '../utils/donationBloodUnit';
+import StaffAddDonor from '../components/StaffAddDonor';
 import '../styles/StaffDonations.css';
 
 async function request(path, options = {}) {
@@ -43,7 +45,8 @@ function formatDonor(donor) {
   return name || donor.email || 'Unknown donor';
 }
 
-export default function StaffDonations() {
+export default function StaffDonations({ onDonationRecorded }) {
+  const [addingDonor, setAddingDonor] = useState(false);
   const [donations, setDonations] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [loading, setLoading] = useState(true);
@@ -145,7 +148,7 @@ export default function StaffDonations() {
     }
     setSaving(true);
     try {
-      await request('/api/donations/staff-donations', {
+      const result = await request('/api/donations/staff-donations', {
         method: 'POST',
         body: JSON.stringify({
           donorID: selectedDonor._id,
@@ -159,6 +162,7 @@ export default function StaffDonations() {
       setNotice('Donation recorded.');
       resetForm();
       setPage(1);
+      onDonationRecorded?.(donationBloodUnit(result.donation));
     } catch (err) {
       setError(err.message);
     } finally {
@@ -217,6 +221,23 @@ export default function StaffDonations() {
       {notice && <p className="form-message" role="status">{notice}</p>}
 
       <div id="donation-panel-record" role="tabpanel" aria-labelledby="donation-tab-record" hidden={!showForm}>
+        {addingDonor ? (
+          <StaffAddDonor onCancel={() => setAddingDonor(false)} onCreated={donor => {
+            setSelectedDonor(donor);
+            setDonorQuery('');
+            setDonorResults([]);
+            setAddingDonor(false);
+            setError('');
+            setNotice('Donor added. You can now record their donation.');
+          }} />
+        ) : (
+        <>
+        <div className="sd-add-donor-heading">
+          <p className="muted small">Donor not registered yet?</p>
+          <button type="button" className="btn-secondary" onClick={() => {
+            setAddingDonor(true); setError(''); setNotice('');
+          }}>Add donor</button>
+        </div>
         <form id="record-donation-form" className="donation-form" onSubmit={submit}>
           <label>
             Donor
@@ -295,7 +316,6 @@ export default function StaffDonations() {
               </select>
             </label>
           ))}
-          <p className="muted small">The encoder is automatically set to your signed-in staff account.</p>
 
           <label>
             Date &amp; time (Philippine Standard Time)
@@ -330,6 +350,8 @@ export default function StaffDonations() {
             </button>
           </div>
         </form>
+        </>
+        )}
       </div>
 
       <div id="donation-panel-history" role="tabpanel" aria-labelledby="donation-tab-history" hidden={showForm}>
