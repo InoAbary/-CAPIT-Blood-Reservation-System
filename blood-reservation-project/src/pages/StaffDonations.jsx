@@ -51,7 +51,6 @@ export default function StaffDonations() {
   const [notice, setNotice] = useState('');
 
   // Filters
-  const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
@@ -79,7 +78,6 @@ export default function StaffDonations() {
         page: String(page),
         limit: String(PAGE_SIZE),
       });
-      if (search.trim()) params.set('search', search.trim());
       if (typeFilter) params.set('type', typeFilter);
       if (fromDate) params.set('from', fromDate);
       if (toDate) params.set('to', toDate);
@@ -92,7 +90,7 @@ export default function StaffDonations() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, typeFilter, fromDate, toDate]);
+  }, [page, typeFilter, fromDate, toDate]);
 
   useEffect(() => {
     if (activeTab === 'history') load();
@@ -338,13 +336,6 @@ export default function StaffDonations() {
 
       <div className="sd-records-heading"><h3>Donation records</h3><span className="sd-count" role="status">{summary}</span></div>
       <div className="donation-filters">
-        <input
-          type="search"
-          aria-label="Search donors"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          placeholder="Search donor…"
-        />
         <select
           aria-label="Filter by donation type"
           value={typeFilter}
@@ -364,7 +355,7 @@ export default function StaffDonations() {
             onChange={e => { setToDate(e.target.value); setPage(1); }} />
         </label>
         <button type="button" className="btn-secondary" onClick={() => {
-          setSearch(''); setTypeFilter(''); setFromDate(''); setToDate(''); setPage(1);
+          setTypeFilter(''); setFromDate(''); setToDate(''); setPage(1);
         }}>Clear filters</button>
       </div>
 
@@ -388,7 +379,7 @@ export default function StaffDonations() {
             ) : donations.length === 0 ? (
               <tr><td colSpan={7} className="sd-empty">
                 <strong>{error ? 'Donations could not be loaded.' : 'No donations found'}</strong>
-                <p>{error ? 'Please try again shortly.' : search || typeFilter || fromDate || toDate ? 'Try adjusting your filters.' : 'Record your first donation to get started.'}</p>
+                <p>{error ? 'Please try again shortly.' : typeFilter || fromDate || toDate ? 'Try adjusting your filters.' : 'Record your first donation to get started.'}</p>
               </td></tr>
             ) : donations.map((d) => {
               const date = new Date(d.dateTime);
