@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import '../styles/BranchAdmin.css';
+import '../styles/StaffDonations.css';
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -26,6 +27,16 @@ const DONATION_TYPES = [
 
 const PAGE_SIZE = 20;
 
+function philippineDateTime() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}T${values.hour}:${values.minute}`;
+}
+
 function formatDonor(donor) {
   if (!donor) return 'Unknown donor';
   const name = `${donor.firstName || ''} ${donor.lastName || ''}`.trim();
@@ -42,6 +53,11 @@ export default function StaffDonations() {
   // Filters
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+  const [staffOptions, setStaffOptions] = useState([]);
+  const [screener, setScreener] = useState('');
+  const [extractor, setExtractor] = useState('');
   const [page, setPage] = useState(1);
 
   // New donation form
@@ -51,7 +67,7 @@ export default function StaffDonations() {
   const [selectedDonor, setSelectedDonor] = useState(null);
   const [donationType, setDonationType] = useState(DONATION_TYPES[0]);
   const [notes, setNotes] = useState('');
-  const [dateTime, setDateTime] = useState(() => new Date().toISOString().slice(0, 16));
+  const [dateTime, setDateTime] = useState(philippineDateTime);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -64,6 +80,8 @@ export default function StaffDonations() {
       });
       if (search.trim()) params.set('search', search.trim());
       if (typeFilter) params.set('type', typeFilter);
+      if (fromDate) params.set('from', fromDate);
+      if (toDate) params.set('to', toDate);
 
       const result = await request(`/api/donations/staff-donations?${params}`);
       setDonations(result.donations || []);
@@ -73,11 +91,20 @@ export default function StaffDonations() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, typeFilter]);
+  }, [page, search, typeFilter, fromDate, toDate]);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!showForm) return;
+    let cancelled = false;
+    request('/api/donations/staff-options')
+      .then(result => { if (!cancelled) setStaffOptions(result.staff || []); })
+      .catch(err => { if (!cancelled) setError(err.message); });
+    return () => { cancelled = true; };
+  }, [showForm]);
 
   // Debounced donor lookup
   useEffect(() => {
@@ -104,7 +131,9 @@ export default function StaffDonations() {
     setSelectedDonor(null);
     setDonationType(DONATION_TYPES[0]);
     setNotes('');
-    setDateTime(new Date().toISOString().slice(0, 16));
+    setScreener('');
+    setExtractor('');
+    setDateTime(philippineDateTime());
   };
 
   const submit = async (e) => {
@@ -122,8 +151,10 @@ export default function StaffDonations() {
         body: JSON.stringify({
           donorID: selectedDonor._id,
           donationType,
+          screener,
+          extractor,
           notes: notes.trim() || undefined,
-          dateTime: new Date(dateTime).toISOString(),
+          dateTime: new Date(`${dateTime}:00+08:00`).toISOString(),
         }),
       });
       setNotice('Donation recorded.');
@@ -144,17 +175,20 @@ export default function StaffDonations() {
   }, [pagination.total]);
 
   return (
-    <section className="content-card">
+    <section className="content-card staff-donations">
       <div className="card-header-row">
         <div>
+          <span className="sd-eyebrow">DONATION MANAGEMENT</span>
           <h2 className="card-title">Donations</h2>
           <p className="card-subtitle">
-            Record and review donations at your facility. {summary}
+            Record and review donations at your facility.
           </p>
         </div>
         <button
           type="button"
           className="btn-action"
+          aria-expanded={showForm}
+          aria-controls="record-donation-form"
           onClick={() => {
             setShowForm((v) => !v);
             setError('');
@@ -169,7 +203,7 @@ export default function StaffDonations() {
       {notice && <p className="form-message" role="status">{notice}</p>}
 
       {showForm && (
-        <form className="donation-form" onSubmit={submit}>
+        <form id="record-donation-form" className="donation-form" onSubmit={submit}>
           <label>
             Donor
             {selectedDonor ? (
@@ -233,8 +267,24 @@ export default function StaffDonations() {
             </select>
           </label>
 
+          {[
+            ['Screener', screener, setScreener],
+            ['Extractor', extractor, setExtractor],
+          ].map(([label, value, setValue]) => (
+            <label key={label}>
+              {label}
+              <select required value={value} onChange={e => setValue(e.target.value)}>
+                <option value="">Select {label.toLowerCase()}</option>
+                {staffOptions.map(staff => (
+                  <option key={staff._id} value={staff._id}>{formatDonor(staff)}</option>
+                ))}
+              </select>
+            </label>
+          ))}
+          <p className="muted small">The encoder is automatically set to your signed-in staff account.</p>
+
           <label>
-            Date &amp; time
+            Date &amp; time (Philippine Standard Time)
             <input
               type="datetime-local"
               value={dateTime}
@@ -261,21 +311,24 @@ export default function StaffDonations() {
             >
               Cancel
             </button>
-            <button type="submit" className="btn-action" disabled={saving || !selectedDonor}>
+            <button type="submit" className="btn-action" disabled={saving || !selectedDonor || !screener || !extractor}>
               {saving ? 'Saving…' : 'Save donation'}
             </button>
           </div>
         </form>
       )}
 
+      <div className="sd-records-heading"><h3>Donation records</h3><span className="sd-count" role="status">{summary}</span></div>
       <div className="donation-filters">
         <input
           type="search"
+          aria-label="Search donors"
           value={search}
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           placeholder="Search donor…"
         />
         <select
+          aria-label="Filter by donation type"
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
         >
@@ -284,31 +337,69 @@ export default function StaffDonations() {
             <option key={t} value={t}>{t}</option>
           ))}
         </select>
+        <label>From date
+          <input type="date" value={fromDate} max={toDate || undefined}
+            onChange={e => { setFromDate(e.target.value); setPage(1); }} />
+        </label>
+        <label>To date
+          <input type="date" value={toDate} min={fromDate || undefined}
+            onChange={e => { setToDate(e.target.value); setPage(1); }} />
+        </label>
+        <button type="button" className="btn-secondary" onClick={() => {
+          setSearch(''); setTypeFilter(''); setFromDate(''); setToDate(''); setPage(1);
+        }}>Clear filters</button>
       </div>
 
-      {loading ? (
-        <p>Loading donations…</p>
-      ) : donations.length === 0 ? (
-        <p className="muted">No donations match these filters.</p>
-      ) : (
-        <ul className="appointment-list">
-          {donations.map((d) => (
-            <li key={d._id} className="appointment-item">
-              <div>
-                <strong>{formatDonor(d.donorID)}</strong>
-                <span className="appointment-venue">
-                  {new Date(d.dateTime).toLocaleString()}
-                </span>
-                <span className="appointment-venue">{d.donationType}</span>
-                {d.donorID?.bloodType && (
-                  <span className="appointment-venue">Blood type: {d.donorID.bloodType}</span>
-                )}
-                {d.notes && <span className="appointment-note">Notes: {d.notes}</span>}
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="sd-table-wrap" tabIndex={0} role="region" aria-label="Donation records" aria-busy={loading}>
+        <table className="sd-table">
+          <caption className="sd-sr-only">Donations recorded at your facility</caption>
+          <thead>
+            <tr>
+              <th scope="col">Donor</th>
+              <th scope="col">Blood Type</th>
+              <th scope="col">Donation Type</th>
+              <th scope="col">Date and Time (PST)</th>
+              <th scope="col">Screener</th>
+              <th scope="col">Extractor</th>
+              <th scope="col">Encoder</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr><td colSpan={7} className="sd-empty"><span role="status">Loading donations…</span></td></tr>
+            ) : donations.length === 0 ? (
+              <tr><td colSpan={7} className="sd-empty">
+                <strong>{error ? 'Donations could not be loaded.' : 'No donations found'}</strong>
+                <p>{error ? 'Please try again shortly.' : search || typeFilter || fromDate || toDate ? 'Try adjusting your filters.' : 'Record your first donation to get started.'}</p>
+              </td></tr>
+            ) : donations.map((d) => {
+              const date = new Date(d.dateTime);
+              const validDate = !Number.isNaN(date.getTime());
+              return (
+                <tr key={d._id}>
+                  <td>
+                    <div className="sd-donor">
+                      <span className="sd-avatar" aria-hidden="true">{formatDonor(d.donorID).charAt(0).toUpperCase()}</span>
+                      <div><strong>{formatDonor(d.donorID)}</strong>
+                        {d.notes && <span className="sd-note">Notes: {d.notes}</span>}
+                      </div>
+                    </div>
+                  </td>
+                  <td><span className="sd-blood-type">{d.donorID?.bloodType || 'Unknown'}</span></td>
+                  <td><span className="sd-type">{d.donationType || 'Unknown'}</span></td>
+                  <td>{validDate ? <time dateTime={date.toISOString()}>
+                    <span className="sd-date">{date.toLocaleDateString(undefined, { timeZone: 'Asia/Manila', month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    <span className="sd-time">{date.toLocaleTimeString(undefined, { timeZone: 'Asia/Manila', hour: 'numeric', minute: '2-digit' })}</span>
+                  </time> : 'Unknown date'}</td>
+                  {[d.screener, d.extractor, d.encoder].map((staff, index) => (
+                    <td key={index}>{staff ? formatDonor(staff) : 'Not recorded'}</td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {pagination.totalPages > 1 && (
         <div className="pagination-row">

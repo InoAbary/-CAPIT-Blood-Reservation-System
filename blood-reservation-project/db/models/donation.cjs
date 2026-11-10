@@ -21,9 +21,21 @@ const donationSchema = new mongoose.Schema({
         enum: ["Whole Blood Donation", "Power Red Donation", "Platelet Donation", "Plasma Donation"],
         required: true
     },
-    notes: {
-        type: String,
-        trim: true
+    screener: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Staff',
+        required: true
+    },
+    extractor: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Staff',
+        required: true
+    },
+    notes: { type: String, trim: true },
+    encoder: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Staff',
+
     }
 });
 
