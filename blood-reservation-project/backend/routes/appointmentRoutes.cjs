@@ -219,6 +219,10 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
       { path: 'venue', select: 'facilityName address' },
     ]);
 
+    const staff = await Staff.findById(staffId)
+      .select('firstName lastName')
+      .lean();
+
       
     res.json({ appointment: populated });
 
@@ -242,6 +246,11 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
             <p>Dear ${populated.donor.firstName || 'Donor'},</p>
             <p>Your appointment at <strong>${populated.venue?.facilityName || 'the facility'}</strong> has been approved.</p>
             <p>Date: ${startTime.toDateString()}</p>
+            <p>Staff: <strong>${staff.firstName}  ${staff.lastName}</strong></p>
+            <p><strong>Reminders: </strong></p>
+            <p>1. Make sure to have 5 to 8 hours of sleep before donating</p>
+            <p>2. Do not drink alcohol before and during the appointed date.</p>
+            <p>3. Have a meal but avoid taking fatty foods.</p>
             <p>Please add it to your calendar using the invite attached below.</p>
           `,
           text:

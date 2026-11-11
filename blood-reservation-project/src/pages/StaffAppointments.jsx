@@ -98,50 +98,76 @@ function StaffAppointments() {
       ) : appointments.length === 0 ? (
         <p className="muted">Nothing to show here.</p>
       ) : (
-        <ul className="appointment-list">
-          {appointments.map((a) => (
-            <li key={a._id} className="appointment-item">
-              <div>
-                <strong>
-                  {a.donor
-                    ? `${a.donor.firstName || ''} ${a.donor.lastName || ''}`.trim() || a.donor.email
-                    : 'Unknown donor'}
-                </strong>
-                <span className="appointment-venue">
-                  {new Date(a.date).toLocaleString()}
-                </span>
-                {a.donor?.bloodType && (
-                  <span className="appointment-venue">Blood type: {a.donor.bloodType}</span>
-                )}
-                {a.note && <span className="appointment-note">Note: {a.note}</span>}
-              </div>
-              <div className="appointment-right">
-                <span className={`status-badge status-${a.status}`}>{a.status}</span>
-                {a.status === 'pending' && (
-                  <>
-                    <button
-                      type="button"
-                      className="btn-action"
-                      onClick={() => decide(a._id, 'approve')}
-                    >
-                      Approve
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary"
-                      onClick={() => {
-                        setDenyTarget(a);
-                        setDenyNote('');
-                      }}
-                    >
-                      Deny
-                    </button>
-                  </>
-                )}
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="appt-table-wrap">
+          <table className="appt-table">
+            <thead>
+              <tr>
+                <th>Donor</th>
+                <th>Blood type</th>
+                <th>Date &amp; time</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {appointments.map((a) => (
+                <tr key={a._id}>
+                  <td>
+                    <strong>
+                      {a.donor
+                        ? `${a.donor.firstName || ''} ${a.donor.lastName || ''}`.trim() || a.donor.email
+                        : 'Unknown donor'}
+                    </strong>
+                    {a.note && <span className="appt-note">Note: {a.note}</span>}
+                  </td>
+                  <td>
+                    {a.donor?.bloodType ? (
+                      <span className="status-badge status-approved">{a.donor.bloodType}</span>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
+                  <td>
+                    <span className="appt-date">
+                      {new Date(a.date).toLocaleDateString([], { dateStyle: 'medium' })}
+                    </span>
+                    <span className="appt-time">
+                      {new Date(a.date).toLocaleTimeString([], { timeStyle: 'short' })}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`status-badge status-${a.status}`}>{a.status}</span>
+                  </td>
+                  <td>
+                    {a.status === 'pending' ? (
+                      <div className="appt-actions">
+                        <button
+                          type="button"
+                          className="btn-action"
+                          onClick={() => decide(a._id, 'approve')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary"
+                          onClick={() => {
+                            setDenyTarget(a);
+                            setDenyNote('');
+                          }}
+                        >
+                          Deny
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {denyTarget && (

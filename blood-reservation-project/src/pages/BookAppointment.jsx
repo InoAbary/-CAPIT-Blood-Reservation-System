@@ -43,6 +43,16 @@ function formatTimeLabel(value) {
   return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
 }
 
+function staffLabel(a) {
+    const s = a.assocStaff;
+    if (!s) return null;
+    if (typeof s === 'string') return s; // if API just returns a name/id string
+    
+    const name = `${s.firstName || ''} ${s.lastName || ''}`.trim();
+    return name || s.email || s.name || null;
+  }
+
+
 function BookAppointment() {
   const [appointments, setAppointments] = useState([]);
   const [venues, setVenues] = useState([]);
@@ -65,6 +75,7 @@ function BookAppointment() {
 
   const { status: formStatus, error: formError } = useFormGate();
 
+  
   const loadAll = useCallback(async () => {
     const [apptResult, venueResult] = await Promise.all([
       request('/api/appointments'),
@@ -81,6 +92,7 @@ function BookAppointment() {
     loadAll()
       .catch((err) => current && setError(err.message))
       .finally(() => current && setLoading(false));
+      
     return () => {
       current = false;
     };
@@ -174,36 +186,52 @@ function BookAppointment() {
     }
   };
 
-  const renderAppointment = (a) => (
-    <li key={a._id} className="appointment-item">
-      <div>
-        <strong>
-          {new Date(a.date).toLocaleString([], {
-            dateStyle: 'medium',
-            timeStyle: 'short',
-          })}
-        </strong>
-        <span className="appointment-venue">
-          {a.venue?.facilityName || 'Venue unavailable'}
-        </span>
-        {a.note && <span className="appointment-note">Note: {a.note}</span>}
-      </div>
-      <div className="appointment-right">
-        <span className={`status-badge status-${a.status}`}>
-          {STATUS_LABEL[a.status] || a.status}
-        </span>
-        {['pending', 'approved'].includes(a.status) && (
-          <button
-            type="button"
-            className="btn-secondary"
-            onClick={() => handleCancel(a._id)}
-          >
-            Cancel
-          </button>
-        )}
-      </div>
-    </li>
-  );
+  const renderRow = (a) => {
+    const staff = staffLabel(a);
+    return (
+      <tr key={a._id}>
+        <td>
+          <span className="appt-date">
+            {new Date(a.date).toLocaleDateString([], { dateStyle: 'medium' })}
+          </span>
+          <span className="appt-time">
+            {new Date(a.date).toLocaleTimeString([], { timeStyle: 'short' })}
+          </span>
+        </td>
+        <td>{a.venue?.facilityName || 'Venue unavailable'}</td>
+        <td>
+          {staff ? (
+            <span className="appt-staff">
+              <span className="appt-staff-name">{staff}</span>
+            </span>
+          ) : a.status === 'pending' ? (
+            <span className="muted">Awaiting assignment</span>
+          ) : (
+            <span className="muted">—</span>
+          )}
+        </td>
+        <td>
+          <span className={`status-badge status-${a.status}`}>
+            {STATUS_LABEL[a.status] || a.status}
+          </span>
+          {a.note && <span className="appt-note">Note: {a.note}</span>}
+        </td>
+        <td>
+          {['pending', 'approved'].includes(a.status) ? (
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => handleCancel(a._id)}
+            >
+              Cancel
+            </button>
+          ) : (
+            <span className="muted">—</span>
+          )}
+        </td>
+      </tr>
+    );
+  };
 
   if (authLoading) return <p>Loading...</p>;
   if (!donor) return <p>Please log in as a donor to book an appointment.</p>
@@ -320,7 +348,20 @@ function BookAppointment() {
         ) : upcoming.length === 0 ? (
           <p className="muted">No upcoming appointments.</p>
         ) : (
-          <ul className="appointment-list">{upcoming.map(renderAppointment)}</ul>
+          <div className="appt-table-wrap">
+            <table className="appt-table">
+              <thead>
+                <tr>
+                  <th>Date &amp; time</th>
+                  <th>Venue</th>
+                  <th>Staff</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>{upcoming.map(renderRow)}</tbody>
+            </table>
+          </div>
         )}
       </section>
 
@@ -331,7 +372,20 @@ function BookAppointment() {
         ) : past.length === 0 ? (
           <p className="muted">No past appointments.</p>
         ) : (
-          <ul className="appointment-list">{past.map(renderAppointment)}</ul>
+          <div className="appt-table-wrap">
+            <table className="appt-table">
+              <thead>
+                <tr>
+                  <th>Date &amp; time</th>
+                  <th>Venue</th>
+                  <th>Staff</th>
+                  <th>Status</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>{past.map(renderRow)}</tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

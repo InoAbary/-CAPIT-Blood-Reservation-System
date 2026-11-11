@@ -561,3 +561,67 @@
 .donation-filters select { padding: .5rem; border: 1px solid #ccc; border-radius: 6px; }
 .pagination-row { display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 1rem; }
 .muted.small { font-size: .85rem; }
+
+/* ─── Appointment tables ─────────────────────────────────────────── */
+.appt-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #e9e3e7;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.appt-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.appt-table th,
+.appt-table td {
+  text-align: left !important; 
+  padding: 16px 18px;
+  vertical-align: top;           
+  border-bottom: 1px solid #f0ebef;
+}
+
+.appt-table th {
+  background: #faf7f9;
+  color: #847483;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.appt-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.appt-table tbody tr:hover {
+  background: #fdfafb;
+}
+
+/* Keep the Action column from shrinking too small */
+.appt-table th:last-child,
+.appt-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* ── Cell content ─────────────────────────────────────────────── */
+.appt-date { display: block; font-weight: 600; white-space: nowrap; }
+.appt-time { display: block; margin-top: 4px; color: #8a7f8d; font-size: 11px; }
+.appt-note { display: block; margin-top: 6px; max-width: 320px; overflow-wrap: anywhere; color: #887a88; font-size: 11px; line-height: 1.5; }
+.appt-staff { display: flex; flex-direction: column; gap: 3px; }
+.appt-staff-name { font-weight: 600; color: #302a35; line-height: 1.35; }
+
+/* Fix the Cancel button */
+.appt-table .btn-secondary {
+  padding: 6px 14px;
+  font-size: 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
