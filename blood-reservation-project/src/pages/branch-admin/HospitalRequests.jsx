@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import '../../styles/BranchAdmin.css';
+import '../../styles/BloodRequestStatus.css';
 
 function formatDate(value) {
   if (!value) return '—';
@@ -119,7 +120,12 @@ export default function HospitalRequests() {
               return <article className="hospital-request-card" key={item.id}>
                 <div className="hospital-request-card-head">
                   <div><span className="branch-eyebrow">REQUEST {item.id.slice(-8).toUpperCase()}</span><h3>{item.bloodType} · {item.units} unit{item.units === 1 ? '' : 's'} of {item.component}</h3><p className="card-subtitle">{item.firstName} {item.lastName} · {item.requestedFacilityName}</p></div>
-                  <span className="tag">{item.requestStatus}</span>
+                    <span
+                      className="blood-request-status"
+                      data-status={item.requestStatus}
+                    >
+                      {item.requestStatus}
+                    </span>
                 </div>
                 <div className="hospital-request-summary">
                   <div><span>Requested method</span><strong>{item.fulfillmentMethod || 'Not specified'}</strong></div>

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import '../../styles/BranchAdmin.css';
+import '../../styles/BloodRequestStatus.css';
 
 async function request(path) {
   const response = await fetch(path, { credentials: 'include' });
@@ -260,7 +261,14 @@ export default function BranchRequests() {
                     <td>{item.lastName}, {item.firstName}</td>
                     <td><strong>{item.bloodType} · {item.units} unit{item.units === 1 ? '' : 's'}</strong><div className="subtext">{item.component}</div></td>
                     <td><span className={`branch-urgency ${item.urgency?.toLowerCase() === 'stat' ? 'urgent' : ''}`}>{item.urgency?.toLowerCase() === 'stat' ? 'STAT' : 'Routine'}</span></td>
-                    <td><span className="tag">{item.requestStatus}</span></td>
+                    <td>
+                        <span
+                          className="blood-request-status"
+                          data-status={item.requestStatus}
+                        >
+                          {item.requestStatus}
+                        </span>
+                    </td>
                   </tr>
                 )) : (
                   <tr><td colSpan="6" className="empty-table">{requests.length ? 'No requests match these filters.' : 'No hospitals have sent a request to this branch yet.'}</td></tr>

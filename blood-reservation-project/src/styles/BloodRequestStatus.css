@@ -1,0 +1,55 @@
+.blood-request-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 11px;
+    border: 1px solid #d0d5dd;
+    border-radius: 999px;
+    background: #f2f4f7;
+    color: #475467;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: left;
+  }
+  
+  .blood-request-status[data-status="Pending"] {
+    background: #fffaeb;
+    border-color: #fedf89;
+    color: #854a0e;
+  }
+  
+  .blood-request-status[data-status="Awaiting Hospital Confirmation"] {
+    background: #f4f3ff;
+    border-color: #d9d6fe;
+    color: #5925dc;
+  }
+  
+  .blood-request-status[data-status="Approved"] {
+    background: #eff8ff;
+    border-color: #b2ddff;
+    color: #175cd3;
+  }
+  
+  .blood-request-status[data-status="Partially Fulfilled"] {
+    background: #fff4ed;
+    border-color: #ffd6ae;
+    color: #9c420c;
+  }
+  
+  .blood-request-status[data-status="Fulfilled"] {
+    background: #ecfdf3;
+    border-color: #abefc6;
+    color: #067647;
+  }
+  
+  .blood-request-status[data-status="Rejected"] {
+    background: #fff1f3;
+    border-color: #fecdd6;
+    color: #b42336;
+  }
+  
+  .blood-request-status[data-status="Cancelled"] {
+    background: #f2f4f7;
+    border-color: #d0d5dd;
+    color: #475467;
+  }
