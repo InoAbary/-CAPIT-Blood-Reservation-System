@@ -32,6 +32,7 @@ export default function BranchRequests() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('stat-first');
   const [selectedId, setSelectedId] = useState('');
   const [decisionReason, setDecisionReason] = useState('');
   const [showDeclineReason, setShowDeclineReason] = useState(false);
@@ -74,8 +75,21 @@ export default function BranchRequests() {
       ].filter(Boolean).join(' ').toLowerCase().includes(query);
       const matchesStatus = statusFilter === 'all' || item.requestStatus === statusFilter;
       return matchesSearch && matchesStatus;
+    }).sort((a,b)=>{
+      const dateA = Date.parse(a.createdAt) || 0;
+      const dateB = Date.parse(b.createdAt) || 0;
+
+      if (sortBy === 'stat-first') {
+        const priority =
+          Number(b.urgency?.toLowerCase() === 'stat') -
+          Number(a.urgency?.toLowerCase() === 'stat');
+
+          if (priority) return priority;
+      }
+
+      return sortBy === 'oldest' ? dateA - dateB : dateB - dateA;
     });
-  }, [requests, search, statusFilter]);
+  }, [requests, search, statusFilter, sortBy]);
 
   const selected = requests.find((item) => item.id === selectedId)
     || filteredRequests[0]
@@ -212,6 +226,18 @@ export default function BranchRequests() {
               <option value="Fulfilled">Fulfilled</option>
               <option value="Rejected">Rejected</option>
               <option value="Cancelled">Cancelled</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="branch-request-sort"> Sort by </label>
+            <select 
+            id="branch-request-sort" 
+            className="form-control" 
+            value={sortBy} 
+            onChange={(event) => setSortBy(event.target.value)}>
+              <option value="stat-first"> STAT first</option>
+              <option value="newest"> Newest first</option>
+              <option value="oldest"> Oldest first</option>
             </select>
           </div>
           <span className="branch-user-count">Showing {filteredRequests.length} of {requests.length}</span>
