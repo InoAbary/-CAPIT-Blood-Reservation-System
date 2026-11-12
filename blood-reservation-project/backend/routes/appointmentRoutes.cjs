@@ -115,6 +115,15 @@ router.patch('/:id/cancel', requireDonor, async (req, res) => {
     
     const { id } = req.params;
 
+    const note = typeof req.body?.note === 'string'
+    ? req.body.note.trim() : '';
+
+    if (!note || note.length > 1000){
+      return res.status(400).json({
+        error: 'Enter a cancellation reason of 1-1000 characters.',
+      });
+    }
+
     const appt = await Appointment.findOne({ _id: id, donor: donorId });
     if (!appt) return res.status(404).json({ error: 'Appointment not found.' });
     if (!['pending', 'approved'].includes(appt.status)) {
@@ -122,7 +131,7 @@ router.patch('/:id/cancel', requireDonor, async (req, res) => {
     }
 
     appt.status = 'cancelled';
-    appt.note = req.body?.note || 'Cancelled by donor';
+    appt.note = note;
     await appt.save();
     return res.json({ appointment: appt });
   } catch (err) {

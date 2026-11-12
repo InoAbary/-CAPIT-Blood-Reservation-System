@@ -1,8 +1,9 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useFormGate } from '../hooks/useFormGate';
 import '../styles/BranchAdmin.css';
+import '../styles/CancelModal.css';
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -60,6 +61,18 @@ function BookAppointment() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+
+  const [cancelId, setCancelId] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelError, setCancelError] = useState ('');
+  const [cancelling, setCancelling] = useState(false);
+  const cancelDialog = useRef(null);
+
+  useEffect(() => {
+    if(cancelId && cancelDialog.current && !cancelDialog.current.open){
+      cancelDialog.current.showModal();
+    }
+  }, [cancelId]);
 
   const [date, setDate] = useState(() => {
     const d = new Date();
@@ -174,15 +187,39 @@ function BookAppointment() {
     }
   };
 
-  const handleCancel = async (id) => {
+  const handleCancel = async (event) => {
+    event.preventDefault();
+    if (cancelling) return;
+  
+    const note = cancelReason.trim();
+  
+    if (!note || note.length > 1000) {
+      setCancelError('Enter a cancellation reason of 1–1000 characters.');
+      return;
+    }
+  
+    setCancelling(true);
+    setCancelError('');
     setError('');
     setNotice('');
+  
     try {
-      await request(`/api/appointments/${id}/cancel`, { method: 'PATCH' });
+      const result = await request(`/api/appointments/${cancelId}/cancel`, {
+        method: 'PATCH',
+        body: JSON.stringify({ note }),
+      });
+  
+      setAppointments(current => current.map(appointment =>
+        appointment._id === cancelId ? result.appointment : appointment
+      ));
+  
+      setCancelId(null);
+      setCancelReason('');
       setNotice('Appointment cancelled.');
-      await loadAll();
     } catch (err) {
-      setError(err.message);
+      setCancelError(err.message);
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -221,7 +258,11 @@ function BookAppointment() {
             <button
               type="button"
               className="btn-secondary"
-              onClick={() => handleCancel(a._id)}
+              onClick={() => {
+                setCancelId(a._id);
+                setCancelReason('');
+                setCancelError('');
+              }}
             >
               Cancel
             </button>
@@ -243,6 +284,7 @@ function BookAppointment() {
   if (formStatus === 'error') {
     return (
       <div className="dashboard-container top-menu-layout">
+
         <main className="dashboard-content">
           <div className="content-card">
             <p className="form-message error-message" role="alert">
@@ -278,6 +320,48 @@ function BookAppointment() {
             <Link className="nav-link" to="/donor/profile" aria-current="page">Profile Settings</Link>
             </nav>
         </header>
+
+        {cancelId && (
+            <dialog
+            ref={cancelDialog}
+            className="cancel-modal"
+            
+            aria-labelledby="cancel-appointment-title"
+            onCancel={(event) => {
+              event.preventDefault();
+              if (!cancelling) setCancelId(null);
+            }}
+          >
+            <form onSubmit={handleCancel}>
+              <h3 id="cancel-appointment-title">Cancel appointment?</h3>
+
+              <label htmlFor="cancel-appointment-reason"> Reason for cancellation (Required): </label>
+
+              <textarea id="cancel-appointment-reason" value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} required maxLength={1000} rows={4} autoFocus disabled={cancelling} style={{ width: '100%', boxSizing: 'border-box' }}/>
+
+              {cancelError && <p role="alert">{cancelError}</p>}
+
+              <div className="cancel-modal__actions">
+                <button
+                  type="button"
+                  className="cancel-modal__back"
+                  disabled={cancelling}
+                  onClick={() => setCancelId(null)}
+                >
+                  Keep Appointment
+                </button>
+
+                <button
+                  type="submit"
+                  className="cancel-modal__confirm"
+                  disabled={cancelling || !cancelReason.trim()}
+                >
+                  {cancelling ? 'Cancelling…' : 'Confirm Cancellation'}
+                </button>
+              </div>
+            </form>
+          </dialog>
+        )}
 
       
       <main className="dashboard-content">
