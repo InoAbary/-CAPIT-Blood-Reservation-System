@@ -6,6 +6,7 @@ const Donor = require('../../db/models/donor.cjs')
 const Appointment = require('../../db/models/appointmentSchedules.cjs')
 const Facility = require('../../db/models/facilities.cjs')
 const Staff = require('../../db/models/staff.cjs')
+const FormAnswers = require('../../db/models/formAnswers.cjs');
 
 const {sendAppointmentEmail} = require('../utils/appointSchedEmail.cjs')
 
@@ -59,7 +60,22 @@ router.post('/send-appointment', requireDonor, async (req, res) => {
       return res.status(401).json({ error: 'Donor authentication required.' });
     }
 
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 1);
+
+    const recentForm = await FormAnswers.exists({
+      donor: donorId,
+      createdAt: { $gte: cutoff },
+    });
+
+    if (!recentForm) {
+      return res.status(403).json({
+        error: 'Please complete the donor assessment form before booking. Your submission must be within the last day.',
+      });
+    }
+    
     const { date, venue } = req.body || {};
+
     if (!date || !venue) {
       return res.status(400).json({ error: 'Please choose both a date and a venue.' });
     }
@@ -133,6 +149,11 @@ router.patch('/:id/cancel', requireDonor, async (req, res) => {
     appt.status = 'cancelled';
     appt.note = note;
     await appt.save();
+    await appt.populate([
+      { path: 'venue', select: 'facilityName' },
+      { path: 'assocStaff', select: 'firstName lastName email' },
+    ]);
+
     return res.json({ appointment: appt });
   } catch (err) {
     console.error('PATCH cancel failed:', err);
