@@ -15,6 +15,8 @@ import LoginStaff from './pages/LoginStaff'
 import ForgotPasswordStaff from './pages/ForgotPasswordStaff'
 import ResetPasswordStaff from './pages/ResetPasswordStaff'
 
+import DonationCooldown from './pages/DonationCooldown'
+
 import DonorDashboard from './pages/DonorDashboard'
 import DonorProfile from './pages/DonorProfile'
 import ChangeMobileNumber, { ConfirmMobileNumber } from './pages/ChangeMobileNumber';
@@ -183,6 +185,7 @@ function App() {
       <Route path="donors/add" element={<AddDonorPage />} />
       <Route path="donors/:id/edit" element={<EditDonorPage />} />
     </Route>
+    <Route path="/DonationCooldown" element={<DonationCooldown />} />
     <Route
     path="/admin/user-directory"
     element={

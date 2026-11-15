@@ -14,6 +14,7 @@
 /* ----- SIDEBAR ----- */
 .dashboard-menu {
   width: 280px;
+  flex-shrink: 0;                 /* don't let content squeeze the sidebar */
   background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
   color: #e2e8f0;
   display: flex;
@@ -44,6 +45,9 @@
   font-size: 0.875rem;
   color: #94a3b8;
   font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Navigation links */
@@ -52,6 +56,8 @@
   flex-direction: column;
   gap: 0.5rem;
   flex: 1;
+  min-height: 0;                  /* allows the nav to scroll if many items */
+  overflow-y: auto;
 }
 
 .nav-link {
@@ -74,7 +80,6 @@
   transform: translateX(4px);
 }
 
-/* Active state – you can add className based on location */
 .nav-link.active {
   background: #3b82f6;
   color: white;
@@ -85,18 +90,23 @@
   font-size: 1.4rem;
   width: 1.8rem;
   text-align: center;
+  flex-shrink: 0;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.1));
 }
 
 .nav-label {
   flex: 1;
+  overflow-wrap: anywhere;        /* long labels wrap instead of overflowing */
 }
 
-/* Menu footer with button */
+/* Menu footer with buttons */
 .menu-footer {
-  margin-top: 2rem;
+  margin-top: auto;               /* stick to bottom of sidebar */
   padding-top: 1rem;
   border-top: 1px solid #334155;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .quick-action-btn {
@@ -128,9 +138,23 @@
   transform: scale(0.98);
 }
 
+.quick-action-btn.secondary {
+  background: transparent;
+  color: #fbbf24;
+  border: 1.5px solid #f59e0b;
+  box-shadow: none;
+}
+
+.quick-action-btn.secondary:hover {
+  background: rgba(245, 158, 11, 0.12);
+  transform: scale(1.02);
+  box-shadow: none;
+}
+
 /* ----- MAIN CONTENT ----- */
 .dashboard-content {
   flex: 1;
+  min-width: 0;                   /* lets the flex child shrink so grids don't overflow */
   padding: 2.5rem 2rem;
   background-color: #f8fafc;
   overflow-y: auto;
@@ -204,7 +228,10 @@
   margin-left: 0.25rem;
 }
 
-/* Responsive adjustments */
+/* ─────────────────────────────────────────────
+   Responsive: under 768px the sidebar becomes
+   a horizontal bar stacked above the content.
+   ───────────────────────────────────────────── */
 @media (max-width: 768px) {
   .dashboard-container {
     flex-direction: column;
@@ -212,33 +239,74 @@
 
   .dashboard-menu {
     width: 100%;
-    padding: 1rem;
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
   }
 
   .dashboard-logo {
-    padding-bottom: 1rem;
-    margin-bottom: 1rem;
+    padding: 0;
+    margin: 0;
+    border-bottom: none;
+    border-right: 1px solid #334155;
+    padding-right: 1rem;
+    flex-shrink: 0;
+  }
+
+  .dashboard-logo h2 {
+    font-size: 1.35rem;
+    margin-bottom: 0;
+  }
+
+  .welcome-text {
+    display: none;                /* keep the top bar compact */
   }
 
   .nav-links {
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    flex-wrap: nowrap;
+    flex: 1 1 0;
+    gap: 0.35rem;
+    overflow-x: auto;
+    overflow-y: visible;
+    min-width: 0;
   }
 
   .nav-link {
-    flex: 1 0 auto;
-    padding: 0.6rem 0.9rem;
+    padding: 0.5rem 0.75rem;
     font-size: 0.85rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transform: none !important;   /* no slide on a horizontal row */
+  }
+
+  .nav-label {
+    display: none;                /* icon-only in the mobile bar */
   }
 
   .nav-icon {
-    font-size: 1.2rem;
     width: auto;
+    font-size: 1.1rem;
+  }
+
+  .menu-footer {
+    margin: 0;
+    padding: 0;
+    border-top: none;
+    border-left: 1px solid #334155;
+    padding-left: 1rem;
+    flex-direction: row;
+    gap: 0.5rem;
+    flex-shrink: 0;
   }
 
   .quick-action-btn {
-    margin-top: 0.75rem;
+    width: auto;
+    padding: 0.5rem 0.9rem;
+    font-size: 0.8rem;
   }
 
   .dashboard-content {
@@ -248,10 +316,6 @@
   .content-placeholder > h1 {
     font-size: 1.8rem;
   }
-
-  .cards-grid {
-    grid-template-columns: 1fr 1fr;
-  }
 }
 
 @media (max-width: 480px) {
@@ -259,137 +323,15 @@
     grid-template-columns: 1fr;
   }
 
+  /* Sidebar nav falls back to a wrapping column on very small screens */
   .nav-links {
-    flex-direction: column;
-  }
-}
-
-/* ----- TOP MENU LAYOUT (DonorDashboard) ----- */
-.dashboard-container.top-menu-layout {
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-/* Header / menu bar across the top */
-.top-menu-layout .dashboard-menu {
-  width: 100%;
-  flex-direction: row;
-  align-items: center;
-  padding: 0.85rem 1.75rem;
-  gap: 1.5rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-  background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%);
-}
-
-/* Logo block no longer stacked/bordered at bottom */
-.top-menu-layout .dashboard-logo {
-  padding: 0;
-  margin: 0;
-  border-bottom: none;
-  border-right: 1px solid #334155;
-  padding-right: 1.5rem;
-  white-space: nowrap;
-}
-
-.top-menu-layout .dashboard-logo h2 {
-  font-size: 1.35rem;
-  margin-bottom: 0.15rem;
-}
-
-.top-menu-layout .welcome-text {
-  font-size: 0.75rem;
-}
-
-/* Horizontal nav links */
-.top-menu-layout .nav-links {
-  flex-direction: row;
-  flex: 1;
-  flex-wrap: nowrap;
-  gap: 0.35rem;
-  overflow-x: auto;
-  min-width: 0;
-}
-
-.top-menu-layout .nav-link {
-  padding: 0.55rem 0.9rem;
-  font-size: 0.875rem;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-/* Hover movement looks odd on a horizontal bar – use vertical lift instead */
-.top-menu-layout .nav-link:hover {
-  transform: translateY(-2px);
-}
-
-.top-menu-layout .nav-icon {
-  font-size: 1.1rem;
-  width: auto;
-}
-
-/* Quick action button in the header */
-.top-menu-layout .menu-footer {
-  margin: 0;
-  padding: 0;
-  border-top: none;
-  border-left: 1px solid #334155;
-  padding-left: 1.5rem;
-  flex-shrink: 0;
-}
-
-.top-menu-layout .quick-action-btn {
-  width: auto;
-  padding: 0.6rem 1.1rem;
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-/* Content sits below the header */
-.top-menu-layout .dashboard-content {
-  flex: 1;
-}
-
-/* Responsive: wrap the header on smaller screens */
-@media (max-width: 1024px) {
-  .top-menu-layout .dashboard-menu {
-    flex-wrap: nowrap;
-    gap: 1rem;
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-x: visible;
   }
 
-  .top-menu-layout .dashboard-logo {
-    border-right: none;
-    border-bottom: none;
-    padding-right: 0;
-    padding-bottom: 0;
-    width: auto;
-    flex-shrink: 0;
-  }
-
-  .top-menu-layout .nav-links {
-    flex: 1 1 0;
-    order: 0;
-  }
-
-  .top-menu-layout .menu-footer {
-    border-left: none;
-    padding-left: 0;
-    flex-shrink: 0;
-  }
-}
-
-@media (max-width: 480px) {
   .top-menu-layout .dashboard-menu {
     padding: 0.75rem 1rem;
-  }
-
-  
-
-  .top-menu-layout .nav-link {
-    width: auto;
-  }
-
-  .top-menu-layout .quick-action-btn {
-    width: auto;
   }
 }
 
@@ -478,4 +420,60 @@
     font-size: 0.8rem;
     color: #666;
     line-height: 1.3;
+}
+
+.forms-table-wrap {
+  overflow-x: auto;
+  background: white;
+  border-radius: 20px;
+  border: 1px solid #e9eef3;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.forms-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.forms-table th,
+.forms-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.forms-table th {
+  background: #f8fafc;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.forms-table tbody tr:hover { background: #f8fafc; }
+
+.status-pill {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.answers-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0;
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+.answer-remarks {
+  color: #64748b;
 }

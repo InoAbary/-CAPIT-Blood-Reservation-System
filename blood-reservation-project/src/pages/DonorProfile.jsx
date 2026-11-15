@@ -7,12 +7,23 @@ import '../styles/Dashboard.css';
 export default function DonorProfile() {
   const { donor } = useAuth();
   return (
-    <div className="dashboard-container top-menu-layout">
+    <div className="dashboard-container">
       <header className="dashboard-menu">
-        <div className="dashboard-logo"><h2>User Hub</h2></div>
+        <div className="dashboard-logo">
+          <h2>User Hub</h2>
+          <p className="welcome-text">
+            {donor?.firstName ? `Welcome, ${donor.firstName}` : 'Welcome!'}
+          </p>
+        </div>
         <nav className="nav-links" aria-label="Donor navigation">
-          <Link className="nav-link" to="/DonorDashboard">Back to dashboard</Link>
-          <Link className="nav-link" to="/donor/profile" aria-current="page">Profile Settings</Link>
+          <Link className="nav-link" to="/DonorDashboard">
+            <span className="nav-icon">📊</span>
+            <span className="nav-label">Back to dashboard</span>
+          </Link>
+          <Link className="nav-link active" to="/donor/profile" aria-current="page">
+            <span className="nav-icon">⚙️</span>
+            <span className="nav-label">Profile Settings</span>
+          </Link>
         </nav>
       </header>
       <main className="dashboard-content">

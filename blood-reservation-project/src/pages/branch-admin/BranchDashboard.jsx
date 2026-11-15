@@ -8,6 +8,7 @@ import StaffAppointments from '../StaffAppointments';
 import HospitalRequests from './HospitalRequests';
 import StaffDonations from '../StaffDonations';
 import Inventory from '../Inventory';
+import StaffDonorForms from '../StaffDonorForms';
 import '../../styles/BranchAdmin.css';
 
 async function request(path, options = {}) {
@@ -446,6 +447,7 @@ function BranchDashboard() {
 
       {activeTab === 'branch-requests' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <BranchRequests />}
       {activeTab === 'my-requests' && facility?.facilityType === 'hospital' && <HospitalRequests />}
+      {activeTab === 'donor-forms' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonorForms />}
       {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonations onDonationRecorded={unit => {
             setPendingBloodUnit(unit);
             setActiveTab('inventory');

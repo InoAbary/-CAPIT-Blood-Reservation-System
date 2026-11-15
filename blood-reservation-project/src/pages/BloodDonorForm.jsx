@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import '../styles/Dashboard.css';
 import '../styles/BloodDonorForm.css';
 import {useAuth} from '../context/AuthContext'
+import { useDonationCooldown } from '../hooks/useDonationCooldown';
 
 const DATE_ONLY = [34, 37];
 const FEMALE_ONLY_QUESTIONS = new Set([33, 34, 35, 36, 37]);
@@ -66,9 +67,15 @@ function DonorTopMenu() {
         <header className="dashboard-menu">
             <div className="dashboard-logo"><h2>Donor Hub</h2></div>
             <nav className="nav-links" aria-label="Donor navigation">
-            <Link className="nav-link" to="/DonorDashboard">Back to dashboard</Link>
-            <Link className="nav-link" to="/donor/profile" aria-current="page">Profile Settings</Link>
-            </nav>
+          <Link className="nav-link" to="/DonorDashboard">
+            <span className="nav-icon">📊</span>
+            <span className="nav-label">Back to dashboard</span>
+          </Link>
+          <Link className="nav-link active" to="/donor/profile" aria-current="page">
+            <span className="nav-icon">⚙️</span>
+            <span className="nav-label">Profile Settings</span>
+          </Link>
+        </nav>
         </header>
     );
 }
@@ -79,6 +86,8 @@ function BloodDonorForm() {
     const location = useLocation();
     const navigate = useNavigate();
     const returnTo = location.state?.returnTo
+
+    const cooldown = useDonationCooldown();
 
     const [submitting, setSubmitting] = useState(false);
     const [stepIndex, setStepIndex] = useState(0);
@@ -202,9 +211,17 @@ function BloodDonorForm() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(answersPayload),
             });
-            if (!answersRes.ok) throw new Error(answersRes.error);
+            if (!answersRes.ok) {
+                const body = await answersRes.json().catch(() => ({}));
+                const err = new Error(body.error || 'Submission failed');
+                err.code = body.code;
+                err.lastDonationDate = body.lastDonationDate;
+                err.nextEligibleDate = body.nextEligibleDate;
+                throw err;
+            }
 
             if (returnTo) {
+                
                 // Skip FormPending and send them straight back to where they were going.
                 navigate(returnTo, { replace: true });
             } else {
@@ -222,6 +239,16 @@ function BloodDonorForm() {
                 });
             }
         } catch (err) {
+            if (err.code === 'DONATION_COOLDOWN') {
+                navigate('/DonationCooldown', {
+                    replace: true,
+                    state: {
+                    lastDonationDate: err.lastDonationDate,
+                    nextEligibleDate: err.nextEligibleDate,
+                    },
+                });
+                return;
+            }
             console.error(err);
             alert(err.message);
         } finally {
@@ -240,6 +267,36 @@ function BloodDonorForm() {
                 </main>
             </div>
         );
+    }
+
+    if (cooldown.status === 'loading') return <p>Checking donation eligibility…</p>;
+
+    if (cooldown.status === 'blocked') {
+    return (
+        <Navigate
+        to="/DonationCooldown"
+        replace
+        state={{
+            returnTo: location.pathname,
+            lastDonationDate: cooldown.lastDonationDate,
+            nextEligibleDate: cooldown.nextEligibleDate,
+        }}
+        />
+    );
+    }
+
+    if (cooldown.status === 'error') {
+    return (
+        <div className="dashboard-container">
+        <main className="dashboard-content">
+            <div className="content-card">
+            <p className="form-message error-message" role="alert">
+                {cooldown.error || 'Could not verify donation eligibility. Please try again later.'}
+            </p>
+            </div>
+        </main>
+        </div>
+    );
     }
 
     /* ---------- Rejected view ---------- */

@@ -13,11 +13,13 @@ const {sendAppointmentEmail} = require('../utils/appointSchedEmail.cjs')
 const requireDonor = require('../middleware/requireDonor.cjs');
 const requireStaff = require('../middleware/requireStaff.cjs');
 
+const { checkDonationCooldown } = require('../utils/donationCooldown.cjs');
 /* ------------------------------------------------------------------ *
  * DONOR ROUTES
  * ------------------------------------------------------------------ */
 
 // List the logged-in donor's appointments (pending + history)
+
 router.get('/', requireDonor, async (req, res) => {
   try {
     const donorId = req.user?.id || req.user?._id || req.user?.sub;
@@ -35,6 +37,24 @@ router.get('/', requireDonor, async (req, res) => {
   } catch (err) {
     console.error('GET /donor-appointments failed:', err);
     return res.status(500).json({ error: 'Unable to load your appointments.' });
+  }
+});
+
+router.get('/donation-eligibility', requireDonor, async (req, res) => {
+  try {
+    const donorId = req.user?.id || req.user?._id || req.user?.sub;
+    if (!donorId) return res.status(401).json({ error: 'Donor authentication required.' });
+
+    const result = await checkDonationCooldown(donorId);
+
+    return res.json({
+      eligible: !result.blocked,
+      lastDonationDate: result.lastDonation?.dateTime ?? null,
+      nextEligibleDate: result.nextEligibleDate ?? null,
+    });
+  } catch (err) {
+    console.error('GET /donation-eligibility failed:', err);
+    return res.status(500).json({ error: 'Unable to check donation eligibility.' });
   }
 });
 
@@ -62,6 +82,17 @@ router.post('/send-appointment', requireDonor, async (req, res) => {
 
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 1);
+
+    const cooldown = await checkDonationCooldown(donorId);
+    if (cooldown.blocked) {
+      return res.status(403).json({
+        error: `You donated blood on ${cooldown.lastDonation.dateTime.toDateString()}. ` +
+              `You are eligible to donate again on ${cooldown.nextEligibleDate.toDateString()}.`,
+        code: 'DONATION_COOLDOWN',
+        nextEligibleDate: cooldown.nextEligibleDate,
+        lastDonationDate: cooldown.lastDonation.dateTime,
+      });
+    }
 
     const recentForm = await FormAnswers.exists({
       donor: donorId,

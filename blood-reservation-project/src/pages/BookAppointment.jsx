@@ -5,6 +5,8 @@ import { useFormGate } from '../hooks/useFormGate';
 import '../styles/BranchAdmin.css';
 import '../styles/CancelModal.css';
 
+import { useDonationCooldown } from '../hooks/useDonationCooldown';
+
 async function request(path, options = {}) {
   const response = await fetch(path, {
     credentials: 'include',
@@ -30,8 +32,8 @@ const STATUS_LABEL = {
 };
 
 // 30-minute interval time options: "00:00", "00:30", … "23:30"
-const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
-  const h = String(Math.floor(i / 2)).padStart(2, '0');
+const TIME_OPTIONS = Array.from({ length: 19 }, (_, i) => {
+  const h = String(Math.floor((i + 16) / 2)).padStart(2, '0');
   const m = i % 2 === 0 ? '00' : '30';
   return `${h}:${m}`;
 });
@@ -67,6 +69,8 @@ function BookAppointment() {
   const [cancelError, setCancelError] = useState ('');
   const [cancelling, setCancelling] = useState(false);
   const cancelDialog = useRef(null);
+
+  const cooldown = useDonationCooldown()
 
   useEffect(() => {
     if(cancelId && cancelDialog.current && !cancelDialog.current.open){
@@ -277,6 +281,36 @@ function BookAppointment() {
   if (authLoading) return <p>Loading...</p>;
   if (!donor) return <p>Please log in as a donor to book an appointment.</p>
 
+  if (cooldown.status === 'loading') return <p>Checking donation eligibility…</p>;
+
+  if (cooldown.status === 'blocked') {
+    return (
+      <Navigate
+        to="/DonationCooldown"
+        replace
+        state={{
+          returnTo: location.pathname,
+          lastDonationDate: cooldown.lastDonationDate,
+          nextEligibleDate: cooldown.nextEligibleDate,
+        }}
+      />
+    );
+  }
+
+  if (cooldown.status === 'error') {
+    return (
+      <div className="dashboard-container">
+        <main className="dashboard-content">
+          <div className="content-card">
+            <p className="form-message error-message" role="alert">
+              {cooldown.error || 'Could not verify donation eligibility. Please try again later.'}
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   if (formStatus === 'loading') {
     return <p>Checking form eligibility...</p>
   }
@@ -316,9 +350,15 @@ function BookAppointment() {
         <header className="dashboard-menu">
             <div className="dashboard-logo"><h2>Donor Hub</h2></div>
             <nav className="nav-links" aria-label="Donor navigation">
-            <Link className="nav-link" to="/DonorDashboard">Back to dashboard</Link>
-            <Link className="nav-link" to="/donor/profile" aria-current="page">Profile Settings</Link>
-            </nav>
+          <Link className="nav-link" to="/DonorDashboard">
+            <span className="nav-icon">📊</span>
+            <span className="nav-label">Back to dashboard</span>
+          </Link>
+          <Link className="nav-link active" to="/donor/profile" aria-current="page">
+            <span className="nav-icon">⚙️</span>
+            <span className="nav-label">Profile Settings</span>
+          </Link>
+        </nav>
         </header>
 
         {cancelId && (

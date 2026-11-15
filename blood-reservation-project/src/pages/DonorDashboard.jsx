@@ -61,31 +61,31 @@ function DonorDashboard() {
   const navItems = role ? NAV_ITEMS[role] : [];
 
   return (
-    <div className="dashboard-container top-menu-layout">
+    <div className="dashboard-container">
       <header className="dashboard-menu">
         <div className="dashboard-logo">
-          <h2>
-            {role === 'recipient' ? 'Recipient Hub' : 'Donor Hub'}
-            <span className="welcome-inline">
-              {donor?.firstName ? ` · Welcome, ${donor.firstName}` : ' · Welcome!'}
-            </span>
-          </h2>
+          <h2>{role === 'recipient' ? 'Recipient Hub' : 'Donor Hub'}</h2>
+          <p className="welcome-inline">
+            {donor?.firstName ? ` · Welcome, ${donor.firstName}` : ' · Welcome!'}
+          </p>
         </div>
 
         <nav className="nav-links">
           {navItems.map((item) => (
             <Link key={item.path} to={item.path} className="nav-link" title={item.label}>
               <span className="nav-icon">{item.icon}</span>
+              <span className="nav-label">{item.label}</span>
             </Link>
           ))}
+        </nav>
+
+        <div className="menu-footer">
+
           {role && (
             <button className="quick-action-btn" onClick={changeRole}>
               Change role
             </button>
           )}
-        </nav>
-
-        <div className="menu-footer">
           
           <button className="quick-action-btn" onClick={handleLogout}>
             Log out

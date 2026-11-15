@@ -50,7 +50,7 @@ app.use(cookieParser());
 
 
 app.use('/api/auth', authRoutes)
-app.use('/api/bloodForm', requireDonor, bloodFormRoutes)
+app.use('/api/bloodForm', bloodFormRoutes)
 app.use('/api/inventories', requireStaff, inventoryRoutes);
 app.use('/api/facilities', facilityRoutes);
 app.use('/api/bloodUnit', requireStaff, bloodUnitRoutes);
