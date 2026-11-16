@@ -12,7 +12,8 @@ export default defineConfig({
         changeOrigin: true,
         secure: false
       }
-    }
+    },
+   allowedHosts: ['semisweet-ardently-endorphin.ngrok-free.dev']
   },
   optimizeDeps: {
     exclude: ['maplibre-gl']
