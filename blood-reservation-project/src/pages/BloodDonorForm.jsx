@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import '../styles/Dashboard.css';
@@ -19,37 +19,37 @@ const QUESTION_LIST = [
     { key: 'q7',  id: 7, rejectReason: 'You cannot donate blood if you have taken any vaccinations or medications recently.' },
     { key: 'q8',  id: 8, rejectReason: 'You cannot donate blood if you have just donated within 3 months.' },
     { key: 'q9',  id: 9, subheading: "subheading_1" },
-    { key: 'q10', id: 10 },
-    { key: 'q11', id: 11 },
+    { key: 'q10', id: 10, subheading: "subheading_1"  },
+    { key: 'q11', id: 11, subheading: "subheading_1"  },
     { key: 'q12', id: 12, subheading: "subheading_2" },
-    { key: 'q13', id: 13 },
-    { key: 'q14', id: 14 },
-    { key: 'q15', id: 15 },
-    { key: 'q16', id: 16 },
-    { key: 'q17', id: 17 },
-    { key: 'q18', id: 18 },
-    { key: 'q19', id: 19 },
+    { key: 'q13', id: 13, subheading: "subheading_2" },
+    { key: 'q14', id: 14, subheading: "subheading_2" },
+    { key: 'q15', id: 15, subheading: "subheading_2" },
+    { key: 'q16', id: 16, subheading: "subheading_2" },
+    { key: 'q17', id: 17, subheading: "subheading_2" },
+    { key: 'q18', id: 18, subheading: "subheading_2" },
+    { key: 'q19', id: 19, subheading: "subheading_2" },
     { key: 'q20', id: 20, subheading: "subheading_3" },
-    { key: 'q21', id: 21 },
-    { key: 'q22', id: 22 },
-    { key: 'q23', id: 23 },
-    { key: 'q24', id: 24 },
-    { key: 'q25', id: 25 },
+    { key: 'q21', id: 21, subheading: "subheading_3" },
+    { key: 'q22', id: 22, subheading: "subheading_3" },
+    { key: 'q23', id: 23, subheading: "subheading_3" },
+    { key: 'q24', id: 24, subheading: "subheading_3" },
+    { key: 'q25', id: 25, subheading: "subheading_3" },
     { key: 'q26', id: 26, subheading: "subheading_4" },
-    { key: 'q27', id: 27 },
-    { key: 'q28', id: 28 },
-    { key: 'q29', id: 29 },
-    { key: 'q30', id: 30 },
-    { key: 'q31', id: 31 },
-    { key: 'q32', id: 32 },
-    { key: 'q33', id: 33, subheading: "subheading_5", rejectReason: 'You cannot donate blood if you are pregnant.' },
+    { key: 'q27', id: 27, subheading: "subheading_4"  },
+    { key: 'q28', id: 28, subheading: "subheading_4"  },
+    { key: 'q29', id: 29, subheading: "subheading_4"  },
+    { key: 'q30', id: 30, subheading: "subheading_4"  },
+    { key: 'q31', id: 31, subheading: "subheading_4"  },
+    { key: 'q32', id: 32, subheading: "subheading_4"  },
+    { key: 'q33', id: 33 },
     { key: 'q34', id: 34 },
     { key: 'q35', id: 35 },
     { key: 'q36', id: 36, rejectReason: 'You cannot donate blood if you are breastfeeding.' },
     { key: 'q37', id: 37 },
 ];
 
-const DENY_YES = new Set([2, 3, 5, 6, 7, 8, 33, 36]);
+const DENY_YES = new Set([2, 3, 5, 6, 7, 8, 36]);
 const DENY_NO = new Set([1]);
 
 function ShouldDeny(q, answer) {
@@ -57,6 +57,14 @@ function ShouldDeny(q, answer) {
     const ans = String(answer ?? '').toLowerCase();
     if (DENY_YES.has(q.id) && ans === 'yes') return true;
     if (DENY_NO.has(q.id) && ans === 'no') return true;
+    return false;
+}
+
+function shouldSkip(q, questionsState) {
+    if (q.id === 34) {
+        const q33 = questionsState.find((x) => x.id === 33);
+        return q33?.answer === 'no';
+    }
     return false;
 }
 
@@ -104,13 +112,23 @@ function BloodDonorForm() {
         QUESTION_LIST.map(q => ({ ...q, answer: '', remark: '', date: '' }))
     );
 
-    const questions = useMemo(()=> {
-        if (userSex === 'Female') return questionsState;
-        return questionsState.filter(q=> !FEMALE_ONLY_QUESTIONS.has(q.id))
-    }, [questionsState, userSex])
+    const questions = useMemo(() => {
+        const base = userSex === 'Female'
+            ? questionsState
+            : questionsState.filter(q => !FEMALE_ONLY_QUESTIONS.has(q.id));
+
+        // Q34 is skipped when Q33 is answered "no"
+        return base.filter(q => !shouldSkip(q, questionsState));
+    }, [questionsState, userSex]);
 
     const curQuestion = questions[stepIndex];
     const isLastStep = stepIndex === questions.length - 1;
+
+    useEffect(() => {
+        if (stepIndex > questions.length - 1) {
+            setStepIndex(Math.max(0, questions.length - 1));
+        }
+    }, [questions.length, stepIndex]);
 
     const progress = useMemo(
         () => Math.round(((stepIndex + 1) / questions.length) * 100),
@@ -127,7 +145,7 @@ function BloodDonorForm() {
     const canProceed = useMemo(() => {
         if (!curQuestion) return false;
         if (DATE_ONLY.includes(curQuestion.id)) {
-            return !!curQuestion.date;         // date must be filled
+            return true;         // date must be filled
         }
         return curQuestion.answer === 'yes' || curQuestion.answer === 'no';
     }, [curQuestion]);

@@ -63,7 +63,32 @@ router.post('/form-answers', requireDonor, async (req, res) => {
         lastDonationDate: cooldown.lastDonation.dateTime,
       });
     }
-    const doc = await FormAnswers.create(req.body);
+    
+    const rawAnswers = Array.isArray(req.body.answers) ? req.body.answers : [];
+    const q33 = rawAnswers.find((a) => Number(a.qId) === 33);
+    const q33SaysNo = q33 && q33.result === false;
+
+    const DATE_ONLY_QIDS = new Set([34, 37]);
+
+    const answers = rawAnswers
+      // Drop Q34 when Q33 was answered "no"
+      .filter((a) => !(Number(a.qId) === 34 && q33SaysNo))
+      .map((a) => {
+        const qId = Number(a.qId);
+        if (DATE_ONLY_QIDS.has(qId)) {
+          // Dates may be empty — coerce blank/null to undefined.
+          return {
+            qId,
+            date: a.date ? new Date(a.date) : undefined,
+          };
+        }
+        return a;
+      });
+
+    const doc = await FormAnswers.create({
+      ...req.body,
+      answers,
+    });
     res.status(201).json(doc);
   } catch (err) {
     console.log(err);

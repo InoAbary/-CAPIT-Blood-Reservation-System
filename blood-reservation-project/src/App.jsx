@@ -6,6 +6,8 @@ import viteLogo from './assets/vite.svg'
 import './App.css'
 import './i18n.js'
 
+import LandingPage from './pages/LandingPage';
+
 import Register from './pages/Register'
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
@@ -55,6 +57,7 @@ function App() {
     <AuthProvider>
     <Routes>
     {/* ---- Public ---- */}
+    <Route path="/" element={<LandingPage />} />
     <Route path="/donor/change-number/confirm" element={<ConfirmMobileNumber />} />
     <Route path="/Register" element={<Register />} />
     <Route path="/Register/Success" element={<RegisterSuccess />} />
@@ -122,9 +125,7 @@ function App() {
     <Route
     path="/BloodBankMap"
     element={
-      <ProtectedRoute >
       <BloodBankMap />
-      </ProtectedRoute>
     }
     />
 
@@ -212,7 +213,7 @@ function App() {
     />
 
     {/* ---- Fallback ---- */}
-    <Route path="*" element={<Navigate to="/Login" replace />} />
+    <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </AuthProvider>
 
