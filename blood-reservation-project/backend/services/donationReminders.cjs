@@ -3,7 +3,8 @@ const Donor = require('../../db/models/donor.cjs');
 const Reminder = require('../../db/models/donationReminder.cjs');
 const EmailReminder = require('../../db/models/donationEmailReminder.cjs');
 const { normalizeEmail, sendEligibilityEmail } = require('./donationEmail.cjs');
-const { normalizeMobile, sendEligibilitySms } = require('./semaphore.cjs');
+const { normalizeMobile } = require('./semaphore.cjs');
+const { readSmsConfig, sendEligibilitySms } = require('./smsGate.cjs');
 const { getNotificationPreferences } = require('../utils/notificationPreferences.cjs');
 
 const DAY = 86400000;
@@ -30,12 +31,13 @@ function readConfig(env = process.env) {
     const smsEnabled = env.DONATION_SMS_REMINDERS_ENABLED !== 'false';
     const emailEnabled = env.DONATION_EMAIL_REMINDERS_ENABLED === 'true';
     if (!smsEnabled && !emailEnabled) throw new Error('Enable at least one donation reminder channel');
-    if (smsEnabled && !env.SEMAPHORE_API_KEY?.trim()) throw new Error('SEMAPHORE_API_KEY is required');
+    if (smsEnabled && env.SMSGATE_ENABLED !== 'true') throw new Error('SMSGATE_ENABLED must be true for SMS reminders');
+    const smsGate = smsEnabled ? readSmsConfig(env) : undefined;
     if (emailEnabled && (!env.EMAIL_ID?.trim() || !env.EMAIL_PASSWORD?.trim())) {
         throw new Error('EMAIL_ID and EMAIL_PASSWORD are required for email reminders');
     }
     return { waitingDays, smsEnabled, emailEnabled, intervalMs: intervalMinutes * 60000,
-        apiKey: env.SEMAPHORE_API_KEY?.trim(), senderName: env.SEMAPHORE_SENDER_NAME?.trim() };
+        smsGate };
 }
 
 function eligibleAt(donation, waitingDays) {
@@ -100,7 +102,7 @@ async function runReminderCheck(config, { now = new Date(), send = sendEligibili
                 await model.updateOne({ _id: reminder._id }, { $set: { status: 'review' } });
                 console.error(`Donation ${name} reminder ${reminder._id} requires review; automatic retry suppressed`);
             }
-            // Stay below Semaphore's 120 requests/minute limit.
+            // Space SMS requests to avoid overwhelming the phone.
             if (name === 'sms') await new Promise(resolve => setTimeout(resolve, 600));
         }
     }

@@ -9,6 +9,8 @@ const Staff = require('../../db/models/staff.cjs')
 const FormAnswers = require('../../db/models/formAnswers.cjs');
 
 const {sendAppointmentEmail} = require('../utils/appointSchedEmail.cjs')
+const { notifyAppointment } = require('../services/appointmentNotifications.cjs');
+const { getNotificationPreferences } = require('../utils/notificationPreferences.cjs');
 
 const requireDonor = require('../middleware/requireDonor.cjs');
 const requireStaff = require('../middleware/requireStaff.cjs');
@@ -148,6 +150,7 @@ router.post('/send-appointment', requireDonor, async (req, res) => {
     });
 
     const populated = await appt.populate('venue', 'facilityName address facilityType');
+    void notifyAppointment(populated, 'booked').catch(() => console.error('Appointment booking notification failed'));
     return res.status(201).json({ appointment: populated });
   } catch (err) {
     console.error('POST /send-appointment failed:', err);
@@ -268,15 +271,17 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
       return res.status(409).json({ error: 'Only pending appointments can be decided.' });
     }
 
-    appt.status = action === 'approve' ? 'approved' : 'denied';
-    appt.assocStaff = staffId;
-    appt.decidedAt = new Date();
-    if (action === 'deny' && note) appt.note = note;
-    await appt.save();
+    const changes = { status: action === 'approve' ? 'approved' : 'denied', assocStaff: staffId, decidedAt: new Date() };
+    if (action === 'deny' && note) changes.note = note;
+    const decided = await Appointment.findOneAndUpdate(
+      { _id: id, venue: facilityId, status: 'pending' },
+      { $set: changes }, { new: true, runValidators: true }
+    );
+    if (!decided) return res.status(409).json({ error: 'Only pending appointments can be decided.' });
 
 
-    const populated = await appt.populate([
-      { path: 'donor', select: 'firstName lastName email' },
+    const populated = await decided.populate([
+      { path: 'donor', select: 'firstName lastName email notificationPreferences' },
       { path: 'venue', select: 'facilityName address' },
     ]);
 
@@ -288,6 +293,7 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
     res.json({ appointment: populated });
 
     if (action === 'approve') {
+      void notifyAppointment(populated, 'approved').catch(() => console.error('Appointment approval SMS failed'));
       // Lazy-require to avoid circular deps and to keep module load fast
   
 
@@ -299,24 +305,92 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
       endTime.setHours(10, 0, 0, 0);
 
       // Make sure we have what we need before sending
-      if (populated.donor?.email) {
+      const latestDonor = await Donor.findById(populated.donor?._id).select('email notificationPreferences').lean();
+      if (latestDonor?.email && getNotificationPreferences(latestDonor).email) {
+        const reminders = [
+          'Stay hydrated. Drink plenty of water before your donation.',
+          'Eat iron-rich foods, such as lean meat, beans, and leafy green vegetables, in the days before your donation.',
+          'Get enough sleep (7-9 hours) the night before your donation.',
+          'Eat a healthy meal 1-3 hours before your donation. Avoid fatty foods and do not arrive on an empty stomach.',
+          'Bring a valid ID for registration and verification.',
+          'Ensure that you have answered and submitted the donor application form.',
+          'Avoid alcohol before your donation and on the day of your appointment.',
+          'Wear comfortable clothing with sleeves that can be raised above your elbow.',
+          'Bring a list of any medicines you take and discuss them with the screening staff. Do not stop prescribed medicines on your own.',
+          'If you feel unwell or develop a fever, contact the donation facility before attending to discuss rescheduling.',
+          'Allow time for registration and donor screening, and follow any additional instructions from your donation facility.',
+        ];
+
+        const escapeHtml = value => String(value).replace(/[&<>"']/g, character => ({
+          '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+        })[character]);
+        const donorName = populated.donor.firstName || 'Donor';
+        const facilityName = populated.venue?.facilityName || 'the facility';
+        const staffName = [staff?.firstName, staff?.lastName].filter(Boolean).join(' ') || 'Donation team';
+
         sendAppointmentEmail({
-          email: populated.donor.email,
+          email: latestDonor.email,
           subject: 'Your Blood Donation Appointment is Confirmed',
           message: `
-            <p>Dear ${populated.donor.firstName || 'Donor'},</p>
-            <p>Your appointment at <strong>${populated.venue?.facilityName || 'the facility'}</strong> has been approved.</p>
-            <p>Date: ${startTime.toDateString()}</p>
-            <p>Staff: <strong>${staff.firstName}  ${staff.lastName}</strong></p>
-            <p><strong>Reminders: </strong></p>
-            <p>1. Make sure to have 5 to 8 hours of sleep before donating</p>
-            <p>2. Do not drink alcohol before and during the appointed date.</p>
-            <p>3. Have a meal but avoid taking fatty foods.</p>
-            <p>Please add it to your calendar using the invite attached below.</p>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Your donation appointment is confirmed</title>
+            </head>
+            <body style="margin:0;padding:0;background-color:#f6f3f4;font-family:Arial,Helvetica,sans-serif;color:#30262a;">
+              <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;">Your appointment is confirmed. Here is everything you need to prepare for your donation.</div>
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#f6f3f4;">
+                <tr><td align="center" style="padding:32px 12px;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background-color:#ffffff;border:1px solid #eadfe3;border-radius:16px;overflow:hidden;">
+                    <tr><td style="padding:32px 28px;background-color:#991b3b;color:#ffffff;">
+                      <p style="margin:0 0 20px;font-size:13px;font-weight:bold;letter-spacing:3px;">SANDUGO</p>
+                      <p style="margin:0 0 10px;font-size:12px;font-weight:bold;letter-spacing:1px;color:#ffe0e8;">APPOINTMENT CONFIRMED</p>
+                      <h1 style="margin:0;font-size:30px;line-height:1.2;">Your next act of kindness<br>is on the calendar.</h1>
+                    </td></tr>
+                    <tr><td style="padding:28px;">
+                      <p style="margin:0 0 12px;font-size:16px;line-height:1.6;">Hi ${escapeHtml(donorName)},</p>
+                      <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#63545a;">Your blood donation appointment has been approved. Thank you for making time to help save lives.</p>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#fcf4f6;border:1px solid #f1dce3;border-radius:12px;">
+                        <tr><td style="padding:20px;">
+                          <h2 style="margin:0 0 16px;font-size:18px;color:#991b3b;">Your appointment</h2>
+                          <p style="margin:0 0 4px;font-size:12px;font-weight:bold;color:#78636b;">DATE</p>
+                          <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${escapeHtml(startTime.toDateString())}</p>
+                          <p style="margin:0 0 4px;font-size:12px;font-weight:bold;color:#78636b;">DONATION FACILITY</p>
+                          <p style="margin:0 0 16px;font-size:16px;line-height:1.5;">${escapeHtml(facilityName)}</p>
+                          <p style="margin:0 0 4px;font-size:12px;font-weight:bold;color:#78636b;">APPROVED BY</p>
+                          <p style="margin:0;font-size:16px;line-height:1.5;">${escapeHtml(staffName)}</p>
+                        </td></tr>
+                      </table>
+                      <h2 style="margin:28px 0 8px;font-size:22px;">A little preparation goes a long way</h2>
+                      <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#63545a;">Your pre-donation checklist for a comfortable visit.</p>
+                      <ol style="margin:0;padding:0 0 0 24px;color:#991b3b;">
+                        ${reminders.map(reminder => `<li style="padding:0 0 14px 6px;font-size:15px;line-height:1.6;"><span style="color:#493d42;">${escapeHtml(reminder)}</span></li>`).join('\n')}
+                      </ol>
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top:12px;background-color:#f5f5f7;border-radius:10px;">
+                        <tr><td style="padding:18px 20px;">
+                          <p style="margin:0 0 6px;font-size:15px;font-weight:bold;">Save the date</p>
+                          <p style="margin:0;font-size:14px;line-height:1.6;color:#63545a;">Open the attached calendar invite to add this appointment to your calendar.</p>
+                        </td></tr>
+                      </table>
+                      <p style="margin:24px 0 0;font-size:15px;line-height:1.6;">We look forward to welcoming you.<br><strong style="color:#991b3b;">The Sandugo Team</strong></p>
+                    </td></tr>
+                    <tr><td align="center" style="padding:20px 28px;border-top:1px solid #eee5e8;">
+                      <p style="margin:0;font-size:12px;line-height:1.6;color:#78636b;">Every donation is a chance to make a difference.</p>
+                    </td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body>
+            </html>
           `,
           text:
             `Your appointment at ${populated.venue?.facilityName || 'the facility'} ` +
-            `has been approved for ${startTime.toDateString()}.`,
+            `has been approved for ${startTime.toDateString()}.\n\n` +
+            `Pre-donation reminders:\n` +
+            reminders.map((reminder, index) => `${index + 1}. ${reminder}`).join('\n') +
+            '\n\nPlease add your appointment to your calendar using the attached invite.',
           event: {
             start: startTime,
             end: endTime,
@@ -327,7 +401,7 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
         }).catch((emailErr) => {
           console.error('Failed to send appointment confirmation email:', emailErr);
         });
-      } else {
+      } else if (!latestDonor?.email) {
         console.warn(
           `Appointment ${populated._id} approved but donor has no email address.`
         );

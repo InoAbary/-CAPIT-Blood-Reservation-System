@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "test:sms": "node backend/scripts/testSmsGate.cjs",
+    "test:sms:cloud": "node backend/scripts/testSmsGateCloud.cjs",
+    "test:notifications": "node --test backend/notification-tests/*.test.cjs",
     "test:profile": "node --test backend/tests/donorProfile.test.cjs backend/tests/mobileNumberChange.test.cjs",
     "test:reminders": "node --test backend/tests/donationReminders.test.cjs backend/tests/donorNotificationRoutes.test.cjs",
     "dev": "vite",
