@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import '../styles/Dashboard.css';
 import DonorNotificationSettings from '../components/DonorNotificationSettings';
+import DonorBadges from '../components/DonorBadges';
 
 /* ── Role-specific nav configurations ── */
 const NAV_ITEMS = {
@@ -31,16 +32,42 @@ function DonorDashboard() {
     return saved === 'donor' || saved === 'recipient' ? saved : null;
   });
 
-  const [badges, setBadges] = useState([]);
-
+  const [badgeStats, setBadgeStats] = useState(null);
+  const [badgeError, setBadgeError] = useState('');
+  
   useEffect(() => {
-    if (donor?.email && role === 'donor') {
-      fetch(`/api/badgr/donor-badges?email=${encodeURIComponent(donor.email)}`)
-        .then((res) => res.json())
-        .then((data) => setBadges(data.result || []))
-        .catch(console.error);
+    setBadgeStats(null);
+    setBadgeError('');
+  
+    if (!donor?._id || role !== 'donor') return;
+  
+    const controller = new AbortController();
+  
+    async function loadBadges() {
+      try {
+        const response = await fetch('/api/donor/badges', {
+          credentials: 'include',
+          signal: controller.signal,
+        });
+  
+        const data = await response.json();
+  
+        if (!response.ok) {
+          throw new Error(data.message || 'Could not load badges.');
+        }
+  
+        if (!controller.signal.aborted) setBadgeStats(data);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setBadgeError(error.message);
+        }
+      }
     }
-  }, [donor?.email, role]);
+  
+    loadBadges();
+  
+    return () => controller.abort();
+  }, [donor?._id, role]);
 
   const pickRole = (picked) => {
     localStorage.setItem(ROLE_KEY, picked);
@@ -103,7 +130,7 @@ function DonorDashboard() {
               <div className="cards-grid">
                 <div className="info-card">
                   <h3>Total Donations</h3>
-                  <p className="stat">24</p>
+                  <p className="stat">{badgeStats?.totalDonations ?? '—'}</p>
                 </div>
                 <div className="info-card">
                   <h3>Lives Impacted</h3>
@@ -115,18 +142,16 @@ function DonorDashboard() {
                 </div>
               </div>
               <DonorNotificationSettings />
-              <div className="badges-section">
-                <h3>My Badges</h3>
-                <div className="badges-grid">
-                  {badges.map((badge) => (
-                    <div key={badge.entityId} className="badge-card">
-                      <img src={badge.image} alt={badge.badgeclassName} />
-                      <h4>{badge.badgeclassName}</h4>
-                      <p>{new Date(badge.issuedOn).toLocaleDateString()}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
+              {badgeError && <p role="alert">{badgeError}</p>}
+              {badgeStats ? (
+                <DonorBadges
+                  totalDonations={badgeStats.totalDonations}
+                  donatedToday={badgeStats.donatedToday}
+                  donorName={`${donor?.firstName || ''} ${donor?.lastName || ''}`.trim()}
+                />
+              ) : !badgeError ? (
+                <p>Loading your badges…</p>
+              ) : null}
             </>
           ) : role === 'recipient' ? (
             <div className="cards-grid">

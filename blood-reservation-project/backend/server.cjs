@@ -21,6 +21,7 @@ const branchAdminRoutes = require('./routes/branchAdminRoutes.cjs');
 const staffRoutes = require('./routes/staffRoutes.cjs');
 const appointmentRoutes = require('./routes/appointmentRoutes.cjs')
 const donationRoutes = require('./routes/donationRoutes.cjs')
+const donorBadgeRoutes = require('./routes/donorBadgeRoutes.cjs');
 
 const requireDonor = require('./middleware/requireDonor.cjs');
 const requireStaff = require('./middleware/requireStaff.cjs');
@@ -64,6 +65,8 @@ app.use('/api/blood-requests', bloodRequestAdminRoutes);
 app.use('/api/bloodRequest', bloodRequestAdminRoutes);
 app.use('/api/admin/donors', requireStaff, requireRole('admin'), require('./routes/adminDonorRoutes.cjs'));
 app.use('/api/admin', requireStaff, requireRole('admin'), adminRoutes);
+//For badges
+app.use('/api/donor/badges', requireDonor, donorBadgeRoutes);
 // Public recovery endpoints: users cannot sign in until their password is reset.
 app.use('/api/donor', forgotPasswordEmailRoutes);
 app.use('/api/donor', require('./routes/mobileNumberChangeRoutes.cjs'));
