@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/AdminDashboard.css';
 import '../../styles/BranchAdmin.css';
+import { usePendingCounts } from '../../hooks/usePendingCounts';
 
 const workspaceTabs = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -16,6 +17,10 @@ export default function BranchAdminLayout() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [facilityType, setFacilityType] = useState(null);
+  const pendingCounts = usePendingCounts(
+    staff?._id || staff?.id,
+    ['bsf', 'prc_chapter'].includes(facilityType)
+  );
   const utilizationTab = facilityType === 'hospital'
     ? { id: 'utilization', label: 'Utilization form', icon: '🩸' }
     : ['bsf', 'prc_chapter'].includes(facilityType)
@@ -109,7 +114,16 @@ export default function BranchAdminLayout() {
               onKeyDown={(event) => handleTabKeyDown(event, index)}
             >
               <span className="icon" aria-hidden="true">{tab.icon}</span>
-              {tab.label}
+              <span>{tab.label}</span>
+
+              {pendingCounts?.[tab.id] > 0 && (
+                <span
+                  className="workspace-pending-badge"
+                  aria-label={`${pendingCounts[tab.id]} pending`}
+                >
+                  {pendingCounts[tab.id] > 99 ? '99+' : pendingCounts[tab.id]}
+                </span>
+              )}
             </button>
           ))}
         </nav>

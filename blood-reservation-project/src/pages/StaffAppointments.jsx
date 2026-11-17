@@ -101,6 +101,7 @@ function StaffAppointments() {
         }
       );
   
+      window.dispatchEvent(new Event('pending-counts-changed'));
       setDecisionTarget(null);
       setDecisionNote('');
       setNotice(

@@ -3,6 +3,7 @@ const Staff = require('../../db/models/staff.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
+const Appointment = require('../../db/models/appointmentSchedules.cjs');
 
 const router = express.Router();
 
@@ -79,5 +80,46 @@ router.get('/dashboard', async (req, res) => {
   }
 });
 
+router.get('/pending-counts', async (req, res) => {
+  res.set('Cache-Control', 'no-store');
+
+  try {
+    const ctx = await getStaffContext(req, res);
+    if (!ctx) return;
+
+    const { user, facility } = ctx;
+
+    if (
+      !['staff', 'branch-admin'].includes(user.role) ||
+      !['bsf', 'prc_chapter'].includes(facility.facilityType) ||
+      facility.isActive === false
+    ) {
+      return res.status(403).json({
+        error: 'Pending counts are available to active BSF/PRC staff.',
+      });
+    }
+
+    const [bloodRequests, appointments] = await Promise.all([
+      BloodRequest.countDocuments({
+        receivingFacilityID: facility._id,
+        requestStatus: 'Pending',
+      }),
+      Appointment.countDocuments({
+        venue: facility._id,
+        status: 'pending',
+      }),
+    ]);
+
+    return res.json({
+      'branch-requests': bloodRequests,
+      appointments,
+    });
+  } catch (error) {
+    console.error('Pending counts failed:', error.message);
+    return res.status(500).json({
+      error: 'Could not load pending counts.',
+    });
+  }
+});
 
 module.exports = router;

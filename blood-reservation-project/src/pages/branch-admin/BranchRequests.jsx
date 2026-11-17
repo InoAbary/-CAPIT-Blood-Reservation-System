@@ -121,6 +121,7 @@ export default function BranchRequests() {
       });
       const result = await readResponse(response);
       if (!response.ok) throw new Error(result.error || 'Could not update this request.');
+      window.dispatchEvent(new Event('pending-counts-changed'));
       setDecisionReason('');
       setShowDeclineReason(false);
       await loadRequests();

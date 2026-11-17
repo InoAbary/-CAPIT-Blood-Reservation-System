@@ -11,6 +11,7 @@ import StaffDonations from './StaffDonations'
 import StaffDonorForms from './StaffDonorForms'
 import { useAuth } from '../context/AuthContext';
 import '../styles/BranchAdmin.css';
+import { usePendingCounts } from '../hooks/usePendingCounts';
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -76,7 +77,10 @@ function StaffDashboard() {
   const facility = dashboard?.facility;
   const summary = dashboard?.summary;
   const facilityType = facility?.facilityType;
-
+  const pendingCounts = usePendingCounts(
+    staff?._id || staff?.id,
+    ['bsf', 'prc_chapter'].includes(facilityType)
+  );
   // Only expose tabs valid for the staff member's facility type.
   const visibleTabs = useMemo(
     () => STAFF_TABS.filter(
@@ -124,6 +128,14 @@ function StaffDashboard() {
             >
               <span className="nav-icon">{tab.icon}</span>
               <span className="nav-label">{tab.label}</span>
+                {pendingCounts?.[tab.key] > 0 && (
+                  <span
+                    className="workspace-pending-badge"
+                    aria-label={`${pendingCounts[tab.key]} pending`}
+                  >
+                    {pendingCounts[tab.key] > 99 ? '99+' : pendingCounts[tab.key]}
+                  </span>
+                )}
             </button>
           ))}
         </nav>
