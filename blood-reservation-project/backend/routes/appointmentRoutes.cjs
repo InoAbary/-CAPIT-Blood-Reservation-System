@@ -251,6 +251,14 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
       return res.status(400).json({ error: 'action must be "approve" or "deny".' });
     }
 
+    const denialReason = typeof note === 'string' ? note.trim() : '';
+
+    if (action === 'deny' &&
+        (!denialReason || denialReason.length > 1000)) {
+      return res.status(400).json({
+        error: 'Please enter a reason.',
+      });
+    }
     const { staffId, facilityId } = await getStaffFacility(req);
     if (!staffId) {
       return res.status(401).json({ error: 'Staff authentication required.' });
@@ -272,7 +280,7 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
     }
 
     const changes = { status: action === 'approve' ? 'approved' : 'denied', assocStaff: staffId, decidedAt: new Date() };
-    if (action === 'deny' && note) changes.note = note;
+    if (action === 'deny') changes.note = denialReason;
     const decided = await Appointment.findOneAndUpdate(
       { _id: id, venue: facilityId, status: 'pending' },
       { $set: changes }, { new: true, runValidators: true }

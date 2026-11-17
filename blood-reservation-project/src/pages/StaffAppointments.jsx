@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../styles/BranchAdmin.css';
+import '../styles/CancelModal.css';
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -30,8 +31,20 @@ function StaffAppointments() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const [denyTarget, setDenyTarget] = useState(null);
-  const [denyNote, setDenyNote] = useState('');
+  const [decisionTarget, setDecisionTarget] = useState(null);
+  const [decisionAction, setDecisionAction] = useState('');
+  const [decisionNote, setDecisionNote] = useState('');
+  const [denialReason, setDenialReason] = useState('');
+  const [decisionError, setDecisionError] = useState('');
+  const [savingDecision, setSavingDecision] = useState(false);
+  const decisionDialog = useRef(null);
+
+  useEffect(() => {
+    if (decisionTarget && decisionDialog.current &&
+        !decisionDialog.current.open) {
+      decisionDialog.current.showModal();
+    }
+  }, [decisionTarget]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -50,26 +63,58 @@ function StaffAppointments() {
     load();
   }, [load]);
 
-  const decide = async (id, action, note) => {
+  const submitDecision = async (event) => {
+    event.preventDefault();
+  
+    if (!decisionTarget || savingDecision) return;
+  
+    const note = denialReason === 'Other'
+      ? decisionNote.trim()
+      : denialReason;
+
+    if (
+      decisionAction === 'deny' &&
+      (!note || note.length > 1000)
+    ) {
+      setDecisionError(
+        denialReason === 'Other'
+          ? 'Please provide an explanation.'
+          : 'Please select a reason.'
+      );
+      return;
+    }
+  
+    setSavingDecision(true);
+    setDecisionError('');
     setError('');
     setNotice('');
+  
     try {
-      await request(`/api/appointments/staff-appointments/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ action, note }),
-      });
-      setNotice(action === 'approve' ? 'Appointment approved.' : 'Appointment denied.');
-      setDenyTarget(null);
-      setDenyNote('');
+      await request(
+        `/api/appointments/staff-appointments/${decisionTarget._id}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({
+            action: decisionAction,
+            ...(decisionAction === 'deny' ? { note } : {}),
+          }),
+        }
+      );
+  
+      setDecisionTarget(null);
+      setDecisionNote('');
+      setNotice(
+        decisionAction === 'approve'
+          ? 'Appointment approved.'
+          : 'Appointment denied.'
+      );
+  
       await load();
     } catch (err) {
-      setError(err.message);
+      setDecisionError(err.message);
+    } finally {
+      setSavingDecision(false);
     }
-  };
-
-  const submitDeny = async () => {
-    if (!denyTarget) return;
-    await decide(denyTarget._id, 'deny', denyNote.trim() || undefined);
   };
 
   return (
@@ -140,25 +185,37 @@ function StaffAppointments() {
                   </td>
                   <td>
                     {a.status === 'pending' ? (
-                      <div className="appt-actions">
-                        <button
-                          type="button"
-                          className="btn-action"
-                          onClick={() => decide(a._id, 'approve')}
-                        >
-                          Approve
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-secondary"
-                          onClick={() => {
-                            setDenyTarget(a);
-                            setDenyNote('');
-                          }}
-                        >
-                          Deny
-                        </button>
-                      </div>
+                    <div className="appt-actions">
+                      <button
+                        type="button"
+                        className="btn-action"
+                        disabled={savingDecision}
+                        onClick={() => {
+                          setDecisionAction('approve');
+                          setDecisionTarget(a);
+                          setDenialReason('');
+                          setDecisionNote('');
+                          setDecisionError('');
+                        }}
+                      >
+                        Approve
+                      </button>
+                    
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        disabled={savingDecision}
+                        onClick={() => {
+                          setDecisionAction('deny');
+                          setDecisionTarget(a);
+                          setDenialReason('');
+                          setDecisionNote('');
+                          setDecisionError('');
+                        }}
+                      >
+                        Deny
+                      </button>
+                    </div>
                     ) : (
                       <span className="muted">—</span>
                     )}
@@ -170,36 +227,124 @@ function StaffAppointments() {
         </div>
       )}
 
-      {denyTarget && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-card">
-            <h3>Deny appointment?</h3>
+    {decisionTarget && (
+      <dialog
+        ref={decisionDialog}
+        className="cancel-modal"
+        aria-labelledby="appointment-decision-title"
+        onCancel={(event) => {
+          event.preventDefault();
+          if (!savingDecision) setDecisionTarget(null);
+        }}
+      >
+        <form onSubmit={submitDecision}>
+          <h3 id="appointment-decision-title">
+            {decisionAction === 'approve'
+              ? 'Approve appointment?'
+              : 'Deny appointment?'}
+          </h3>
+
+          <p>
+            {decisionTarget.donor
+              ? `${decisionTarget.donor.firstName || ''} ${
+                  decisionTarget.donor.lastName || ''
+                }`.trim()
+              : 'This donor'}
+            {' — '}
+            {new Date(decisionTarget.date).toLocaleString()}
+          </p>
+
+          {decisionAction === 'approve' ? (
             <p>
-              {denyTarget.donor
-                ? `${denyTarget.donor.firstName || ''} ${denyTarget.donor.lastName || ''}`.trim()
-                : 'This donor'}{' '}
-              on {new Date(denyTarget.date).toLocaleString()}
+              Confirm that your facility can accommodate this donor
+              at the scheduled date and time.
             </p>
-            <label>
-              Reason (optional)
-              <textarea
-                rows={3}
-                value={denyNote}
-                onChange={(e) => setDenyNote(e.target.value)}
-                placeholder="e.g. Fully booked that day"
-              />
-            </label>
-            <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={() => setDenyTarget(null)}>
-                Cancel
-              </button>
-              <button type="button" className="btn-action" onClick={submitDeny}>
-                Confirm deny
-              </button>
-            </div>
+          ) : (
+            <>
+              <label htmlFor="appointment-denial-reason">
+                Reason for not being able to accommodate
+              </label>
+
+              <select
+                id="appointment-denial-reason"
+                className="form-control"
+                value={denialReason}
+                onChange={(event) => {
+                  setDenialReason(event.target.value);
+                  setDecisionNote('');
+                  setDecisionError('');
+                }}
+                required
+                disabled={savingDecision}
+              >
+                <option value="" disabled>Select a reason</option>
+                <option value="Fully booked">Fully booked</option>
+                <option value="Staff unavailable">Staff unavailable</option>
+                <option value="Equipment unavailable">Equipment unavailable</option>
+                <option value="Facility temporarily closed">
+                  Facility temporarily closed
+                </option>
+                <option value="Other">Other</option>
+              </select>
+
+              {denialReason === 'Other' && (
+                <>
+                  <label htmlFor="appointment-decision-reason">
+                    Please explain
+                  </label>
+
+                  <textarea
+                    id="appointment-decision-reason"
+                    rows={4}
+                    required
+                    maxLength={1000}
+                    value={decisionNote}
+                    onChange={(event) => setDecisionNote(event.target.value)}
+                    placeholder="Enter the reason for denying this appointment."
+                    disabled={savingDecision}
+                  />
+                </>
+              )}
+            </>
+          )}
+
+          {decisionError && <p role="alert">{decisionError}</p>}
+
+          <div className="cancel-modal__actions">
+            <button
+              type="button"
+              className="cancel-modal__back"
+              disabled={savingDecision}
+              onClick={() => setDecisionTarget(null)}
+              autoFocus
+            >
+              Go Back
+            </button>
+
+            <button
+              type="submit"
+              className="cancel-modal__confirm"
+              disabled={
+                savingDecision ||
+                (
+                  decisionAction === 'deny' &&
+                  (
+                    !denialReason ||
+                    (denialReason === 'Other' && !decisionNote.trim())
+                  )
+                )
+              }
+            >
+              {savingDecision
+                ? 'Saving…'
+                : decisionAction === 'approve'
+                  ? 'Confirm Approval'
+                  : 'Confirm Denial'}
+            </button>
           </div>
-        </div>
-      )}
+        </form>
+      </dialog>
+    )}
     </section>
   );
 }
