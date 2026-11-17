@@ -83,14 +83,24 @@ router.get('/staff-donations', async (req, res) => {
     if (req.query.from || req.query.to) {
       filter.dateTime = {};
       if (req.query.from) {
-        const from = new Date(req.query.from);
+        const from = new Date(
+          /^\d{4}-\d{2}-\d{2}$/.test(req.query.from)
+            ? `${req.query.from}T00:00:00+08:00`
+            : req.query.from
+        );
+
         if (Number.isNaN(from.getTime())) {
           return res.status(400).json({ error: 'Invalid "from" date.' });
         }
         filter.dateTime.$gte = from;
       }
       if (req.query.to) {
-        const to = new Date(req.query.to);
+        const to = new Date(
+          /^\d{4}-\d{2}-\d{2}$/.test(req.query.to)
+            ? `${req.query.to}T00:00:00+08:00`
+            : req.query.to
+        );
+        
         if (/^\d{4}-\d{2}-\d{2}$/.test(req.query.to)) to.setUTCDate(to.getUTCDate() + 1);
         if (Number.isNaN(to.getTime())) {
           return res.status(400).json({ error: 'Invalid "to" date.' });

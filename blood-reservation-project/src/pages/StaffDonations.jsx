@@ -45,6 +45,28 @@ function formatDonor(donor) {
   return name || donor.email || 'Unknown donor';
 }
 
+function donationDateRange(period) {
+  const today = philippineDateTime().slice(0, 10);
+
+  if (period === 'all') return { from: '', to: '' };
+
+  const start = new Date(`${today}T00:00:00Z`);
+
+  if (period === 'week') {
+    const daysSinceMonday = (start.getUTCDay() + 6) % 7;
+    start.setUTCDate(start.getUTCDate() - daysSinceMonday);
+  }
+
+  if (period === 'month') {
+    start.setUTCDate(1);
+  }
+
+  return {
+    from: start.toISOString().slice(0, 10),
+    to: today,
+  };
+}
+
 export default function StaffDonations({ onDonationRecorded }) {
   const [addingDonor, setAddingDonor] = useState(false);
   const [donations, setDonations] = useState([]);
@@ -61,6 +83,13 @@ export default function StaffDonations({ onDonationRecorded }) {
   const [screener, setScreener] = useState('');
   const [extractor, setExtractor] = useState('');
   const [page, setPage] = useState(1);
+
+  function applyDateShortcut(period) {
+    const range = donationDateRange(period);
+    setFromDate(range.from);
+    setToDate(range.to);
+    setPage(1);
+  }
 
   // New donation form
   const [activeTab, setActiveTab] = useState('record');
@@ -358,6 +387,44 @@ export default function StaffDonations({ onDonationRecorded }) {
 
       <div className="sd-records-heading"><h3>Donation records</h3><span className="sd-count" role="status">{summary}</span></div>
       <div className="donation-filters">
+      <div
+        role="group"
+        aria-label="Donation history date shortcuts"
+        style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}
+      >
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => applyDateShortcut('today')}
+        >
+          Today
+        </button>
+
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => applyDateShortcut('week')}
+        >
+          This Week
+        </button>
+
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => applyDateShortcut('month')}
+        >
+          This Month
+        </button>
+
+        <button
+          type="button"
+          className="btn-secondary"
+          onClick={() => applyDateShortcut('all')}
+        >
+          All Time
+        </button>
+      </div>
+      
         <select
           aria-label="Filter by donation type"
           value={typeFilter}
