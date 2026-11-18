@@ -42,14 +42,14 @@ const QUESTION_LIST = [
     { key: 'q30', id: 30, subheading: "subheading_4"  },
     { key: 'q31', id: 31, subheading: "subheading_4"  },
     { key: 'q32', id: 32, subheading: "subheading_4"  },
-    { key: 'q33', id: 33 },
+    { key: 'q33', id: 33, rejectReason: 'You cannot donate blood if you are pregnant.' },
     { key: 'q34', id: 34 },
     { key: 'q35', id: 35 },
     { key: 'q36', id: 36, rejectReason: 'You cannot donate blood if you are breastfeeding.' },
     { key: 'q37', id: 37 },
 ];
 
-const DENY_YES = new Set([2, 3, 5, 6, 7, 8, 36]);
+const DENY_YES = new Set([2, 3, 5, 6, 7, 8, 33, 36]);
 const DENY_NO = new Set([1]);
 
 function ShouldDeny(q, answer) {
@@ -94,6 +94,7 @@ function BloodDonorForm() {
     const location = useLocation();
     const navigate = useNavigate();
     const returnTo = location.state?.returnTo
+    const appointmentDraft = location.state?.appointmentDraft;
 
     const cooldown = useDonationCooldown();
 
@@ -239,9 +240,12 @@ function BloodDonorForm() {
             }
 
             if (returnTo) {
-                
-                // Skip FormPending and send them straight back to where they were going.
-                navigate(returnTo, { replace: true });
+                navigate(returnTo, {
+                  replace: true,
+                  state: appointmentDraft
+                    ? { appointmentDraft }
+                    : undefined,
+                });
             } else {
                 navigate('/FormPending', {
                     state: {

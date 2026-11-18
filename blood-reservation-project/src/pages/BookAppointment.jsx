@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useFormGate } from '../hooks/useFormGate';
 import '../styles/BranchAdmin.css';
 import '../styles/CancelModal.css';
@@ -38,6 +38,9 @@ const TIME_OPTIONS = Array.from({ length: 19 }, (_, i) => {
   return `${h}:${m}`;
 });
 
+// TODO: change to actual time later
+const LAST_APPOINTMENT_TIME = '15:00';
+
 // Display as "8:00 AM", "12:30 PM", etc.
 function formatTimeLabel(value) {
   const [h, m] = value.split(':').map(Number);
@@ -57,6 +60,9 @@ function staffLabel(a) {
 
 
 function BookAppointment() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const appointmentDraft = location.state?.appointmentDraft;
   const [appointments, setAppointments] = useState([]);
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -85,14 +91,14 @@ function BookAppointment() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   });
-  const [time, setTime] = useState('');
-  const [venue, setVenue] = useState('');
+  
+  const [time, setTime] = useState(appointmentDraft?.time || '');
+  const [venue, setVenue] = useState(appointmentDraft?.venue || '');
 
   const { donor, loading: authLoading } = useAuth();
 
   const { status: formStatus, error: formError } = useFormGate();
 
-  
   const loadAll = useCallback(async () => {
     const [apptResult, venueResult] = await Promise.all([
       request('/api/appointments'),
@@ -138,10 +144,12 @@ function BookAppointment() {
   }, []);
 
   const availableTimes = useMemo(() => {
-    if (date !== today) return TIME_OPTIONS;
-    if (!minTimeToday) return [];
-    return TIME_OPTIONS.filter((t) => t >= minTimeToday);
-  }, [date, today, minTimeToday]);
+    if (!venue || !minTimeToday) return [];
+  
+    return TIME_OPTIONS.filter(
+      (t) => t >= minTimeToday && t <= LAST_APPOINTMENT_TIME
+    );
+  }, [venue, minTimeToday]);
 
   // Reset time if the current selection is no longer valid (e.g. switched back to today)
   useEffect(() => {
@@ -163,7 +171,7 @@ function BookAppointment() {
     setNotice('');
 
     if (!date || !time || !venue) {
-      setError('Please choose a date, start time, and venue.');
+      setError('Please choose a start time and venue.');
       return;
     }
 
@@ -171,6 +179,33 @@ function BookAppointment() {
     const combined = new Date(`${date}T${time}:00`);
     if (Number.isNaN(combined.getTime()) || combined.getTime() <= Date.now()) {
       setError('Please choose a future date and time.');
+      return;
+    }
+    if (formStatus === 'loading') {
+      setError('Please wait while we check your prescreening status.');
+      return;
+    }
+    
+    if (formStatus === 'error') {
+      setError(
+        formError ||
+        'Could not verify your prescreening status. Please try again later.'
+      );
+      return;
+    }
+
+    if (formStatus === 'needsForm') {
+      navigate('/BloodDonorForm', {
+        state: {
+          returnTo: location.pathname,
+          reason: 'appointment',
+          appointmentDraft: {
+            time,
+            venue,
+          },
+        },
+      });
+    
       return;
     }
 
@@ -311,36 +346,6 @@ function BookAppointment() {
     );
   }
 
-  if (formStatus === 'loading') {
-    return <p>Checking form eligibility...</p>
-  }
-
-  if (formStatus === 'error') {
-    return (
-      <div className="dashboard-container top-menu-layout">
-
-        <main className="dashboard-content">
-          <div className="content-card">
-            <p className="form-message error-message" role="alert">
-              {formError || 'Could not verify your form status. Please try again later.'}
-            </p>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  if (formStatus === 'needsForm') {
-    // Redirect to the blood donor form; remember where to send them back.
-    return (
-      <Navigate
-        to="/BloodDonorForm"
-        replace
-        state={{ returnTo: location.pathname, reason: 'appointment' }}
-      />
-    );
-  }
-
   return (
 
     
@@ -408,15 +413,22 @@ function BookAppointment() {
       <div className="appointment-container content-card">
       <h2 className="card-title">Book a Blood Donation Appointment</h2>
       <p className="card-subtitle">
-        Pick a venue, date, and start time. Your request will be pending until staff confirm it.
+        Pick a venue and preferred start time for today. Your request will be pending until staff confirm it.
       </p>
 
       {error && <p className="form-message error-message" role="alert">{error}</p>}
+
+      {formStatus === 'error' && (
+        <p className="form-message error-message" role="alert">
+          {formError || 'Could not verify your prescreening status. Please try again.'}
+        </p>
+      )}
+
       {notice && <p className="form-message" role="status">{notice}</p>}
 
       <form className="appointment-form" onSubmit={handleSubmit}>
         <label>
-          Date
+          Preferred Date
           <input
             type="date"
             value={date}
@@ -426,32 +438,17 @@ function BookAppointment() {
         </label>
 
         <label>
-          Start time
+          Donation Venue
           <select
-            value={time}
-            onChange={(e) => setTime(e.target.value)}
+            value={venue}
+            onChange={(e) => {
+              setVenue(e.target.value);
+              setTime('');
+            }}
             required
-            disabled={!date || availableTimes.length === 0}
           >
-            <option value="">
-              {!date
-                ? 'Select a date first…'
-                : availableTimes.length === 0
-                ? 'No slots left today'
-                : 'Select a time…'}
-            </option>
-            {availableTimes.map((t) => (
-              <option key={t} value={t}>
-                {formatTimeLabel(t)}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          Venue
-          <select value={venue} onChange={(e) => setVenue(e.target.value)} required>
             <option value="">Select a venue…</option>
+
             {venues.map((v) => (
               <option key={v._id} value={v._id}>
                 {v.facilityName} — {v.address}
@@ -460,9 +457,49 @@ function BookAppointment() {
           </select>
         </label>
 
-        <button type="submit" className="btn-action" disabled={submitting}>
-          {submitting ? 'Sending…' : 'Request appointment'}
+        {venue && (
+          <small className="muted">
+            Donation hours: 8:00 AM–5:00 PM. Last appointment starts at 3:00 PM.
+          </small>
+        )}
+
+        <label>
+          Preferred Start Time
+          <select
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
+            required
+            disabled={!venue || availableTimes.length === 0}
+          >
+            <option value="">
+              {!venue
+                ? 'Select a venue first…'
+                : availableTimes.length === 0
+                ? 'No appointment times remaining today'
+                : 'Select a time…'}
+            </option>
+
+            {availableTimes.map((t) => (
+              <option key={t} value={t}>
+                {formatTimeLabel(t)}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <button type="submit" className="btn-action" disabled={
+            submitting ||
+            formStatus === 'loading' ||
+            formStatus === 'error'
+          }
+        >
+          {submitting
+            ? 'Sending…'
+            : formStatus === 'needsForm'
+            ? 'Continue to prescreening'
+            : 'Request appointment'}
         </button>
+
       </form>
 
       <section className="appointment-section">
