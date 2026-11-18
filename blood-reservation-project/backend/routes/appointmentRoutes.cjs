@@ -243,6 +243,75 @@ router.get('/staff-appointments', requireStaff, async (req, res) => {
   }
 });
 
+// details
+router.get('/staff-appointments/:id/details', requireStaff, async (req, res) => {
+  try {
+    const { facilityId } = await getStaffFacility(req);
+
+    if (!facilityId) {
+      return res.status(400).json({
+        error: 'No facility is associated with this staff account.',
+      });
+    }
+
+    const appointment = await Appointment.findOne({
+      _id: req.params.id,
+      venue: facilityId,
+    })
+      .populate(
+        'donor',
+        'donorID firstName middleName lastName age sex bloodType mobileNumber email'
+      )
+      .populate('venue', 'facilityName address')
+      .populate('assocStaff', 'firstName lastName')
+      .lean();
+
+    if (!appointment) {
+      return res.status(404).json({
+        error: 'Appointment not found at your facility.',
+      });
+    }
+
+    const donorId = appointment.donor?._id;
+
+    let form = null;
+
+    if (donorId) {
+      const phDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Manila',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(appointment.date));
+
+      const start = new Date(`${phDate}T00:00:00+08:00`);
+      const end = new Date(`${phDate}T23:59:59.999+08:00`);
+
+      form = await FormAnswers.findOne({
+        donor: donorId,
+        createdAt: {
+          $gte: start,
+          $lte: end,
+        },
+      })
+        .sort({ createdAt: -1 })
+        .select('answers createdAt')
+        .lean();
+    }
+
+    return res.json({
+      appointment,
+      form,
+    });
+  } catch (err) {
+    console.error('GET appointment details failed:', err);
+
+    return res.status(500).json({
+      error: 'Unable to load appointment details.',
+    });
+  }
+});
+
 // Staff approves or denies
 router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
   try {

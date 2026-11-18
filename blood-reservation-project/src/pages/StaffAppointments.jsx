@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import '../styles/BranchAdmin.css';
 import '../styles/CancelModal.css';
+import { Trans } from 'react-i18next';
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -25,6 +26,25 @@ const TABS = [
   { key: 'all', label: 'All' },
 ];
 
+function EyeIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 function StaffAppointments() {
   const [status, setStatus] = useState('pending');
   const [appointments, setAppointments] = useState([]);
@@ -38,6 +58,12 @@ function StaffAppointments() {
   const [decisionError, setDecisionError] = useState('');
   const [savingDecision, setSavingDecision] = useState(false);
   const decisionDialog = useRef(null);
+  const [detailTarget, setDetailTarget] = useState(null);
+  const [detailData, setDetailData] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+
+  const detailDialog = useRef(null);
 
   useEffect(() => {
     if (decisionTarget && decisionDialog.current &&
@@ -45,6 +71,35 @@ function StaffAppointments() {
       decisionDialog.current.showModal();
     }
   }, [decisionTarget]);
+
+  useEffect(() => {
+    if (
+      detailTarget &&
+      detailDialog.current &&
+      !detailDialog.current.open
+    ) {
+      detailDialog.current.showModal();
+    }
+  }, [detailTarget]);
+
+  const openDetails = async (appointment) => {
+    setDetailTarget(appointment);
+    setDetailData(null);
+    setDetailError('');
+    setDetailLoading(true);
+  
+    try {
+      const result = await request(
+        `/api/appointments/staff-appointments/${appointment._id}/details`
+      );
+  
+      setDetailData(result);
+    } catch (err) {
+      setDetailError(err.message);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -185,8 +240,20 @@ function StaffAppointments() {
                     <span className={`status-badge status-${a.status}`}>{a.status}</span>
                   </td>
                   <td>
-                    {a.status === 'pending' ? (
                     <div className="appt-actions">
+                      <button
+                        type="button"
+                        className="appt-view-btn"
+                        onClick={() => openDetails(a)}
+                        aria-label={`View details for ${
+                          a.donor?.firstName || 'donor'
+                        }`}
+                        title="View donor and prescreening details"
+                      >
+                        <EyeIcon />
+                      </button>
+
+                      {a.status === 'pending' && ( <>
                       <button
                         type="button"
                         className="btn-action"
@@ -216,16 +283,204 @@ function StaffAppointments() {
                       >
                         Deny
                       </button>
+                      </>
+                      )}
                     </div>
-                    ) : (
-                      <span className="muted">—</span>
-                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      )}
+
+      {detailTarget && (
+        <dialog
+          ref={detailDialog}
+          className="appointment-details-modal"
+          onCancel={(event) => {
+            event.preventDefault();
+            setDetailTarget(null);
+            setDetailData(null);
+          }}
+        >
+          <div className="appointment-details-content">
+
+            <div className="appointment-details-header">
+              <div>
+                <h3>Donor & Prescreening Details</h3>
+                <p>
+                  Review the donor information and submitted prescreening form.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="appointment-details-close"
+                onClick={() => {
+                  setDetailTarget(null);
+                  setDetailData(null);
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            {detailLoading ? (
+              <p>Loading details…</p>
+            ) : detailError ? (
+              <p className="form-message error-message">
+                {detailError}
+              </p>
+            ) : detailData ? (
+              <>
+                <section className="appointment-details-section">
+                  <h4>Donor Information</h4>
+
+                  <div className="donor-details-grid">
+                    <div>
+                      <span>Full name</span>
+                      <strong>
+                        {[
+                          detailData.appointment.donor?.firstName,
+                          detailData.appointment.donor?.middleName,
+                          detailData.appointment.donor?.lastName,
+                        ]
+                          .filter(Boolean)
+                          .join(' ') || '—'}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Donor ID</span>
+                      <strong>
+                        {detailData.appointment.donor?.donorID || '—'}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Blood type</span>
+                      <strong>
+                        {detailData.appointment.donor?.bloodType || '—'}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Age</span>
+                      <strong>
+                        {detailData.appointment.donor?.age ?? '—'}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Sex</span>
+                      <strong>
+                        {detailData.appointment.donor?.sex || '—'}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Mobile</span>
+                      <strong>
+                        {detailData.appointment.donor?.mobileNumber || '—'}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Email</span>
+                      <strong>
+                        {detailData.appointment.donor?.email || '—'}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <span>Appointment</span>
+                      <strong>
+                        {new Date(
+                          detailData.appointment.date
+                        ).toLocaleString()}
+                      </strong>
+                    </div>
+                  </div>
+                </section>
+
+                <section className="appointment-details-section">
+                  <div className="prescreen-heading">
+                    <div>
+                      <h4>Prescreening Form</h4>
+
+                      {detailData.form?.createdAt && (
+                        <p>
+                          Submitted{' '}
+                          {new Date(
+                            detailData.form.createdAt
+                          ).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {!detailData.form ? (
+                    <p className="muted">
+                      No prescreening form was found for this appointment.
+                    </p>
+                  ) : (
+                    <div className="staff-prescreen-list">
+                      {detailData.form.answers.map((answer) => (
+                        <div
+                          key={answer.qId}
+                          className="staff-prescreen-row"
+                        >
+                          <div className="staff-prescreen-question">
+                            <span className="staff-prescreen-question-number">
+                              {answer.qId}
+                            </span>
+
+                            <span className="staff-prescreen-question-text">
+                              <Trans
+                                i18nKey={`questionnaire.q${answer.qId}`}
+                                components={{ bold: <strong /> }}
+                              />
+                            </span>
+                          </div>
+
+                          <div
+                            className={`staff-prescreen-answer ${
+                              answer.result === true
+                                ? 'answer-yes'
+                                : answer.result === false
+                                ? 'answer-no'
+                                : 'answer-date'
+                            }`}
+                          >
+                            <strong>
+                              {answer.date
+                                ? new Date(answer.date).toLocaleDateString()
+                                : answer.result === true
+                                ? 'Yes'
+                                : answer.result === false
+                                ? 'No'
+                                : '—'}
+                            </strong>
+
+                            {answer.remarks && (
+                              <small>
+                                Remarks: {answer.remarks}
+                              </small>
+                            )}
+                          </div>
+                          
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              </>
+            ) : null}
+
+          </div>
+        </dialog>
       )}
 
     {decisionTarget && (
