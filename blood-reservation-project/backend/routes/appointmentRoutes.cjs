@@ -64,7 +64,7 @@ router.get('/donation-eligibility', requireDonor, async (req, res) => {
 router.get('/venues', requireDonor, async (req, res) => {
   try {
     // Adjust the filter to your Facility schema (e.g. acceptBSF, acceptingDonations…)
-    const venues = await Facility.find({ facilityType: { $in: ['bsf', 'prc_chapter', 'hospital'] } })
+    const venues = await Facility.find({ facilityType: { $in: ['bsf', 'prc_chapter'] }, isActive: true, })
       .select('facilityName address facilityType')
       .lean();
     return res.json({ venues });
