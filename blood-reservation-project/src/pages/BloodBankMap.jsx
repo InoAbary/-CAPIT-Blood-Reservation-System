@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import MapLibreView from '../components/MapLibreView';
 import FacilityCard from '../components/FacilityCard';
-import ComprehensiveMatrixModal from '../components/ComprehensiveMatrixModal';
 import ChangeLocationModal from '../components/ChangeLocationModal';
 import AdminAddBranchModal from '../components/AdminAddBranchModal';
 import {
@@ -33,6 +32,13 @@ const COMPONENT_OPTIONS = [
   { id: 'platelet', label: 'Platelets' },
   { id: 'plasma', label: 'Plasma' },
 ];
+
+const isSameFacility = (first, second) => Boolean(
+  first && second && (
+    first.id === second.id ||
+    (first.facilityID && second.facilityID && first.facilityID === second.facilityID)
+  )
+);
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -66,6 +72,15 @@ function statusForCount(units) {
   return 'Available';
 }
 
+function statusForInventory(value) {
+  if (typeof value === 'string') {
+    if (value === 'Available') return 'Available';
+    if (value === 'Limited' || value === 'Critical') return 'Low';
+    return 'Unavailable';
+  }
+  return statusForCount(value);
+}
+
 // availability[facilityID][bloodType][componentLabel] = unitCount
 //   -> { [bloodType]: { [componentKey]: status } }
 function buildMatrix(facilityAvailability) {
@@ -74,7 +89,7 @@ function buildMatrix(facilityAvailability) {
   for (const [bt, comps] of Object.entries(facilityAvailability)) {
     matrix[bt] = matrix[bt] || {};
     for (const [compLabel, units] of Object.entries(comps)) {
-      matrix[bt][getComponentKey(compLabel)] = statusForCount(units);
+      matrix[bt][getComponentKey(compLabel)] = statusForInventory(units);
     }
   }
   return matrix;
@@ -92,10 +107,10 @@ function formatFacility(f) {
       f.category ||
       (f.facilityName?.includes('Red Cross') ? 'PRC' : 'Hospital BSF'),
     typeLabel:
-      f.typeLabel ||
-      (f.category === 'PRC'
-        ? 'Philippine Red Cross'
-        : 'Hospital Blood Service Facility'),
+      (f.typeLabel ||
+        (f.category === 'PRC'
+          ? 'Philippine Red Cross'
+          : 'Blood Service Facility')).replace(/^Hospital\s+/i, ''),
     priority: f.category === 'PRC' ? 1 : 2,
     address: f.address,
     phone: f.contactNumber || f.contactNuber || f.phone || '(02) 8527-2195',
@@ -117,9 +132,9 @@ export default function BloodBankMap() {
 
   // Filter state
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBloodType, setSelectedBloodType] = useState('B-');
+  const [selectedBloodTypes, setSelectedBloodTypes] = useState(['B-']);
   const [selectedComponent, setSelectedComponent] = useState('Packed RBC');
-  const [selectedRadiusKm, setSelectedRadiusKm] = useState(30);
+  const [selectedRadiusKm, setSelectedRadiusKm] = useState(null);
   const [hierarchyMode, setHierarchyMode] = useState('prc-first');
   const [hideUnavailable, setHideUnavailable] = useState(false);
   const [viewMode, setViewMode] = useState('split');
@@ -133,16 +148,40 @@ export default function BloodBankMap() {
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [selectedFacility, setSelectedFacility] = useState(null);
+  const [pinnedFacility, setPinnedFacility] = useState(null);
+  const cardsColumnRef = useRef(null);
+  const previousPageScrollRef = useRef(null);
 
-  const [matrixModalFacility, setMatrixModalFacility] = useState(null);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
 
   const [bloodTypes] = useState(BLOOD_TYPE_OPTIONS);
   const [components] = useState(COMPONENT_OPTIONS);
 
-  const [isSyncing, setIsSyncing] = useState(false);
   const [syncToast, setSyncToast] = useState(null);
+
+  const handleSelectFacility = (facility, source = 'card') => {
+    if (isSameFacility(selectedFacility, facility)) {
+      setSelectedFacility(null);
+      setPinnedFacility(null);
+      if (source === 'map' && previousPageScrollRef.current !== null) {
+        const pageScroll = previousPageScrollRef.current;
+        window.requestAnimationFrame(() => window.scrollTo({ top: pageScroll, behavior: 'auto' }));
+      }
+      previousPageScrollRef.current = null;
+      return;
+    }
+
+    setSelectedFacility(facility);
+    if (source === 'map') {
+      previousPageScrollRef.current = window.scrollY;
+      setPinnedFacility(facility);
+    } else {
+      setPinnedFacility(null);
+    }
+
+    if (facility && source === 'map' && viewMode === 'map-only') setViewMode('split');
+  };
 
   const { donor, staff } = useAuth();
   const isAdmin = !donor && staff?.role === 'admin';
@@ -198,7 +237,7 @@ export default function BloodBankMap() {
     const data = await res.json();
     if (!data.success || !Array.isArray(data.facilities)) return null;
 
-    // BloodUnits.facilityID stores the Facility _id as a string.
+    // Inventory.facilityID references the Facility Mongo ObjectId.
     const facilityIDs = data.facilities
       .map((f) => f._id?.$oid || f._id)
       .filter(Boolean);
@@ -237,7 +276,15 @@ export default function BloodBankMap() {
   // Derived values
   // -------------------------------------------------------------------------
   const compKey = getComponentKey(selectedComponent);
-  const targetBT = selectedBloodType;
+  const targetBTLabel = selectedBloodTypes.length <= 2
+    ? selectedBloodTypes.join(', ')
+    : `${selectedBloodTypes.length} blood types`;
+
+  const statusesFor = (facility, componentKey) =>
+    selectedBloodTypes.map((bloodType) => facility.matrix?.[bloodType]?.[componentKey] || 'Unavailable');
+
+  const hasStockForSelection = (facility, componentKey) =>
+    statusesFor(facility, componentKey).some((status) => status === 'Available' || status === 'Low');
 
   const facilitiesWithDistance = useMemo(() => {
     return facilitiesList.map((fac) => {
@@ -254,7 +301,7 @@ export default function BloodBankMap() {
 
   const filteredFacilities = useMemo(() => {
     return facilitiesWithDistance.filter((fac) => {
-      if (fac.distanceKm > selectedRadiusKm) return false;
+      if (selectedRadiusKm !== null && fac.distanceKm > selectedRadiusKm) return false;
 
       if (hierarchyMode === 'prc-only' && fac.category !== 'PRC') return false;
       if (hierarchyMode === 'bsf-only' && fac.category !== 'Hospital BSF')
@@ -273,8 +320,7 @@ export default function BloodBankMap() {
       }
 
       if (hideUnavailable) {
-        const status = fac.matrix?.[targetBT]?.[compKey];
-        if (status !== 'Available' && status !== 'Low') return false;
+        if (!hasStockForSelection(fac, compKey)) return false;
       }
 
       return true;
@@ -285,7 +331,7 @@ export default function BloodBankMap() {
     hierarchyMode,
     searchQuery,
     hideUnavailable,
-    targetBT,
+    selectedBloodTypes,
     compKey,
   ]);
 
@@ -305,36 +351,53 @@ export default function BloodBankMap() {
     [filteredFacilities]
   );
 
+  const selectedFacilityInResults = filteredFacilities.find((facility) =>
+    isSameFacility(facility, pinnedFacility)
+  );
+  const remainingPrcFacilities = prcFacilities.filter((facility) =>
+    !isSameFacility(facility, selectedFacilityInResults)
+  );
+  const remainingBsfFacilities = bsfFacilities.filter((facility) =>
+    !isSameFacility(facility, selectedFacilityInResults)
+  );
+
+  useEffect(() => {
+    if (!selectedFacilityInResults || viewMode === 'map-only') return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const card = document.getElementById(`facility-card-${selectedFacilityInResults.id}`);
+      if (card && cardsColumnRef.current) {
+        const panel = cardsColumnRef.current;
+        const cardTop = card.offsetTop - panel.offsetTop;
+        const cardBottom = cardTop + card.offsetHeight;
+        if (cardTop < panel.scrollTop || cardBottom > panel.scrollTop + panel.clientHeight) {
+          panel.scrollTo({ top: cardTop - 16, behavior: 'auto' });
+        }
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedFacilityInResults?.id, viewMode]);
+
+  const totalPrcFacilities = facilitiesList.filter((facility) => facility.category === 'PRC').length;
+  const totalBsfFacilities = facilitiesList.filter((facility) => facility.category === 'Hospital BSF').length;
+
   const availableCount = useMemo(() => {
     return facilitiesWithDistance.filter((f) => {
-      const status = f.matrix?.[targetBT]?.[compKey];
-      return status === 'Available' || status === 'Low';
+      return hasStockForSelection(f, compKey);
     }).length;
-  }, [facilitiesWithDistance, targetBT, compKey]);
+  }, [facilitiesWithDistance, selectedBloodTypes, compKey]);
+
+  const toggleBloodType = (bloodType) => {
+    setSelectedBloodTypes((current) => {
+      if (current.includes(bloodType)) {
+        return current.length > 1 ? current.filter((type) => type !== bloodType) : current;
+      }
+      return [...current, bloodType];
+    });
+  };
 
   // -------------------------------------------------------------------------
   // Handlers
   // -------------------------------------------------------------------------
-  const handleTriggerSync = async () => {
-    setIsSyncing(true);
-    try {
-      availabilityCacheRef.current = { data: null, fetchedAt: 0 };
-      availabilityInflightRef.current = null;
-
-      const formatted = await loadFacilities();
-      if (formatted) setFacilitiesList(formatted);
-
-      setSyncToast(
-        `BBIS Central Network Re-synchronized: ${facilitiesList.length} facilities reporting active cold-chain status.`
-      );
-      setTimeout(() => setSyncToast(null), 4000);
-    } catch (err) {
-      console.warn('BBIS sync failed:', err);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   const handleUseMyLocation = () => {
     if (!navigator.geolocation) {
       setLocationError('Geolocation is not supported by your browser.');
@@ -433,17 +496,13 @@ export default function BloodBankMap() {
             <span>SANDUGO</span>
             <span className="dot-separator">•</span>
             <span>BLOOD LOCATOR</span>
-            <span className="dot-separator">•</span>
-            <span className="live-badge">
-              <span className="pulse-dot"></span> LIVE BSF NETWORK
-            </span>
           </div>
 
           <h1 className="hero-title">Sandugo Blood Locator</h1>
 
           <p className="hero-description">
             Locate verified blood stocks across nearest Philippine Red Cross
-            chapters and hospital Blood Service Facilities. Reflects simplified,
+            chapters and Blood Service Facilities. Reflects simplified,
             privacy-preserving availability statuses (Available, Low,
             Unavailable) with locational routing and proximity mapping.
           </p>
@@ -462,32 +521,27 @@ export default function BloodBankMap() {
             </div>
           )}
 
-          <div className="hero-metrics-grid" style={{ marginTop: '1.25rem' }}>
+          <div className="hero-metrics-grid">
             <div className="metric-card">
-              <span className="metric-label">PRC Chapters Monitored</span>
+              <span className="metric-label">PRC Chapters Shown</span>
               <div className="metric-value-row">
                 <span className="metric-value prc-red">
-                  {facilitiesList.filter((f) => f.category === 'PRC').length}{' '}
-                  Chapters
+                  {prcFacilities.length} of {totalPrcFacilities} Chapters
                 </span>
               </div>
             </div>
 
             <div className="metric-card">
-              <span className="metric-label">Participating Hospital BSFs</span>
+              <span className="metric-label">BSFs Shown</span>
               <div className="metric-value-row">
                 <span className="metric-value bsf-blue">
-                  {
-                    facilitiesList.filter((f) => f.category === 'Hospital BSF')
-                      .length
-                  }{' '}
-                  Facilities
+                  {bsfFacilities.length} of {totalBsfFacilities} Facilities
                 </span>
               </div>
             </div>
 
             <div className="metric-card">
-              <span className="metric-label">Available for {targetBT}</span>
+              <span className="metric-label">Available for {targetBTLabel}</span>
               <div className="metric-value-row">
                 <span
                   className={`metric-value ${
@@ -499,22 +553,6 @@ export default function BloodBankMap() {
               </div>
             </div>
 
-            <div className="metric-card">
-              <span className="metric-label">BBIS Live Sync</span>
-              <div className="metric-value-row">
-                <span className="metric-value sync-white">
-                  Central API Active
-                </span>
-                <button
-                  type="button"
-                  className="btn-sync-spin"
-                  title="Synchronize BBIS Data"
-                  onClick={handleTriggerSync}
-                >
-                  <RefreshIcon size={14} spinning={isSyncing} />
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -535,17 +573,11 @@ export default function BloodBankMap() {
               />
             </div>
 
-            <div className="location-display-box">
-              <span
-                style={{
-                  color: '#dc2626',
-                  display: 'flex',
-                  alignItems: 'center',
-                }}
-              >
+            <div className="location-display-box" title={currentOrigin.name}>
+              <span className="location-display-icon">
                 <PinIcon size={16} />
               </span>
-              <span>{currentOrigin.name}</span>
+              <span className="location-display-name">{currentOrigin.name}</span>
             </div>
 
             <button
@@ -576,9 +608,12 @@ export default function BloodBankMap() {
               <span className="radius-label">Radius:</span>
               <select
                 className="radius-select"
-                value={selectedRadiusKm}
-                onChange={(e) => setSelectedRadiusKm(parseInt(e.target.value))}
+                value={selectedRadiusKm === null ? 'all' : selectedRadiusKm}
+                onChange={(e) =>
+                  setSelectedRadiusKm(e.target.value === 'all' ? null : Number(e.target.value))
+                }
               >
+                <option value="all">All distances</option>
                 <option value={5}>Within 5 km</option>
                 <option value={10}>Within 10 km</option>
                 <option value={15}>Within 15 km</option>
@@ -590,15 +625,16 @@ export default function BloodBankMap() {
 
           <div className="bt-component-row">
             <div className="bt-group">
-              <span className="bt-group-label">Blood Type:</span>
+              <span className="bt-group-label">Blood Type <small>Select one or more</small></span>
               {bloodTypes.map((bt) => (
                 <button
                   key={bt}
                   type="button"
                   className={`bt-pill-btn ${
-                    selectedBloodType === bt ? 'active' : ''
+                    selectedBloodTypes.includes(bt) ? 'active' : ''
                   }`}
-                  onClick={() => setSelectedBloodType(bt)}
+                  aria-pressed={selectedBloodTypes.includes(bt)}
+                  onClick={() => toggleBloodType(bt)}
                 >
                   {bt}
                 </button>
@@ -649,7 +685,7 @@ export default function BloodBankMap() {
                 }`}
                 onClick={() => setHierarchyMode('bsf-only')}
               >
-                Hospital BSFs Only
+                BSFs Only
               </button>
             </div>
 
@@ -713,9 +749,8 @@ export default function BloodBankMap() {
               <MapLibreView
                 facilities={filteredFacilities}
                 selectedFacility={selectedFacility}
-                onSelectFacility={setSelectedFacility}
-                onOpenMatrix={(fac) => setMatrixModalFacility(fac)}
-                selectedBloodType={selectedBloodType}
+                onSelectFacility={handleSelectFacility}
+                selectedBloodTypes={selectedBloodTypes}
                 selectedComponent={selectedComponent}
                 currentOrigin={currentOrigin}
               />
@@ -723,8 +758,28 @@ export default function BloodBankMap() {
           )}
 
           {(viewMode === 'split' || viewMode === 'list-only') && (
-            <div className="cards-column">
-              {prcFacilities.length > 0 && (
+            <div className="cards-column" ref={cardsColumnRef}>
+              {selectedFacilityInResults && (
+                <>
+                  <div className="priority-section-header selected-facility-heading">
+                    <h4 className="priority-title">
+                      <span className={`priority-dot ${selectedFacilityInResults.category === 'PRC' ? 'prc' : 'bsf'}`}></span>
+                      <span>SELECTED FACILITY</span>
+                    </h4>
+                    <span className="priority-sub">Shown first beside the map</span>
+                  </div>
+                  <FacilityCard
+                    key={`selected-${selectedFacilityInResults.facilityID || selectedFacilityInResults.id}`}
+                    facility={selectedFacilityInResults}
+                    selectedBloodTypes={selectedBloodTypes}
+                    selectedComponent={selectedComponent}
+                    isSelected
+                    onSelect={handleSelectFacility}
+                  />
+                </>
+              )}
+
+              {remainingPrcFacilities.length > 0 && (
                 <>
                   <div className="priority-section-header">
                     <h4 className="priority-title">
@@ -733,30 +788,26 @@ export default function BloodBankMap() {
                         PRIORITY 1: PHILIPPINE RED CROSS (PRC) CHAPTERS
                       </span>
                       <span className="priority-count">
-                        ({prcFacilities.length} branches)
+                        ({remainingPrcFacilities.length} branches)
                       </span>
                     </h4>
                     <span className="priority-sub">Sorted by nearest distance</span>
                   </div>
 
-                  {prcFacilities.map((fac) => (
+                  {remainingPrcFacilities.map((fac) => (
                     <FacilityCard
                       key={fac.facilityID || fac.id}
                       facility={fac}
-                      selectedBloodType={selectedBloodType}
+                      selectedBloodTypes={selectedBloodTypes}
                       selectedComponent={selectedComponent}
-                      isSelected={
-                        selectedFacility?.id === fac.id ||
-                        selectedFacility?.facilityID === fac.facilityID
-                      }
-                      onSelect={(f) => setSelectedFacility(f)}
-                      onOpenDetails={(f) => setMatrixModalFacility(f)}
+                      isSelected={isSameFacility(selectedFacility, fac)}
+                      onSelect={handleSelectFacility}
                     />
                   ))}
                 </>
               )}
 
-              {bsfFacilities.length > 0 && (
+              {remainingBsfFacilities.length > 0 && (
                 <>
                   <div
                     className="priority-section-header"
@@ -765,28 +816,24 @@ export default function BloodBankMap() {
                     <h4 className="priority-title">
                       <span className="priority-dot bsf"></span>
                       <span>
-                        PRIORITY 2: PARTICIPATING HOSPITAL BLOOD SERVICE
+                        PRIORITY 2: PARTICIPATING BLOOD SERVICE
                         FACILITIES (BSFs)
                       </span>
                       <span className="priority-count">
-                        ({bsfFacilities.length} facilities)
+                        ({remainingBsfFacilities.length} facilities)
                       </span>
                     </h4>
                     <span className="priority-sub">Sorted by nearest distance</span>
                   </div>
 
-                  {bsfFacilities.map((fac) => (
+                  {remainingBsfFacilities.map((fac) => (
                     <FacilityCard
                       key={fac.facilityID || fac.id}
                       facility={fac}
-                      selectedBloodType={selectedBloodType}
+                      selectedBloodTypes={selectedBloodTypes}
                       selectedComponent={selectedComponent}
-                      isSelected={
-                        selectedFacility?.id === fac.id ||
-                        selectedFacility?.facilityID === fac.facilityID
-                      }
-                      onSelect={(f) => setSelectedFacility(f)}
-                      onOpenDetails={(f) => setMatrixModalFacility(f)}
+                      isSelected={isSameFacility(selectedFacility, fac)}
+                      onSelect={handleSelectFacility}
                     />
                   ))}
                 </>
@@ -816,8 +863,7 @@ export default function BloodBankMap() {
                     No Blood Service Facilities Found
                   </h4>
                   <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>
-                    Try expanding your search radius or click "+ Admin: Add
-                    Branch" to log a new branch into MongoDB.
+                    Try expanding your search radius.
                   </p>
                 </div>
               )}
@@ -826,19 +872,10 @@ export default function BloodBankMap() {
         </div>
       </div>
 
-      {/* Comprehensive Availability Matrix Modal */}
-      {matrixModalFacility && (
-        <ComprehensiveMatrixModal
-          facility={matrixModalFacility}
-          onClose={() => setMatrixModalFacility(null)}
-        />
-      )}
-
       {/* Change Location Modal */}
       {showLocationModal && (
         <ChangeLocationModal
           currentOrigin={currentOrigin}
-          facilities={facilitiesList}
           onSelectCity={(city) =>
             setCurrentOrigin({
               name: city.name,

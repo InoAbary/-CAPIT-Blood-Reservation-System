@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import BloodBankMap from './BloodBankMap';
+import donationHeart from '../assets/donation-heart-illustration.png';
 import {
   SearchIcon,
   ShieldAlertIcon,
@@ -12,6 +13,7 @@ const TABS = [
   { id: 'login',    label: 'Login',           icon: null,                  external: '/Login' },
   { id: 'register', label: 'Register',        icon: null,                  external: '/Register' },
   { id: 'map',      label: 'Blood Bank Map',  icon: <PinIcon size={14} />, external: null },
+  { id: 'about',    label: 'About Us',        icon: null,                  external: null },
 ];
 
 const ELIGIBILITY = [
@@ -76,36 +78,45 @@ export default function LandingPage() {
             <span className="landing-brand">SANDUGO</span>
             <span className="landing-brand-dot">•</span>
             <span className="landing-brand-sub">BLOOD DONATION NETWORK</span>
-            <span className="landing-live-badge">
-              <span className="pulse-dot" /> LIVE BSF NETWORK
-            </span>
           </div>
 
-          <h1 className="landing-headline">
-            Every drop counts.<br />
-            <span className="landing-headline-accent">Be someone's lifeline.</span>
-          </h1>
+          <div className="landing-hero-layout">
+            <div className="landing-hero-copy">
+              <h1 className="landing-headline">
+                Every drop counts.<br />
+                <span className="landing-headline-accent">Be someone's lifeline.</span>
+              </h1>
 
-          <p className="landing-subtext">
-            Sandugo connects voluntary blood donors with verified Philippine Red
-            Cross chapters and hospital Blood Service Facilities. Find available
-            blood near you, book a donation slot, and help keep the national
-            supply steady.
-          </p>
+              <p className="landing-subtext">
+                Sandugo connects voluntary blood donors with verified Philippine Red
+                Cross chapters and hospital Blood Service Facilities. Find available
+                blood near you, book a donation slot, and help keep the national
+                supply steady.
+              </p>
 
-          <div className="landing-hero-stats">
-            <div className="landing-stat">
-              <span className="landing-stat-value">1</span>
-              <span className="landing-stat-label">Donation saves up to 3 lives</span>
+              <div className="landing-hero-stats">
+                <div className="landing-stat">
+                  <span className="landing-stat-value">1</span>
+                  <span className="landing-stat-label">Donation saves up to 3 lives</span>
+                </div>
+                <div className="landing-stat">
+                  <span className="landing-stat-value">~10</span>
+                  <span className="landing-stat-label">Minutes per donation</span>
+                </div>
+                <div className="landing-stat">
+                  <span className="landing-stat-value">3 mo.</span>
+                  <span className="landing-stat-label">Safe donation interval</span>
+                </div>
+              </div>
             </div>
-            <div className="landing-stat">
-              <span className="landing-stat-value">~10</span>
-              <span className="landing-stat-label">Minutes per donation</span>
-            </div>
-            <div className="landing-stat">
-              <span className="landing-stat-value">3 mo.</span>
-              <span className="landing-stat-label">Safe donation interval</span>
-            </div>
+
+            <figure className="landing-hero-artwork">
+              <img
+                src={donationHeart}
+                alt="Red heart and blood drop illustration for blood donation"
+              />
+              <figcaption>Blood donation saves lives</figcaption>
+            </figure>
           </div>
         </div>
       </section>
@@ -143,6 +154,43 @@ export default function LandingPage() {
                 {/* Public, read-only view of the Blood Bank Map */}
                 <BloodBankMap />
               </div>
+            )}
+            {activeTab === 'about' && (
+              <section className="landing-about-panel" aria-labelledby="landing-about-title">
+                <div className="landing-about-intro">
+                  <span className="landing-about-kicker">ABOUT SANDUGO</span>
+                  <h2 id="landing-about-title">Making blood donation easier to find and plan.</h2>
+                  <p>
+                    Sandugo brings donor registration, appointment booking, and
+                    blood service facility discovery together in one place.
+                  </p>
+                </div>
+
+                <div className="landing-about-values">
+                  <article className="landing-about-card">
+                    <span className="landing-about-number">01</span>
+                    <h3>Find a nearby facility</h3>
+                    <p>Explore participating facilities and check simplified blood availability.</p>
+                  </article>
+                  <article className="landing-about-card">
+                    <span className="landing-about-number">02</span>
+                    <h3>Plan your donation</h3>
+                    <p>Register, complete screening, and book a donation appointment.</p>
+                  </article>
+                  <article className="landing-about-card">
+                    <span className="landing-about-number">03</span>
+                    <h3>Give safely</h3>
+                    <p>Keep track of your donation history and return when you’re eligible.</p>
+                  </article>
+                </div>
+
+                <div className="landing-about-footer">
+                  <p>Every donation can help support patients and local communities.</p>
+                  <button type="button" onClick={() => navigate('/Register')}>
+                    Register as a Donor
+                  </button>
+                </div>
+              </section>
             )}
           </div>
         </div>

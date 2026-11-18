@@ -1,17 +1,17 @@
 import React from 'react';
-import { ClockIcon, PhoneIcon } from './Icons';
+import { ClockIcon, PhoneIcon, PinIcon } from './Icons';
 
 export default function FacilityCard({
   facility,
-  selectedBloodType,
+  selectedBloodTypes,
   selectedComponent,
   isSelected,
   onSelect,
-  onOpenDetails,
 }) {
-  // Determine status for selected blood type & component
-  const bt = selectedBloodType === 'ALL' ? 'O+' : selectedBloodType;
-  const matrixForBT = facility.matrix?.[bt] || {};
+  const selectedTypes = Array.isArray(selectedBloodTypes) ? selectedBloodTypes : [selectedBloodTypes];
+  const selectedTypesLabel = selectedTypes.length <= 2
+    ? selectedTypes.join(', ')
+    : `${selectedTypes.length} types`;
 
   let currentCompKey = 'prbc';
   if (selectedComponent?.toLowerCase().includes('whole')) currentCompKey = 'whole';
@@ -19,13 +19,38 @@ export default function FacilityCard({
   else if (selectedComponent?.toLowerCase().includes('plasma')) currentCompKey = 'plasma';
   else if (selectedComponent?.toLowerCase().includes('cryo')) currentCompKey = 'cryo';
 
-  const mainStatus = matrixForBT[currentCompKey] || 'Available';
+  const statusesForComponent = (componentKey) => selectedTypes.map((bloodType) => ({
+    bloodType,
+    status: facility.matrix?.[bloodType]?.[componentKey] || 'Unavailable',
+  }));
+  const aggregateStatus = (componentKey) => {
+    const statuses = statusesForComponent(componentKey).map(({ status }) => status);
+    if (statuses.includes('Available')) return 'Available';
+    if (statuses.includes('Low')) return 'Low';
+    return 'Unavailable';
+  };
+  const componentSummary = (componentKey) => {
+    const rows = statusesForComponent(componentKey);
+    const status = aggregateStatus(componentKey);
+    if (status === 'Unavailable') return { status, label: '✕ Out' };
+    const matchingTypes = rows.filter((row) => row.status === status).map((row) => row.bloodType);
+    const matchedLabel = matchingTypes.length <= 2 ? matchingTypes.join(', ') : `${matchingTypes.length} types`;
+    return {
+      status,
+      label: `${status === 'Available' ? '● Available' : '▲ Low'}${selectedTypes.length > 1 ? ` · ${matchedLabel}` : ''}`,
+      title: `${status} for ${matchingTypes.join(', ')}`,
+    };
+  };
+
+  const mainStatus = aggregateStatus(currentCompKey);
 
   const isAvailable = mainStatus === 'Available';
   const isLow = mainStatus === 'Low';
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${facility.lat},${facility.lon}`)}`;
 
   return (
     <div
+      id={`facility-card-${facility.id}`}
       className={`facility-card ${isSelected ? 'selected' : ''}`}
       onClick={() => onSelect(facility)}
     >
@@ -39,8 +64,8 @@ export default function FacilityCard({
         </span>
 
         <div className="card-status-badges">
-          <span className="card-bt-badge">
-            {bt} · {selectedComponent?.includes('Packed') ? 'Packed' : selectedComponent?.split(' ')[0]}
+          <span className="card-bt-badge" title={`Selected blood types: ${selectedTypes.join(', ')}`}>
+            {selectedTypesLabel} · {selectedComponent?.includes('Packed') ? 'Packed' : selectedComponent?.split(' ')[0]}
           </span>
           <span
             className={`card-status-pill ${
@@ -59,7 +84,7 @@ export default function FacilityCard({
       {/* Stock Summary Header */}
       <div className="card-stock-header">
         <span className="stock-header-title">
-          Stock Summary for Blood Type <strong>{bt}</strong>:
+          Stock Summary for <strong>{selectedTypesLabel}</strong>:
         </span>
         <span className="stock-sync-time">
           BBIS Synced: {facility.bbisSyncedMins} minutes ago
@@ -70,32 +95,32 @@ export default function FacilityCard({
       <div className="card-components-grid">
         <div className="comp-chip">
           <span className="comp-name">PRBC</span>
-          <span className={`comp-status ${matrixForBT.prbc?.toLowerCase()}`}>
-            {matrixForBT.prbc === 'Available' ? '● Available' : matrixForBT.prbc === 'Low' ? '▲ Low' : '✕ Out'}
+          <span className={`comp-status ${componentSummary('prbc').status.toLowerCase()}`} title={componentSummary('prbc').title}>
+            {componentSummary('prbc').label}
           </span>
         </div>
         <div className="comp-chip">
           <span className="comp-name">Whole</span>
-          <span className={`comp-status ${matrixForBT.whole?.toLowerCase()}`}>
-            {matrixForBT.whole === 'Available' ? '● Available' : matrixForBT.whole === 'Low' ? '▲ Low' : '✕ Out'}
+          <span className={`comp-status ${componentSummary('whole').status.toLowerCase()}`} title={componentSummary('whole').title}>
+            {componentSummary('whole').label}
           </span>
         </div>
         <div className="comp-chip">
           <span className="comp-name">Platelet</span>
-          <span className={`comp-status ${matrixForBT.platelet?.toLowerCase()}`}>
-            {matrixForBT.platelet === 'Available' ? '● Available' : matrixForBT.platelet === 'Low' ? '▲ Low' : '✕ Out'}
+          <span className={`comp-status ${componentSummary('platelet').status.toLowerCase()}`} title={componentSummary('platelet').title}>
+            {componentSummary('platelet').label}
           </span>
         </div>
         <div className="comp-chip">
           <span className="comp-name">Plasma</span>
-          <span className={`comp-status ${matrixForBT.plasma?.toLowerCase()}`}>
-            {matrixForBT.plasma === 'Available' ? '● Available' : matrixForBT.plasma === 'Low' ? '▲ Low' : '✕ Out'}
+          <span className={`comp-status ${componentSummary('plasma').status.toLowerCase()}`} title={componentSummary('plasma').title}>
+            {componentSummary('plasma').label}
           </span>
         </div>
         <div className="comp-chip">
           <span className="comp-name">Cryo</span>
-          <span className={`comp-status ${matrixForBT.cryo?.toLowerCase()}`}>
-            {matrixForBT.cryo === 'Available' ? '● Available' : matrixForBT.cryo === 'Low' ? '▲ Low' : '✕ Out'}
+          <span className={`comp-status ${componentSummary('cryo').status.toLowerCase()}`} title={componentSummary('cryo').title}>
+            {componentSummary('cryo').label}
           </span>
         </div>
       </div>
@@ -119,16 +144,17 @@ export default function FacilityCard({
         </div>
 
         <div className="card-action-buttons">
-          <button
-            type="button"
+          <a
+            href={googleMapsUrl}
             className="btn-card-details"
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenDetails(facility);
-            }}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${facility.name} in Google Maps`}
+            onClick={(event) => event.stopPropagation()}
           >
-            Details &gt;
-          </button>
+            <PinIcon size={14} />
+            Google Maps
+          </a>
         </div>
       </div>
     </div>

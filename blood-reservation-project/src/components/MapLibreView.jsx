@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { ClockIcon, PhoneIcon, RefreshIcon } from './Icons';
+import { ClockIcon, PhoneIcon, RefreshIcon, PinIcon } from './Icons';
 import '../styles/PRCRadarMap.css';
 
 export default function MapLibreView({
   facilities,
   selectedFacility,
   onSelectFacility,
-  onOpenMatrix,
-  selectedBloodType,
+  selectedBloodTypes,
   selectedComponent,
   currentOrigin = { name: 'City of Manila', lat: 14.5888, lon: 120.9744 },
 }) {
@@ -56,14 +55,18 @@ export default function MapLibreView({
 
   // Determine availability status for current filter
   const getFacilityStatus = (facility) => {
-    const bt = selectedBloodType === 'ALL' ? 'O+' : selectedBloodType;
     let compKey = 'prbc';
     if (selectedComponent?.toLowerCase().includes('whole')) compKey = 'whole';
     else if (selectedComponent?.toLowerCase().includes('platelet')) compKey = 'platelet';
     else if (selectedComponent?.toLowerCase().includes('plasma')) compKey = 'plasma';
     else if (selectedComponent?.toLowerCase().includes('cryo')) compKey = 'cryo';
 
-    return facility.matrix?.[bt]?.[compKey] || 'Available';
+    const statuses = selectedBloodTypes.map((bloodType) =>
+      facility.matrix?.[bloodType]?.[compKey] || 'Unavailable'
+    );
+    if (statuses.includes('Available')) return 'Available';
+    if (statuses.includes('Low')) return 'Low';
+    return 'Unavailable';
   };
 
   const resetView = () => {
@@ -173,7 +176,7 @@ export default function MapLibreView({
               anchor="bottom"
               onClick={(e) => {
                 e.originalEvent.stopPropagation();
-                onSelectFacility(fac);
+                onSelectFacility(fac, 'map');
               }}
             >
               <div
@@ -307,13 +310,16 @@ export default function MapLibreView({
           </div>
 
           <div className="bottom-card-actions">
-            <button
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${selectedFacility.lat},${selectedFacility.lon}`)}`}
               className="btn-matrix-outline"
               style={{ width: '100%', justifyContent: 'center' }}
-              onClick={() => onOpenMatrix(selectedFacility)}
+              target="_blank"
+              rel="noopener noreferrer"
             >
-              Full Stock Matrix &gt;
-            </button>
+              <PinIcon size={14} />
+              Open in Google Maps
+            </a>
           </div>
         </div>
       )}
