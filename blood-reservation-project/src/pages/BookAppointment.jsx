@@ -457,12 +457,6 @@ function BookAppointment() {
           </select>
         </label>
 
-        {venue && (
-          <small className="muted">
-            Donation hours: 8:00 AM–5:00 PM. Last appointment starts at 3:00 PM.
-          </small>
-        )}
-
         <label>
           Preferred Start Time
           <select
@@ -470,6 +464,7 @@ function BookAppointment() {
             onChange={(e) => setTime(e.target.value)}
             required
             disabled={!venue || availableTimes.length === 0}
+            aria-describedby={venue ? 'appointment-hours' : undefined}
           >
             <option value="">
               {!venue
@@ -487,6 +482,7 @@ function BookAppointment() {
           </select>
         </label>
 
+
         <button type="submit" className="btn-action" disabled={
             submitting ||
             formStatus === 'loading' ||
@@ -499,6 +495,19 @@ function BookAppointment() {
             ? 'Continue to prescreening'
             : 'Request appointment'}
         </button>
+
+        {venue && (
+          <dl className="appointment-hours" id="appointment-hours">
+            <div>
+              <dt>Donation hours</dt>
+              <dd>8:00 AM–5:00 PM</dd>
+            </div>
+            <div>
+              <dt>Last appointment starts</dt>
+              <dd>{formatTimeLabel(LAST_APPOINTMENT_TIME)}</dd>
+            </div>
+          </dl>
+        )}
 
       </form>
 
