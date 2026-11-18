@@ -102,12 +102,62 @@ function BloodDonorForm() {
     const [stepIndex, setStepIndex] = useState(0);
     const [rejected, setRejected] = useState(false);
 
+    const [todaySubmission, setTodaySubmission] = useState(null);
+    const [checkingTodaySubmission, setCheckingTodaySubmission] = useState(true);
+    const [todaySubmissionError, setTodaySubmissionError] = useState('');
+
     // ── NEW: confirmation modal state ──
     const [showConfirm, setShowConfirm] = useState(false);
     const [hasConfirmed, setHasConfirmed] = useState(false);
 
     const {donor, loading} = useAuth()
     const userSex = donor?.sex
+
+    useEffect(() => {
+        if (loading || !donor) return;
+    
+        let active = true;
+    
+        const checkTodaySubmission = async () => {
+            try {
+                setCheckingTodaySubmission(true);
+                setTodaySubmissionError('');
+    
+                const res = await fetch('/api/bloodForm/form-today');
+    
+                const data = await res.json().catch(() => ({}));
+    
+                if (!res.ok) {
+                    throw new Error(
+                        data.error || 'Could not check today’s prescreening form.'
+                    );
+                }
+    
+                if (!active) return;
+    
+                if (data.submitted) {
+                    setTodaySubmission(data.submission);
+                } else {
+                    setTodaySubmission(null);
+                }
+            } catch (err) {
+                if (active) {
+                    setTodaySubmissionError(err.message);
+                }
+            } finally {
+                if (active) {
+                    setCheckingTodaySubmission(false);
+                }
+            }
+        };
+    
+        checkTodaySubmission();
+    
+        return () => {
+            active = false;
+        };
+    }, [donor, loading]);
+
     const printRef = useRef(null);
     const [questionsState, setQuestionsState] = useState(
         QUESTION_LIST.map(q => ({ ...q, answer: '', remark: '', date: '' }))
@@ -236,6 +286,7 @@ function BloodDonorForm() {
                 err.code = body.code;
                 err.lastDonationDate = body.lastDonationDate;
                 err.nextEligibleDate = body.nextEligibleDate;
+                err.submission = body.submission;
                 throw err;
             }
 
@@ -261,6 +312,14 @@ function BloodDonorForm() {
                 });
             }
         } catch (err) {
+
+            if (err.code === 'FORM_ALREADY_SUBMITTED_TODAY') {
+                if (err.submission) {
+                    setTodaySubmission(err.submission);
+                }
+                return;
+            }
+            
             if (err.code === 'DONATION_COOLDOWN') {
                 navigate('/DonationCooldown', {
                     replace: true,
@@ -278,13 +337,157 @@ function BloodDonorForm() {
         }
     };
 
-    if (loading || !curQuestion) {
+    if (loading || checkingTodaySubmission || !curQuestion) {
         return (
             <div className="dashboard-container top-menu-layout">
                 <DonorTopMenu />
                 <main className="dashboard-content">
                     <div className="donorform-container">
                         <p>{t('common.loading', 'Loading…')}</p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    if (todaySubmissionError) {
+        return (
+            <div className="dashboard-container top-menu-layout">
+                <DonorTopMenu />
+    
+                <main className="dashboard-content">
+                    <div className="donorform-container">
+                        <p className="form-message error-message" role="alert">
+                            {todaySubmissionError}
+                        </p>
+                    </div>
+                </main>
+            </div>
+        );
+    }
+
+    if (todaySubmission) {
+        return (
+            <div className="dashboard-container top-menu-layout">
+                <DonorTopMenu />
+    
+                <main className="dashboard-content submitted-form-page">
+                    <div className="submitted-form-wrapper">
+    
+                        <div className="language-switcher submitted-language-switcher">
+                            <button onClick={() => i18n.changeLanguage('en')}>
+                                English
+                            </button>
+                            <button onClick={() => i18n.changeLanguage('fil')}>
+                                Filipino
+                            </button>
+                        </div>
+    
+                        <div className="submitted-form-card">
+    
+                            <div className="submitted-form-header">
+                                <div className="submitted-check">✓</div>
+    
+                                <h2>Today's Prescreening Form</h2>
+    
+                                <p>
+                                    You have already completed your donor prescreening
+                                    for today. Your submitted answers are shown below
+                                    and can no longer be edited.
+                                </p>
+    
+                                <div className="submitted-time">
+                                    Submitted{' '}
+                                    {new Date(
+                                        todaySubmission.createdAt
+                                    ).toLocaleString([], {
+                                        dateStyle: 'medium',
+                                        timeStyle: 'short',
+                                    })}
+                                </div>
+                            </div>
+    
+                            <div className="submitted-answers">
+                                {todaySubmission.answers?.map((answer, index) => {
+                                    const displayAnswer =
+                                        DATE_ONLY.includes(answer.qId)
+                                            ? answer.date
+                                                ? new Date(
+                                                    answer.date
+                                                ).toLocaleDateString()
+                                                : '—'
+                                            : answer.result === true
+                                            ? 'Yes'
+                                            : answer.result === false
+                                            ? 'No'
+                                            : '—';
+    
+                                    return (
+                                        <div
+                                            key={answer.qId}
+                                            className="submitted-answer-row"
+                                        >
+                                            <div className="submitted-question">
+                                                <span className="submitted-question-number">
+                                                    {index + 1}
+                                                </span>
+    
+                                                <div>
+                                                    <Trans
+                                                        i18nKey={`questionnaire.q${answer.qId}`}
+                                                        components={{
+                                                            bold: <strong />,
+                                                        }}
+                                                    />
+    
+                                                    {answer.remarks && (
+                                                        <p className="submitted-remark">
+                                                            Remarks: {answer.remarks}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+    
+                                            <div
+                                                className={`submitted-answer-value ${
+                                                    displayAnswer === 'Yes'
+                                                        ? 'answer-yes'
+                                                        : displayAnswer === 'No'
+                                                        ? 'answer-no'
+                                                        : ''
+                                                }`}
+                                            >
+                                                {displayAnswer}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+    
+                            <div className="submitted-form-actions">
+                                <button
+                                    type="button"
+                                    className="submit-btn"
+                                    onClick={() => {
+                                        if (returnTo) {
+                                            navigate(returnTo, {
+                                                replace: true,
+                                                state: appointmentDraft
+                                                    ? { appointmentDraft }
+                                                    : undefined,
+                                            });
+                                        } else {
+                                            navigate('/DonorDashboard');
+                                        }
+                                    }}
+                                >
+                                    {returnTo
+                                        ? 'Return to Appointment'
+                                        : 'Return to Dashboard'}
+                                </button>
+                            </div>
+    
+                        </div>
                     </div>
                 </main>
             </div>

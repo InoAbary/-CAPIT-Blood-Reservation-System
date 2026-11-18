@@ -10,6 +10,49 @@ const requireStaff = require('../middleware/requireStaff.cjs');
 
 const { checkDonationCooldown } = require('../utils/donationCooldown.cjs');
 
+function getTodayRangePH() {
+  const now = new Date();
+
+  const phDate = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+
+  const start = new Date(`${phDate}T00:00:00+08:00`);
+  const end = new Date(`${phDate}T23:59:59.999+08:00`);
+
+  return { start, end };
+}
+
+router.get('/form-today', requireDonor, async (req, res) => {
+  try {
+    const donorId = req.user.id;
+    const { start, end } = getTodayRangePH();
+
+    const submission = await FormAnswers.findOne({
+      donor: donorId,
+      createdAt: {
+        $gte: start,
+        $lte: end,
+      },
+    })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({
+      submitted: Boolean(submission),
+      submission: submission || null,
+    });
+  } catch (err) {
+    console.error('Failed to check today form:', err);
+
+    return res.status(500).json({
+      error: 'Could not check today’s prescreening form.',
+    });
+  }
+});
 
 router.get('/form-recent', requireDonor, async(req,res) => {
     try {
@@ -21,15 +64,17 @@ router.get('/form-recent', requireDonor, async(req,res) => {
             return res.status(404).json({ error: 'Donor not found.' });
         }
 
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - 1);
+        const { start, end } = getTodayRangePH();
 
         const recent = await FormAnswers.findOne({
-            donor: id,
-            createdAt: { $gte: cutoff },
+          donor: id,
+          createdAt: {
+            $gte: start,
+            $lte: end,
+          },
         })
-            .sort({ createdAt: -1 })
-            .select('_id createdAt');
+          .sort({ createdAt: -1 })
+          .select('_id createdAt');
 
         if (!recent) {
             return res.json({
@@ -54,7 +99,8 @@ router.get('/form-recent', requireDonor, async(req,res) => {
 
 router.post('/form-answers', requireDonor, async (req, res) => {
   try {
-    const cooldown = await checkDonationCooldown(req.user.id);
+    const donorId = req.user.id;
+    const cooldown = await checkDonationCooldown(donorId);
     if (cooldown.blocked) {
       return res.status(403).json({
         error: `You are in a 3-month donation cooldown. Next eligible date: ${cooldown.nextEligibleDate.toDateString()}.`,
@@ -85,10 +131,30 @@ router.post('/form-answers', requireDonor, async (req, res) => {
         return a;
       });
 
-    const doc = await FormAnswers.create({
-      ...req.body,
-      answers,
-    });
+      const { start, end } = getTodayRangePH();
+
+      const existingSubmission = await FormAnswers.findOne({
+        donor: donorId,
+        createdAt: {
+          $gte: start,
+          $lte: end,
+        },
+      });
+      
+      if (existingSubmission) {
+        return res.status(409).json({
+          code: 'FORM_ALREADY_SUBMITTED_TODAY',
+          error: 'You have already submitted your prescreening form today.',
+          submission: existingSubmission,
+        });
+      }
+
+      const doc = await FormAnswers.create({
+        ...req.body,
+        donor: donorId,
+        answers,
+      });
+
     res.status(201).json(doc);
   } catch (err) {
     console.log(err);
@@ -112,15 +178,15 @@ router.get('/donor-forms-today', requireStaff, async (req, res) => {
     // 2. Define "today" in the server's local timezone.
     //    $gte start-of-day, $lt start-of-tomorrow — half-open range avoids
     //    the classic "23:59:59.999" gap.
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const startOfTomorrow = new Date(startOfDay);
-    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    const { start, end } = getTodayRangePH();
 
     // 3. Every form submitted today (optionally: only forms from donors who
     //    have *any* appointment at this facility — see note below).
     const forms = await FormAnswers.find({
-      createdAt: { $gte: startOfDay, $lt: startOfTomorrow },
+      createdAt: {
+        $gte: start,
+        $lte: end,
+      },
     })
       .sort({ createdAt: -1 })
       .populate({
@@ -143,6 +209,10 @@ router.get('/donor-forms-today', requireStaff, async (req, res) => {
         $match: {
           donor: { $in: donorIds },
           venue: staff.facilityID,
+          date: {
+            $gte: start,
+            $lte: end,
+          },
           status: { $in: ['pending', 'approved', 'completed'] },
         },
       },
@@ -160,17 +230,17 @@ router.get('/donor-forms-today', requireStaff, async (req, res) => {
     );
 
     // 5. Attach the matching appointment (or null) to each form.
-    const enriched = forms.map((f) => {
-      const donorKey = String(f.donor?._id);
-      const appt = appointmentByDonor.get(donorKey) || null;
-      // Only attach if the appointment existed when the form was submitted.
-      const apptWasBeforeForm =
-        appt && new Date(appt.createdAt) <= new Date(f.createdAt);
-      return {
-        ...f,
-        appointment: apptWasBeforeForm ? appt : null,
-      };
-    });
+    const enriched = forms
+      .map((f) => {
+        const donorKey = String(f.donor?._id);
+        const appt = appointmentByDonor.get(donorKey) || null;
+
+        return {
+          ...f,
+          appointment: appt,
+        };
+      })
+      .filter((f) => f.appointment);
 
     return res.json({
       facilityId: staff.facilityID,
