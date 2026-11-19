@@ -270,6 +270,8 @@ function BookAppointment() {
           <span className="appt-date">
             {new Date(a.date).toLocaleDateString([], { dateStyle: 'medium' })}
           </span>
+        </td>
+        <td>
           <span className="appt-time">
             {new Date(a.date).toLocaleTimeString([], { timeStyle: 'short' })}
           </span>
@@ -522,7 +524,8 @@ function BookAppointment() {
             <table className="appt-table">
               <thead>
                 <tr>
-                  <th>Date &amp; time</th>
+                  <th>Date</th>
+                  <th>Time</th>
                   <th>Venue</th>
                   <th>Staff</th>
                   <th>Status</th>
@@ -546,7 +549,8 @@ function BookAppointment() {
             <table className="appt-table">
               <thead>
                 <tr>
-                  <th>Date &amp; time</th>
+                  <th>Date</th>
+                  <th>Time</th>
                   <th>Venue</th>
                   <th>Staff</th>
                   <th>Status</th>

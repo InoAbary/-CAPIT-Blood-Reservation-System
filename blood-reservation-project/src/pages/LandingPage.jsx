@@ -71,9 +71,31 @@ export default function LandingPage() {
 
   return (
     <div className="landing-page">
-      {/* ---------- HERO ---------- */}
-      <section className="landing-hero">
+     <section className="landing-hero">
         <div className="landing-hero-inner">
+          {/* Tabs bar — now above the brand logo */}
+          <div className="landing-tabs-bar landing-tabs-bar-hero" role="tablist">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                className={`landing-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                onClick={() => {
+                  if (tab.external) {
+                    navigate(tab.external);
+                  } else {
+                    setActiveTab(tab.id);
+                  }
+                }}
+              >
+                {tab.icon && <span className="landing-tab-icon">{tab.icon}</span>}
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
           <div className="landing-brand-row">
             <span className="landing-brand">SANDUGO</span>
             <span className="landing-brand-dot">•</span>
@@ -124,34 +146,9 @@ export default function LandingPage() {
       {/* ---------- TABS ---------- */}
       <section className="landing-tabs-section">
         <div className="landing-tabs-container">
-          <div className="landing-tabs-bar" role="tablist">
-            {TABS.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                className={`landing-tab-btn ${
-                  activeTab === tab.id ? 'active' : ''
-                }`}
-                onClick={() => {
-                  if (tab.external) {
-                    navigate(tab.external);
-                  } else {
-                    setActiveTab(tab.id);
-                  }
-                }}
-              >
-                {tab.icon && <span className="landing-tab-icon">{tab.icon}</span>}
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
           <div className="landing-tab-panel">
             {activeTab === 'map' && (
               <div className="landing-panel landing-panel-map">
-                {/* Public, read-only view of the Blood Bank Map */}
                 <BloodBankMap />
               </div>
             )}

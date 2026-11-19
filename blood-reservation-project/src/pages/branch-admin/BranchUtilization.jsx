@@ -123,7 +123,13 @@ export default function BranchUtilization({
           <div className="table-scroll">
             <table className="custom-table branch-utilization-table">
               <thead>
-                <tr><th>Blood Unit</th><th>Released</th><th>Utilization report</th></tr>
+                <tr>
+                  <th>Blood Unit</th>
+                  <th>Blood Type</th>
+                  <th>Blood Component</th>
+                  <th>Released</th>
+                  <th>Utilization report</th>
+                </tr>
               </thead>
               <tbody>
                 {units.length ? units.map((unit) => {
@@ -132,8 +138,9 @@ export default function BranchUtilization({
                     <tr key={unit.id}>
                       <td>
                         <strong>{unit.bloodUnitID}</strong>
-                        <div className="subtext">{unit.bloodType} · {unit.component}</div>
                       </td>
+                      <td>{unit.bloodType} </td>
+                      <td>{unit.component}</td>
                       <td>{formatDate(unit.releasedAt)}</td>
                       <td>
                         {unit.report ? (
@@ -215,13 +222,14 @@ export default function BranchUtilization({
             <div className="table-scroll">
               <table className="custom-table branch-utilization-table">
                 <thead>
-                  <tr><th>Hospital</th><th>Blood Unit</th><th>Component</th><th>Released</th><th>Usage status</th><th>Report details</th></tr>
+                  <tr><th>Hospital</th><th>Blood Unit</th><th>Blood Type</th><th>Component</th><th>Released</th><th>Usage status</th><th>Report details</th></tr>
                 </thead>
                 <tbody>
                   {units.length ? units.map((unit) => (
                     <tr key={unit.id}>
                       <td>{unit.hospitalName}</td>
-                      <td><strong>{unit.bloodUnitID}</strong><div className="subtext">{unit.bloodType}</div></td>
+                      <td><strong>{unit.bloodUnitID}</strong></td>
+                      <td>{unit.bloodType}</td>
                       <td>{unit.component}</td>
                       <td>{formatDate(unit.releasedAt)}</td>
                       <td>{unit.report ? <span className="tag">{unit.report.status}</span> : <span className="subtext">Not reported</span>}</td>

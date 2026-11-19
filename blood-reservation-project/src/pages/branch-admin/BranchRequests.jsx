@@ -24,7 +24,13 @@ async function readResponse(response) {
 function formatDate(value) {
   if (!value) return '—';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+  return date.toLocaleDateString([], {dateStyle: 'medium'});
+}
+
+function formatTime(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return date.toLocaleTimeString([], {timeStyle: 'short'});
 }
 
 export default function BranchRequests() {
@@ -249,15 +255,17 @@ export default function BranchRequests() {
           <div className="table-scroll">
             <table className="custom-table branch-request-table">
               <thead>
-                <tr><th>Request</th><th>Hospital</th><th>Patient</th><th>Blood requested</th><th>Urgency</th><th>Status</th></tr>
+                <tr><th>Request</th><th>Creation Date</th><th>Creation Time</th><th>Hospital</th><th>Patient</th><th>Blood requested</th><th>Urgency</th><th>Status</th></tr>
               </thead>
               <tbody>
                 {filteredRequests.length ? filteredRequests.map((item) => (
                   <tr key={item.id} className={`${selected?.id === item.id ? 'branch-request-selected' : ''} branch-request-row`} onClick={() => setSelectedId(item.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedId(item.id); } }} tabIndex={0} aria-label={`View request ${item.id.slice(-8).toUpperCase()} from ${item.hospitalName}`}>
                     <td>
                       <span className="branch-request-select">{item.id.slice(-8).toUpperCase()}</span>
-                      <div className="subtext">{formatDate(item.createdAt)}</div>
+                     
                     </td>
+                    <td> {formatDate(item.createdAt)}</td>
+                    <td> {formatTime(item.createdAt)}</td>
                     <td>{item.hospitalName}</td>
                     <td>{item.lastName}, {item.firstName}</td>
                     <td><strong>{item.bloodType} · {item.units} unit{item.units === 1 ? '' : 's'}</strong><div className="subtext">{item.component}</div></td>

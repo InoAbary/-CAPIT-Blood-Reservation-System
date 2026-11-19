@@ -49,7 +49,7 @@ const QUESTION_LIST = [
     { key: 'q37', id: 37 },
 ];
 
-const DENY_YES = new Set([2, 3, 5, 6, 7, 8, 33, 36]);
+const DENY_YES = new Set([2, 3, 5, 6, 7, 8, 36]);
 const DENY_NO = new Set([1]);
 
 function ShouldDeny(q, answer) {

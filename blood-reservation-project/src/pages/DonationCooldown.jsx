@@ -28,7 +28,7 @@ export default function DonationCooldown() {
             Philippine Red Cross guidelines require a <strong>3-month interval</strong> between whole-blood donations.
           </p>
 
-          <div className="info-card" style={{ maxWidth: 560 }}>
+          <div className="info-card" style={{ maxWidth: 1560 }}>
             {last && (
               <>
                 <h3>Your last donation</h3>

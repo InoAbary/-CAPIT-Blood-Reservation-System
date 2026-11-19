@@ -205,7 +205,8 @@ function StaffAppointments() {
               <tr>
                 <th>Donor</th>
                 <th>Blood type</th>
-                <th>Date &amp; time</th>
+                <th>Date</th>
+                <th>Time</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -232,6 +233,9 @@ function StaffAppointments() {
                     <span className="appt-date">
                       {new Date(a.date).toLocaleDateString([], { dateStyle: 'medium' })}
                     </span>
+                    
+                  </td>
+                  <td>
                     <span className="appt-time">
                       {new Date(a.date).toLocaleTimeString([], { timeStyle: 'short' })}
                     </span>

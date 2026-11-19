@@ -77,6 +77,7 @@
   font-weight: 800;
   margin: 0 0 1rem;
   letter-spacing: -0.035em;
+  color: #fecaca; 
 }
 .landing-headline-accent { color: #fecaca; }
 .landing-subtext {
@@ -361,7 +362,7 @@
   padding: 3rem 1.25rem;
 }
 .landing-cta-inner { text-align: center; }
-.landing-cta-title { font-size: 1.75rem; font-weight: 800; margin: 0 0 0.5rem; }
+.landing-cta-title { font-size: 1.75rem; font-weight: 800; margin: 0 0 0.5rem; color: #fecaca; }
 .landing-cta-text { color: rgba(255,255,255,0.85); margin: 0 0 1.5rem; }
 .landing-cta-buttons {
   display: flex;
@@ -421,5 +422,21 @@
   .landing-hero-artwork img { border-radius: 21px 21px 0 0; }
   .landing-panel:not(.landing-panel-map) { padding: 1.25rem; }
   .landing-tab-btn { padding: 0.65rem 0.9rem; font-size: 0.875rem; }
+}
+
+/* Tabs bar variant used inside the hero (above the brand logo) */
+.landing-tabs-bar-hero {
+  border-bottom-color: rgba(255, 255, 255, 0.28);
+  margin-bottom: 1.5rem;
+}
+.landing-tabs-bar-hero .landing-tab-btn {
+  color: rgba(255, 255, 255, 0.72);
+}
+.landing-tabs-bar-hero .landing-tab-btn:hover {
+  color: #fff;
+}
+.landing-tabs-bar-hero .landing-tab-btn.active {
+  color: #fff;
+  border-bottom-color: #fecaca;
 }
 
