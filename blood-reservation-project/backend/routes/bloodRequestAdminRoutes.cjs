@@ -1,6 +1,7 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
+const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const requireRequestStaff = require('../middleware/requireRequestAdmin.cjs');
 const router = express.Router();
@@ -75,6 +76,107 @@ router.get('/receiving-facilities', async (req, res) => {
     } catch (error) {
         console.error('Destination list error:', error.name);
         return fail(res, 500, 'Could not load receiving facilities.');
+    }
+});
+
+router.post('/receiving-facilities/availability', async (req, res) => {
+    const { bloodType, products } = req.body || {};
+
+    if (!BLOOD_TYPES.includes(bloodType)) {
+        return fail(res, 400, 'Select a valid blood type.');
+    }
+
+    if (!Array.isArray(products) || products.length < 1 || products.length > COMPONENTS.length) {
+        return fail(res, 400, 'Select between one and four components.');
+    }
+
+    const requestedByComponent = new Map();
+
+    for (const product of products) {
+        const component = product?.component;
+        const units = Number(product?.units);
+
+        if (!COMPONENTS.includes(component) || !Number.isSafeInteger(units) || units < 1) {
+            return fail(res, 400, 'Select a valid component and quantity for each row.');
+        }
+
+        const total = (requestedByComponent.get(component) || 0) + units;
+        if (!Number.isSafeInteger(total)) {
+            return fail(res, 400, 'The requested quantity is too large.');
+        }
+
+        requestedByComponent.set(component, total);
+    }
+
+    try {
+        const hospital = await assignedFacility(req);
+        if (!canSubmitRequest(req.requestStaff, hospital)) {
+            return fail(res, 403, 'Your account needs an active hospital facility assignment.');
+        }
+
+        const facilities = await Facility.find({
+            isActive: true,
+            facilityType: { $in: RECEIVER_TYPES },
+        })
+            .select('_id facilityID facilityName facilityType address')
+            .sort({ facilityName: 1 })
+            .lean();
+
+        const keysFor = facility => [
+            ...new Set([String(facility._id), facility.facilityID].filter(Boolean)),
+        ];
+        const facilityKeys = [...new Set(facilities.flatMap(keysFor))];
+
+        const stock = await BloodUnits.aggregate([
+            {
+                $match: {
+                    facilityID: { $in: facilityKeys },
+                    bloodType,
+                    component: { $in: [...requestedByComponent.keys()] },
+                    status: 'In-stock',
+                    expiryDate: { $gt: new Date() },
+                },
+            },
+            {
+                $group: {
+                    _id: { facilityID: '$facilityID', component: '$component' },
+                    units: { $sum: 1 },
+                },
+            },
+        ]);
+
+        const stockByKey = new Map(stock.map(row => [
+            `${row._id.facilityID}:${row._id.component}`,
+            row.units,
+        ]));
+
+        const results = facilities.map(({ facilityID, ...facility }) => {
+            const keys = keysFor({ ...facility, facilityID });
+            const components = [...requestedByComponent].map(([component, requested]) => ({
+                component,
+                requested,
+                available: keys.reduce(
+                    (total, key) => total + (stockByKey.get(`${key}:${component}`) || 0),
+                    0
+                ),
+            }));
+
+            return {
+                ...facility,
+                components,
+                canFillAll: components.every(item => item.available >= item.requested),
+            };
+        });
+
+        return res.json({
+            success: true,
+            facilities: results
+                .filter(facility => facility.components.some(item => item.available > 0))
+                .sort((a, b) => Number(b.canFillAll) - Number(a.canFillAll)),
+        });
+    } catch (error) {
+        console.error('Request availability lookup failed:', error.name);
+        return fail(res, 500, 'Could not check facility stock.');
     }
 });
 
