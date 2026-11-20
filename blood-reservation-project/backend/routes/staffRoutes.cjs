@@ -100,15 +100,17 @@ router.get('/pending-counts', async (req, res) => {
 
     const { user, facility } = ctx;
 
-    if (
-      !['staff', 'branch-admin'].includes(user.role) ||
-      !['bsf', 'prc_chapter'].includes(facility.facilityType) ||
-      facility.isActive === false
-    ) {
-      return res.status(403).json({
-        error: 'Pending counts are available to active BSF/PRC staff.',
-      });
-    }
+    const isHybridFacility = facility.facilityType === 'bsf_hospital';
+    const isProvider = ['bsf', 'prc_chapter', 'bsf_hospital'].includes(facility.facilityType);
+    const canViewPendingCounts =
+      ['staff', 'branch-admin'].includes(user.role) ||
+      (isHybridFacility && user.role === 'hospital');
+
+      if (!canViewPendingCounts || !isProvider || facility.isActive === false) {
+        return res.status(403).json({
+          error: 'Pending counts are available to active BSF/PRC staff.',
+        });
+      }
 
     const [bloodRequests, appointments] = await Promise.all([
       BloodRequest.countDocuments({
