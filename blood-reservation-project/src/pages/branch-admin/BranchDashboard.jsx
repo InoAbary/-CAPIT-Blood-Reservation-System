@@ -209,6 +209,25 @@ function BranchDashboard() {
                 <button className="btn-action" type="button" onClick={() => setActiveTab('branch-requests')}>Review requests</button>
               </article>
             )}
+            {workspaceFacilityType === 'hospital' && (
+              <article className="metric-card">
+                <div className="metric-header">
+                  <span className="metric-label">Open outgoing requests</span>
+                  <span className="metric-icon orange" aria-hidden="true">◷</span>
+                </div>
+                <div className="metric-value">{summary?.openRequests ?? 0}</div>
+                <div className="metric-subtext">
+                  {summary?.totalRequests ?? 0} total requests submitted
+                </div>
+                <button
+                  className="btn-action"
+                  type="button"
+                  onClick={() => setActiveTab('my-requests')}
+                >
+                  Review submitted requests
+                </button>
+              </article>
+            )}
             <article className="metric-card">
               <div className="metric-header"><span className="metric-label">Active Users</span><span className="metric-icon green">✓</span></div>
               <div className="metric-value">{summary?.activeUsers ?? 0}</div>
@@ -418,7 +437,7 @@ function BranchDashboard() {
         </section>
       )}
 
-      {activeTab === 'inventory' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && (
+      {activeTab === 'inventory' && ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && (
         <section id="branch-panel-inventory" className="branch-tab-panel" role="tabpanel" aria-labelledby="branch-tab-inventory" tabIndex="0">
           <Inventory fixedFacilityId={facility?.id}
                 initialBloodUnit={pendingBloodUnit}

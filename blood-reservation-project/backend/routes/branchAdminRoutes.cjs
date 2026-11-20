@@ -107,6 +107,18 @@ router.get('/dashboard', requireRole('branch-admin'), async (req, res) => {
       ? await BloodRequest.countDocuments({ receivingFacilityID: context.facility._id })
       : 0;
 
+    const [openRequests, totalRequests] = canManageHospitalRequests(context)
+      ? await Promise.all([
+          BloodRequest.countDocuments({
+            hospitalFacilityID: context.facility._id,
+            requestStatus: { $in: ['Pending', 'Approved', 'Partially Fulfilled'] },
+          }),
+          BloodRequest.countDocuments({
+            hospitalFacilityID: context.facility._id,
+          }),
+        ])
+      : [0, 0];
+
     return res.json({
       facility: {
         id: String(context.facility._id),
@@ -123,6 +135,8 @@ router.get('/dashboard', requireRole('branch-admin'), async (req, res) => {
         deactivatedUsers: users.filter((user) => user.isActive === false).length,
         pendingBloodRequests,
         totalBloodRequests,
+        openRequests,
+        totalRequests,
       },
       users: users.map(formatUser),
     });
@@ -402,7 +416,20 @@ router.get('/utilization', async (req, res) => {
     const context = await getBranchContext(req, res);
     if (!context) return;
     
-    if (context.facility.facilityType === 'hospital') {
+    const workspace = req.query.workspace ??
+        (canManageHospitalRequests(context) ? 'hospital' : 'bsf');
+
+      if (
+        (workspace !== 'hospital' && workspace !== 'bsf') ||
+        (workspace === 'hospital' && !canManageHospitalRequests(context)) ||
+        (workspace === 'bsf' && !canReceiveBranchRequests(context))
+      ) {
+        return res.status(403).json({
+          error: 'Utilization is not available in this workspace for your facility.',
+        });
+      }
+
+      if (workspace === 'hospital') {
       const requests = await BloodRequest.find({ hospitalFacilityID: context.facility._id })
         .select('_id').lean();
       const units = requests.length
@@ -427,11 +454,6 @@ router.get('/utilization', async (req, res) => {
       });
     }
 
-    if (!['bsf', 'prc_chapter'].includes(context.facility.facilityType)) {
-      return res.status(409).json({ error: 'Utilization is not available for this facility type.' });
-    }
-
-    
     const units = await BloodUnits.find({
       facilityID: context.facility._id,
       status: 'Released',
@@ -479,7 +501,7 @@ router.post('/utilization/reports', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-    if (context.facility.facilityType !== 'hospital') {
+    if (!canManageHospitalRequests(context)) {
       return res.status(403).json({ error: 'Only hospital facilities can submit utilization reports.' });
     }
 
