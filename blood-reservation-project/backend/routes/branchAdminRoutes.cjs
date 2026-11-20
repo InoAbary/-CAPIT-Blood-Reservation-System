@@ -42,20 +42,12 @@ async function getBranchContext(req, res) {
   return { staff, facility };
 }
 
-function canReceiveBranchRequests({ staff, facility }) {
-  if (facility.facilityType === 'bsf_hospital') {
-    return ['staff', 'branch-admin'].includes(staff.role);
-  }
-
-  return ['bsf', 'prc_chapter'].includes(facility.facilityType);
+function canReceiveBranchRequests({ facility }) {
+  return ['bsf', 'prc_chapter', 'bsf_hospital'].includes(facility.facilityType);
 }
 
-function canManageHospitalRequests({ staff, facility }) {
-  if (facility.facilityType === 'bsf_hospital') {
-    return ['hospital', 'branch-admin'].includes(staff.role);
-  }
-
-  return facility.facilityType === 'hospital';
+function canManageHospitalRequests({ facility }) {
+  return ['hospital', 'bsf_hospital'].includes(facility.facilityType);
 }
 
 function formatUser(user) {
