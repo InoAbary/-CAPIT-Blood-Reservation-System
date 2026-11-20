@@ -141,7 +141,7 @@ function DonorDashboard() {
 
 
   return (
-    <div className={`dashboard-container${role === 'recipient' ? '' : ' donor-theme ui-dashboard'}`}>
+    <div className="dashboard-container donor-theme ui-dashboard">
       <DonorSidebar
         role={role}
         firstName={donor?.firstName}
@@ -152,7 +152,12 @@ function DonorDashboard() {
         <div className="content-placeholder">
         <header className="ui-page-header ui-page-header--card">
           <div className="ui-page-header-copy">
-            <h1>{role === 'recipient' ? 'Recipient Dashboard' : 'Donor Overview'}</h1>
+          <h1>{role === 'recipient' ? 'Recipient Overview' : 'Donor Overview'}</h1>
+          <p>
+            {role === 'recipient'
+              ? 'Find blood banks and check reported blood availability.'
+              : 'See your donation history and when you can book again.'}
+          </p>
           </div>
 
           {role === 'donor' && (

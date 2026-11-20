@@ -12,6 +12,10 @@ import {
   MapIcon,
   ListIcon,
 } from '../components/Icons';
+import { useMatch, useNavigate } from 'react-router-dom';
+import DonorSidebar from '../components/DonorSidebar';
+import '../styles/Dashboard.css';
+import '../styles/UI.css';
 
 import '../styles/BloodLocator.css';
 import { useAuth } from '../context/AuthContext';
@@ -183,7 +187,13 @@ export default function BloodBankMap() {
     if (facility && source === 'map' && viewMode === 'map-only') setViewMode('split');
   };
 
-  const { donor, staff } = useAuth();
+  const { donor, staff, logoutDonor } = useAuth();
+  const navigate = useNavigate();
+  const isMapPage = useMatch('/BloodBankMap');
+  const showRecipientSidebar = Boolean(
+    isMapPage && donor && localStorage.getItem('donorHubRole') === 'recipient'
+  );
+
   const isAdmin = !donor && staff?.role === 'admin';
 
   // -------------------------------------------------------------------------
@@ -487,7 +497,7 @@ export default function BloodBankMap() {
     setTimeout(() => setSyncToast(null), 4500);
   };
 
-  return (
+  const locator = (
     <div className="blood-locator-page">
       {/* Hero Banner */}
       <section className="locator-hero">
@@ -917,4 +927,29 @@ export default function BloodBankMap() {
       )}
     </div>
   );
+
+  if (!showRecipientSidebar) return locator;
+
+  return (
+    <div className="dashboard-container donor-theme ui-dashboard">
+      <DonorSidebar
+        role="recipient"
+        firstName={donor?.firstName}
+        onChangeRole={() => {
+          localStorage.removeItem('donorHubRole');
+          navigate('/DonorDashboard');
+        }}
+        onLogout={async () => {
+          localStorage.removeItem('donorHubRole');
+          await logoutDonor();
+          navigate('/Login', { replace: true });
+        }}
+      />
+
+      <main className="dashboard-content">
+        {locator}
+      </main>
+    </div>
+  );
+
 }

@@ -26,7 +26,7 @@ export default function DonorProfile() {
   }
 
   return (
-    <div className={`dashboard-container${role === 'donor' ? ' donor-theme ui-dashboard' : ''}`}>
+    <div className="dashboard-container donor-theme ui-dashboard">
       <DonorSidebar
         role={role}
         firstName={donor?.firstName}
