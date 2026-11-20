@@ -5,7 +5,8 @@ const Facility = require('../../db/models/facilities.cjs');
 const requireRequestStaff = require('../middleware/requireRequestAdmin.cjs');
 const router = express.Router();
 const REVIEW_ROLES = new Set(['staff', 'supervisor', 'admin']);
-const RECEIVER_TYPES = ['bsf', 'prc_chapter'];
+const SENDER_TYPES = ['hospital', 'bsf_hospital'];
+const RECEIVER_TYPES = ['bsf', 'prc_chapter', 'bsf_hospital'];
 const COMPONENTS = ['Packed RBC', 'Platelets', 'Plasma', 'Whole Blood'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const PATIENT_FIELDS = ['firstName', 'lastName', 'middleName', 'age', 'sex', 'wardRoom', 'diagnosis',
@@ -25,7 +26,7 @@ router.get('/context', async (req, res) => {
     if (!['hospital', 'branch-admin'].includes(req.requestStaff.role)) return fail(res, 403, 'A hospital account is required.');
     try {
         const hospital = await assignedFacility(req);
-        if (!hospital || hospital.facilityType !== 'hospital') return fail(res, 403, 'Your account needs an active hospital facility assignment.');
+        if (!hospital || !SENDER_TYPES.includes(hospital.facilityType)) return fail(res, 403, 'Your account needs an active hospital facility assignment.');
         return res.json({ success: true, hospitalName: hospital.facilityName, hospitalFacilityID: String(hospital._id) });
     } catch (error) {
         console.error('Hospital request context error:', error.name);
@@ -90,7 +91,7 @@ router.post('/', async (req, res) => {
     if (body.priorTransfusion === 'yes' && (!priorDate || Number.isNaN(priorDate.getTime()) || priorDate > new Date())) return fail(res, 400, 'Enter a valid previous transfusion date.');
     try {
         const hospital = await assignedFacility(req);
-        if (!hospital || hospital.facilityType !== 'hospital') return fail(res, 403, 'Your hospital account needs an active hospital facility assignment.');
+        if (!hospital || !SENDER_TYPES.includes(hospital.facilityType)) return fail(res, 403, 'Your hospital account needs an active hospital facility assignment.');
         const receiver = await Facility.findOne({ _id: body.receivingFacilityID, isActive: true, facilityType: { $in: RECEIVER_TYPES } }).lean();
         if (!receiver) return fail(res, 400, 'The selected facility is not an active BSF or PRC chapter.');
         // Whitelist model fields; never accept requestedBy, hospitalFacilityID,
