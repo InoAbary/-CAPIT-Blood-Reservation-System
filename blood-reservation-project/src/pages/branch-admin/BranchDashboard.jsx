@@ -473,8 +473,8 @@ function BranchDashboard() {
         ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <BranchRequests />}
       {activeTab === 'my-requests' &&
         workspaceFacilityType === 'hospital' && <HospitalRequests />}
-      {activeTab === 'donor-forms' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonorForms />}
-      {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonations onDonationRecorded={unit => {
+      {activeTab === 'donor-forms' && ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <StaffDonorForms />}
+      {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <StaffDonations onDonationRecorded={unit => {
             setPendingBloodUnit(unit);
             setActiveTab('inventory');
           }} />}
