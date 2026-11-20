@@ -423,13 +423,28 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
                 <select
                   className="form-select"
                   value={formData.facilityType}
-                  onChange={(e) => setFormData({ ...formData, facilityType: e.target.value })}
+                  onChange={(event) => {
+                    const facilityType = event.target.value;
+                    const labels = {
+                      bsf: 'Blood Service Facility',
+                      hospital: 'Hospital',
+                      prc_chapter: 'Philippine Red Cross Chapter',
+                      bsf_hospital: 'Hospital + Blood Service Facility',
+                    };
+
+                    setFormData(current => ({
+                      ...current,
+                      facilityType,
+                      typeLabel: labels[facilityType],
+                    }));
+                  }}
                 >
                   <option value="bsf">BSF (Blood Service Facility)</option>
-                  <option value="hospital">Hospital Blood Bank</option>
-                  <option value="blood bank">Regional Blood Bank</option>
-                  <option value="donation center">Donation Center</option>
+                  <option value="hospital">Hospital</option>
+                  <option value="prc_chapter">Philippine Red Cross Chapter</option>
+                  <option value="bsf_hospital">Hospital + Blood Service Facility</option>
                 </select>
+                
               </div>
             </div>
 
