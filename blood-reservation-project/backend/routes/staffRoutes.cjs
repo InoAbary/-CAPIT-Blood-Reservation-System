@@ -23,7 +23,8 @@ router.get('/dashboard', async (req, res) => {
     if (!ctx) return;
     const { facility, user } = ctx;
 
-    const isProvider = ['bsf', 'prc_chapter'].includes(facility.facilityType);
+    const isProvider = ['bsf', 'prc_chapter', 'bsf_hospital'].includes(facility.facilityType);
+    const isHospital = ['hospital', 'bsf_hospital'].includes(facility.facilityType);
 
     const [pendingBloodRequests, totalBloodRequests] = isProvider
       ? await Promise.all([
@@ -32,23 +33,31 @@ router.get('/dashboard', async (req, res) => {
         ])
       : [0, 0];
 
-    const hospitalRequestIds = facility.facilityType === 'hospital'
+    const hospitalRequestIds = isHospital
       ? await BloodRequest.find({ hospitalFacilityID: facility._id }).select('_id').lean()
       : [];
 
-    const [openRequests, totalRequests] = facility.facilityType === 'hospital'
+      const [openRequests, totalRequests] = isHospital
       ? await Promise.all([
           BloodRequest.countDocuments({ hospitalFacilityID: facility._id, requestStatus: { $in: ['Pending', 'Approved', 'Partially Fulfilled'] } }),
           BloodRequest.countDocuments({ hospitalFacilityID: facility._id }),
         ])
       : [0, 0];
 
-    const releasedUnits = facility.facilityType === 'hospital'
-      ? await BloodUnits.countDocuments({
-          requestID: { $in: hospitalRequestIds.map((r) => r._id) },
-          status: 'Released',
-        })
-      : await BloodUnits.countDocuments({ facilityID: facility.facilityID, status: 'Released' });
+      const [hospitalReleasedUnits, bsfReleasedUnits] = await Promise.all([
+        isHospital
+          ? BloodUnits.countDocuments({
+              requestID: { $in: hospitalRequestIds.map(request => request._id) },
+              status: 'Released',
+            })
+          : 0,
+        isProvider
+          ? BloodUnits.countDocuments({
+              facilityID: { $in: [String(facility._id), facility.facilityID] },
+              status: 'Released',
+            })
+          : 0,
+      ]);
 
     return res.json({
       staff: {
@@ -70,7 +79,9 @@ router.get('/dashboard', async (req, res) => {
         totalBloodRequests,
         openRequests,
         totalRequests,
-        releasedUnits,
+        releasedUnits: isHospital ? hospitalReleasedUnits : bsfReleasedUnits,
+        hospitalReleasedUnits,
+        bsfReleasedUnits,
         // reportedUnits: count from BloodReport if you want it; omitted here
       },
     });

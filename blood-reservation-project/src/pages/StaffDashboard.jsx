@@ -253,11 +253,21 @@ function StaffDashboard() {
 
                 <article className="metric-card">
                   <div className="metric-header">
-                    <span className="metric-label">Released units</span>
+                  <span className="metric-label">
+                    {facilityType === 'hospital' ? 'Units released to hospital' : 'Units released from inventory'}
+                  </span>
                     <span className="metric-icon blue">🩸</span>
                   </div>
-                  <div className="metric-value">{summary?.releasedUnits ?? 0}</div>
-                  <div className="metric-subtext">Units released for utilization review</div>
+                  <div className="metric-value">
+                    {facilityType === 'hospital'
+                      ? (summary?.hospitalReleasedUnits ?? 0)
+                      : (summary?.bsfReleasedUnits ?? 0)}
+                  </div>
+                  <div className="metric-subtext">
+                    {facilityType === 'hospital'
+                      ? 'Released against requests submitted by this hospital'
+                      : 'Released from this facility’s inventory'}
+                  </div>
                 </article>
 
                 <article className="metric-card">
