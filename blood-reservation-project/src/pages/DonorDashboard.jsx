@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import DonorSidebar from '../components/DonorSidebar';
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
-import { BellIcon } from '@heroicons/react/24/outline';
+import { BellIcon, HeartIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import {
   Squares2X2Icon,
   ClipboardDocumentListIcon,
@@ -262,7 +262,9 @@ function DonorDashboard() {
                 className="role-option"
                 onClick={() => pickRole('donor')}
               >
-                <span className="role-option-icon">💝</span>
+                <span className="role-option-icon inline-grid size-12 place-items-center rounded-xl bg-rose-50 text-[#8f1d2c]">
+                <HeartIcon className="size-6" aria-hidden="true" />
+              </span>
                 <span className="role-option-label">Donor</span>
                 <span className="role-option-desc">Donate blood, book appointments, track badges</span>
               </button>
@@ -272,7 +274,9 @@ function DonorDashboard() {
                 className="role-option"
                 onClick={() => pickRole('recipient')}
               >
-                <span className="role-option-icon">🩸</span>
+                <span className="role-option-icon inline-grid size-12 place-items-center rounded-xl bg-blue-50 text-[#063b82]">
+                  <MagnifyingGlassIcon className="size-6" aria-hidden="true" />
+                </span>
                 <span className="role-option-label">Recipient</span>
                 <span className="role-option-desc">Request blood, find donors, manage requests</span>
               </button>

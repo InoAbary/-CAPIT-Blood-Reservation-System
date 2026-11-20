@@ -5,6 +5,7 @@ import {
   CalendarDaysIcon,
   Cog6ToothIcon,
   MapIcon,
+  ArrowsRightLeftIcon,
 } from '@heroicons/react/24/outline';
 
 const NAV_ITEMS = {
@@ -57,9 +58,14 @@ export default function DonorSidebar({
 
       <div className="menu-footer">
         {role && onChangeRole && (
-          <button type="button" className="quick-action-btn" onClick={onChangeRole}>
-            Change role
-          </button>
+          <button
+          type="button"
+          className="quick-action-btn flex items-center justify-center gap-2"
+          onClick={onChangeRole}
+        >
+          <ArrowsRightLeftIcon className="size-5 shrink-0" aria-hidden="true" />
+          <span>Change role</span>
+        </button>
         )}
         <button type="button" className="quick-action-btn" onClick={onLogout}>
           Log out
