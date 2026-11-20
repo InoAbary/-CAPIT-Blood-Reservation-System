@@ -22,7 +22,7 @@ async function getBranchContext(req, res) {
     _id: req.user.id,
     role: {$in: STAFF_ROLES},
     isActive: true,
-  }).select('facilityID firstName lastName email').lean();
+  }).select('facilityID firstName lastName email role').lean();
 
   if (!staff) {
     res.status(401).json({ error: 'Invalid staff account.' });
@@ -40,6 +40,22 @@ async function getBranchContext(req, res) {
   }
 
   return { staff, facility };
+}
+
+function canReceiveBranchRequests({ staff, facility }) {
+  if (facility.facilityType === 'bsf_hospital') {
+    return ['staff', 'branch-admin'].includes(staff.role);
+  }
+
+  return ['bsf', 'prc_chapter'].includes(facility.facilityType);
+}
+
+function canManageHospitalRequests({ staff, facility }) {
+  if (facility.facilityType === 'bsf_hospital') {
+    return ['hospital', 'branch-admin'].includes(staff.role);
+  }
+
+  return facility.facilityType === 'hospital';
 }
 
 function formatUser(user) {
@@ -91,10 +107,11 @@ router.get('/dashboard', requireRole('branch-admin'), async (req, res) => {
       facilityID: context.facility._id,
       role: { $in: managedRoles },
     }).select('firstName lastName email staffId role isActive createdAt').sort({ firstName: 1, lastName: 1 }).lean();
-    const pendingBloodRequests = ['bsf', 'prc_chapter'].includes(context.facility.facilityType)
+    
+    const pendingBloodRequests = canReceiveBranchRequests(context)
       ? await BloodRequest.countDocuments({ receivingFacilityID: context.facility._id, requestStatus: 'Pending' })
       : 0;
-    const totalBloodRequests = ['bsf', 'prc_chapter'].includes(context.facility.facilityType)
+    const totalBloodRequests = canReceiveBranchRequests(context)
       ? await BloodRequest.countDocuments({ receivingFacilityID: context.facility._id })
       : 0;
 
@@ -127,7 +144,7 @@ router.get('/requests', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-    if (!['bsf', 'prc_chapter'].includes(context.facility.facilityType)) {
+    if (!canReceiveBranchRequests(context)) {
       return res.status(403).json({ error: 'Only BSF and PRC branches can view incoming requests.' });
     }
 
@@ -186,7 +203,7 @@ router.patch('/requests/:id/decision', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-    if (!['bsf', 'prc_chapter'].includes(context.facility.facilityType)) {
+    if (!canReceiveBranchRequests(context)) {
       return res.status(403).json({ error: 'Only BSF and PRC branches can decide incoming requests.' });
     }
 
@@ -247,7 +264,7 @@ router.get('/my-requests', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-    if (context.facility.facilityType !== 'hospital') {
+    if (!canManageHospitalRequests(context)) {
       return res.status(403).json({ error: 'Only hospital branches can view their submitted requests.' });
     }
 
@@ -282,7 +299,7 @@ router.patch('/my-requests/:id/method-response', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-    if (context.facility.facilityType !== 'hospital') return res.status(403).json({ error: 'Only hospital branches can respond to method offers.' });
+    if (!canManageHospitalRequests(context)) return res.status(403).json({ error: 'Only hospital branches can respond to method offers.' });
     const update = accepted
       ? { requestStatus: 'Approved', fulfillmentStatus: 'Preparing' }
       : { requestStatus: 'Cancelled', fulfillmentStatus: null };
@@ -308,7 +325,7 @@ router.patch('/requests/:id/progress', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-    if (!['bsf', 'prc_chapter'].includes(context.facility.facilityType)) return res.status(403).json({ error: 'Only BSF and PRC branches can update fulfillment progress.' });
+    if (!canReceiveBranchRequests(context)) return res.status(403).json({ error: 'Only BSF and PRC branches can update fulfillment progress.' });
     const current = await BloodRequest.findOne({
       _id: id, receivingFacilityID: context.facility._id,
       requestStatus: { $in: ['Approved', 'Partially Fulfilled', 'Fulfilled'] },
@@ -355,7 +372,7 @@ router.patch('/requests/:id/fulfillment-details', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-    if (!['bsf', 'prc_chapter'].includes(context.facility.facilityType)) return res.status(403).json({ error: 'Only BSF and PRC branches can update fulfillment details.' });
+    if (!canReceiveBranchRequests(context)) return res.status(403).json({ error: 'Only BSF and PRC branches can update fulfillment details.' });
     const request = await BloodRequest.findOneAndUpdate(
       { _id: id, receivingFacilityID: context.facility._id, requestStatus: { $in: ['Approved', 'Partially Fulfilled', 'Fulfilled'] } },
       { $set: Object.fromEntries(fields.map((field) => [`fulfillmentDetails.${field}`, details[field]])) },
@@ -374,7 +391,7 @@ router.patch('/my-requests/:id/cancel', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-    if (context.facility.facilityType !== 'hospital') return res.status(403).json({ error: 'Only hospital branches can cancel their requests.' });
+    if (!canManageHospitalRequests(context)) return res.status(403).json({ error: 'Only hospital branches can cancel their requests.' });
     const updated = await BloodRequest.findOneAndUpdate(
       { _id: req.params.id, hospitalFacilityID: context.facility._id, requestStatus: 'Pending' },
       { $set: { requestStatus: 'Cancelled' } },
