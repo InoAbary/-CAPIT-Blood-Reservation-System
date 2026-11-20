@@ -4,6 +4,9 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useFormGate } from '../hooks/useFormGate';
 import '../styles/BranchAdmin.css';
 import '../styles/CancelModal.css';
+import DonorSidebar from '../components/DonorSidebar';
+import '../styles/Dashboard.css';
+import '../styles/UI.css';
 
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
 
@@ -95,7 +98,18 @@ function BookAppointment() {
   const [time, setTime] = useState(appointmentDraft?.time || '');
   const [venue, setVenue] = useState(appointmentDraft?.venue || '');
 
-  const { donor, loading: authLoading } = useAuth();
+  const { donor, loading: authLoading, logoutDonor } = useAuth();
+
+  function handleChangeRole() {
+    localStorage.removeItem('donorHubRole');
+    navigate('/DonorDashboard');
+  }
+  
+  async function handleLogout() {
+    localStorage.removeItem('donorHubRole');
+    await logoutDonor();
+    navigate('/Login', { replace: true });
+  }
 
   const { status: formStatus, error: formError } = useFormGate();
 
@@ -352,21 +366,14 @@ function BookAppointment() {
 
     
     
-      <div className="dashboard-container top-menu-layout">
+      <div className="dashboard-container donor-theme ui-dashboard">
 
-        <header className="dashboard-menu">
-            <div className="dashboard-logo"><h2>Donor Hub</h2></div>
-            <nav className="nav-links" aria-label="Donor navigation">
-          <Link className="nav-link" to="/DonorDashboard">
-            <span className="nav-icon">📊</span>
-            <span className="nav-label">Back to dashboard</span>
-          </Link>
-          <Link className="nav-link active" to="/donor/profile" aria-current="page">
-            <span className="nav-icon">⚙️</span>
-            <span className="nav-label">Profile Settings</span>
-          </Link>
-        </nav>
-        </header>
+        <DonorSidebar
+          role="donor"
+          firstName={donor?.firstName}
+          onChangeRole={handleChangeRole}
+          onLogout={handleLogout}
+        />
 
         {cancelId && (
             <dialog

@@ -1,10 +1,12 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import DonorSidebar from '../components/DonorSidebar';
 import '../styles/Dashboard.css';
 import '../styles/BloodDonorForm.css';
 import {useAuth} from '../context/AuthContext'
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
+import '../styles/UI.css';
 
 const DATE_ONLY = [34, 37];
 const FEMALE_ONLY_QUESTIONS = new Set([33, 34, 35, 36, 37]);
@@ -69,24 +71,6 @@ function shouldSkip(q, questionsState) {
 }
 
 /* Reusable top menu – matches DonorDashboard */
-function DonorTopMenu() {
-    
-    return (
-        <header className="dashboard-menu">
-            <div className="dashboard-logo"><h2>Donor Hub</h2></div>
-            <nav className="nav-links" aria-label="Donor navigation">
-          <Link className="nav-link" to="/DonorDashboard">
-            <span className="nav-icon">📊</span>
-            <span className="nav-label">Back to dashboard</span>
-          </Link>
-          <Link className="nav-link active" to="/donor/profile" aria-current="page">
-            <span className="nav-icon">⚙️</span>
-            <span className="nav-label">Profile Settings</span>
-          </Link>
-        </nav>
-        </header>
-    );
-}
 
 function BloodDonorForm() {
     const { t, i18n } = useTranslation();
@@ -110,7 +94,28 @@ function BloodDonorForm() {
     const [showConfirm, setShowConfirm] = useState(false);
     const [hasConfirmed, setHasConfirmed] = useState(false);
 
-    const {donor, loading} = useAuth()
+    const { donor, loading, logoutDonor } = useAuth();
+
+function handleChangeRole() {
+    localStorage.removeItem('donorHubRole');
+    navigate('/DonorDashboard');
+}
+
+async function handleLogout() {
+    localStorage.removeItem('donorHubRole');
+    await logoutDonor();
+    navigate('/Login', { replace: true });
+}
+
+const sidebar = (
+    <DonorSidebar
+        role="donor"
+        firstName={donor?.firstName}
+        onChangeRole={handleChangeRole}
+        onLogout={handleLogout}
+    />
+);
+
     const userSex = donor?.sex
 
     useEffect(() => {
@@ -339,8 +344,8 @@ function BloodDonorForm() {
 
     if (loading || checkingTodaySubmission || !curQuestion) {
         return (
-            <div className="dashboard-container top-menu-layout">
-                <DonorTopMenu />
+            <div className="dashboard-container donor-theme ui-dashboard">
+                {sidebar}
                 <main className="dashboard-content">
                     <div className="donorform-container">
                         <p>{t('common.loading', 'Loading…')}</p>
@@ -352,8 +357,8 @@ function BloodDonorForm() {
 
     if (todaySubmissionError) {
         return (
-            <div className="dashboard-container top-menu-layout">
-                <DonorTopMenu />
+            <div className="dashboard-container donor-theme ui-dashboard">
+                {sidebar}
     
                 <main className="dashboard-content">
                     <div className="donorform-container">
@@ -368,8 +373,8 @@ function BloodDonorForm() {
 
     if (todaySubmission) {
         return (
-            <div className="dashboard-container top-menu-layout">
-                <DonorTopMenu />
+            <div className="dashboard-container donor-theme ui-dashboard">
+                {sidebar}
     
                 <main className="dashboard-content submitted-form-page">
                     <div className="submitted-form-wrapper">
@@ -532,8 +537,8 @@ function BloodDonorForm() {
         };
 
         return (
-            <div className="dashboard-container top-menu-layout">
-                <DonorTopMenu />
+            <div className="dashboard-container donor-theme ui-dashboard">
+            {sidebar}
                 
                 <main className="dashboard-content">
                     <div className="donorform-container">
@@ -579,8 +584,8 @@ function BloodDonorForm() {
     const isDateQuestion = DATE_ONLY.includes(curQuestion.id);
 
     return (
-        <div className="dashboard-container top-menu-layout">
-            <DonorTopMenu />
+        <div className="dashboard-container donor-theme ui-dashboard">
+            {sidebar}
 
             <main className="dashboard-content">
                 <div className="donorform-container">

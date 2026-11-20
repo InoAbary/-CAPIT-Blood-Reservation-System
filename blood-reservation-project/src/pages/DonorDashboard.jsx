@@ -1,30 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import DonorSidebar from '../components/DonorSidebar';
+import { useDonationCooldown } from '../hooks/useDonationCooldown';
+import { BellIcon } from '@heroicons/react/24/outline';
+import {
+  Squares2X2Icon,
+  ClipboardDocumentListIcon,
+  CalendarDaysIcon,
+  Cog6ToothIcon,
+  MapIcon,
+} from '@heroicons/react/24/outline';
+
+import '../styles/Dashboard.css';
+import '../styles/UI.css';
+
+
 import { useAuth } from '../context/AuthContext';
 import '../styles/Dashboard.css';
 import DonorNotificationSettings from '../components/DonorNotificationSettings';
 import DonorBadges from '../components/DonorBadges';
 
-/* ── Role-specific nav configurations ── */
-const NAV_ITEMS = {
-  donor: [
-    { label: 'Overview', path: '/DonorDashboard', icon: '📊' },
-    { label: 'Donor Application Form', path: '/BloodDonorForm', icon: '💝' },
-    { label: 'Book Appointment', path: '/BookAppointment', icon: '📅' },
-    { label: 'Profile Settings', path: '/donor/profile', icon: '⚙️' },
-  ],
-  recipient: [
-    { label: 'Overview', path: '/DonorDashboard', icon: '📊' },
-    { label: 'Blood Bank Map', path: '/BloodBankMap', icon: '🗺️' },
-    { label: 'Profile Settings', path: '/donor/profile', icon: '⚙️' },
-  ],
-};
+
+
 
 const ROLE_KEY = 'donorHubRole';
 
 function DonorDashboard() {
   const navigate = useNavigate();
   const { donor, logoutDonor } = useAuth();
+
+  const { status, nextEligibleDate, lastDonationDate } = useDonationCooldown();
+
+  const dateFormat = new Intl.DateTimeFormat('en-PH', {
+    dateStyle: 'medium',
+    timeZone: 'Asia/Manila',
+  });
+
+  const eligibilityLabel = {
+    loading: 'Checking…',
+    eligible: 'Eligible to book',
+    blocked: nextEligibleDate
+      ? `Next eligible ${dateFormat.format(new Date(nextEligibleDate))}`
+      : 'Waiting period active',
+    error: 'Status unavailable',
+  }[status];
 
   /* ── Role from localStorage, or null → show popup ── */
   const [role, setRole] = useState(() => {
@@ -34,6 +53,7 @@ function DonorDashboard() {
 
   const [badgeStats, setBadgeStats] = useState(null);
   const [badgeError, setBadgeError] = useState('');
+  const [upcomingAppointment, setUpcomingAppointment] = useState(null);
   
   useEffect(() => {
     setBadgeStats(null);
@@ -69,6 +89,40 @@ function DonorDashboard() {
     return () => controller.abort();
   }, [donor?._id, role]);
 
+  useEffect(() => {
+    setUpcomingAppointment(null);
+    if (!donor?._id || role !== 'donor') return;
+  
+    const controller = new AbortController();
+  
+    async function loadUpcomingAppointment() {
+      try {
+        const response = await fetch('/api/appointments', {
+          credentials: 'include',
+          signal: controller.signal,
+        });
+        if (!response.ok) return;
+  
+        const { appointments = [] } = await response.json();
+        const now = Date.now();
+        const next = appointments
+          .filter(item =>
+            ['pending', 'approved'].includes(item.status) &&
+            Date.parse(item.date) >= now
+          )
+          .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))[0];
+  
+        if (!controller.signal.aborted) {
+          setUpcomingAppointment(next ?? null);
+        }
+      } catch {
+      }
+    }
+  
+    void loadUpcomingAppointment();
+    return () => controller.abort();
+  }, [donor?._id, role]);
+
   const pickRole = (picked) => {
     localStorage.setItem(ROLE_KEY, picked);
     setRole(picked);
@@ -85,62 +139,85 @@ function DonorDashboard() {
     navigate('/Login', { replace: true });
   };
 
-  const navItems = role ? NAV_ITEMS[role] : [];
 
   return (
-    <div className="dashboard-container">
-      <header className="dashboard-menu">
-        <div className="dashboard-logo">
-          <h2>{role === 'recipient' ? 'Recipient Hub' : 'Donor Hub'}</h2>
-          <p className="welcome-inline">
-            {donor?.firstName ? ` · Welcome, ${donor.firstName}` : ' · Welcome!'}
-          </p>
-        </div>
-
-        <nav className="nav-links">
-          {navItems.map((item) => (
-            <Link key={item.path} to={item.path} className="nav-link" title={item.label}>
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </Link>
-          ))}
-        </nav>
-
-        <div className="menu-footer">
-
-          {role && (
-            <button className="quick-action-btn" onClick={changeRole}>
-              Change role
-            </button>
-          )}
-          
-          <button className="quick-action-btn" onClick={handleLogout}>
-            Log out
-          </button>
-        </div>
-      </header>
-
+    <div className={`dashboard-container${role === 'recipient' ? '' : ' donor-theme ui-dashboard'}`}>
+      <DonorSidebar
+        role={role}
+        firstName={donor?.firstName}
+        onChangeRole={changeRole}
+        onLogout={handleLogout}
+      />
       <main className="dashboard-content">
         <div className="content-placeholder">
-          <h1>{role === 'recipient' ? 'Recipient Dashboard' : 'Donor Dashboard'}</h1>
-          <p>Select a menu item to view details.</p>
+        <header className="ui-page-header ui-page-header--card">
+          <div className="ui-page-header-copy">
+            <h1>{role === 'recipient' ? 'Recipient Dashboard' : 'Donor Overview'}</h1>
+          </div>
+
+          {role === 'donor' && (
+            <button
+              type="button"
+              disabled
+              aria-label="Notifications unavailable"
+              title="Notifications coming soon"
+              className="grid size-10 shrink-0 place-items-center rounded-lg border border-blue-100 bg-blue-50 text-[#063b82]"
+            >
+              <BellIcon className="size-5" aria-hidden="true" />
+            </button>
+          )}
+        </header>
 
           {role === 'donor' ? (
             <>
-              <div className="cards-grid">
-                <div className="info-card">
-                  <h3>Total Donations</h3>
-                  <p className="stat">{badgeStats?.totalDonations ?? '—'}</p>
-                </div>
-                <div className="info-card">
-                  <h3>Lives Impacted</h3>
-                  <p className="stat">87</p>
-                </div>
-                <div className="info-card">
-                  <h3>Next Pickup</h3>
-                  <p className="stat">May 15</p>
-                </div>
+             <div className="cards-grid">
+              <div className="info-card">
+                <h3>Total Donations</h3>
+                <p className="stat">{badgeStats?.totalDonations ?? '—'}</p>
+                {lastDonationDate && (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Last donation {dateFormat.format(new Date(lastDonationDate))}
+                  </p>
+                )}
               </div>
+
+              <div className="info-card">
+                <h3>Donation Eligibility</h3>
+                <p className="text-lg font-bold text-[#102440]" aria-live="polite">
+                  {eligibilityLabel}
+                </p>
+                {status === 'eligible' && (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Prescreening and staff confirmation still apply.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {upcomingAppointment && (
+              <section className="info-card upcoming-appointment-card">
+                <h3>Upcoming Appointment</h3>
+                <p className="font-semibold text-[#102440]">
+                  {new Date(upcomingAppointment.date).toLocaleString('en-PH', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                    timeZone: 'Asia/Manila',
+                  })}
+                </p>
+                <p className="mt-1 text-sm text-slate-600">
+                  {upcomingAppointment.venue?.facilityName || 'Venue unavailable'}
+                  {' · '}
+                  {upcomingAppointment.status === 'approved' ? 'Approved' : 'Awaiting staff review'}
+                </p>
+                <Link
+                  className="mt-3 inline-block text-sm font-semibold text-blue-800 underline"
+                  to={`/BookAppointment?appointment=${encodeURIComponent(upcomingAppointment._id)}`}
+                >
+                  View appointment
+                </Link>
+              </section>
+            )}
+               
               <DonorNotificationSettings />
               {badgeError && <p role="alert">{badgeError}</p>}
               {badgeStats ? (

@@ -477,3 +477,105 @@
 .answer-remarks {
   color: #64748b;
 }
+
+/* Donor dashboard colors */
+.donor-theme {
+  --donor-blue: #063b82;
+  --donor-blue-deep: #06234d;
+  --donor-page-bg: #edf5ff;
+  background-color: var(--donor-page-bg);
+}
+
+.donor-theme > .dashboard-menu .quick-action-btn {
+  background: #1459ad;
+  color: #fff;
+  border: 1px solid rgb(255 255 255 / 25%);
+  box-shadow: none;
+}
+
+.donor-theme > .dashboard-menu .quick-action-btn:hover {
+  background: #1b66bf;
+  transform: none;
+}
+
+.donor-theme > .dashboard-menu .quick-action-btn:focus-visible {
+  outline: 2px solid #bfdbfe;
+  outline-offset: 2px;
+}
+
+.donor-theme > .dashboard-menu {
+  background: linear-gradient(180deg, var(--donor-blue), var(--donor-blue-deep));
+  color: #fff;
+}
+
+.donor-theme > .dashboard-content {
+  background-color: var(--donor-page-bg);
+}
+
+.donor-theme > .dashboard-menu .nav-link,
+.donor-theme > .dashboard-menu .welcome-inline {
+  color: #eef6ff;
+}
+
+.donor-theme > .dashboard-menu .nav-link:hover,
+.donor-theme > .dashboard-menu .nav-link.active {
+  background-color: #ffffff26;
+  color: #fff;
+}
+
+.donor-theme > .dashboard-menu .dashboard-logo,
+.donor-theme > .dashboard-menu .menu-footer {
+  border-color: #ffffff40;
+}
+
+.ui-dashboard.donor-theme > .dashboard-menu .nav-link[aria-current="page"] {
+  background: rgb(255 255 255 / 18%);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: inset 3px 0 #93c5fd;
+  transform: none;
+}
+
+.donor-theme > .dashboard-menu,
+.donor-theme > .dashboard-content {
+  text-align: left;
+}
+
+.donor-theme .dashboard-logo h2 {
+  background: none;
+  color: #fff;
+  -webkit-text-fill-color: currentColor;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.donor-theme > .dashboard-menu .welcome-inline {
+  margin-top: 0.25rem;
+  color: #dbeafe;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+@media (min-width: 769px) {
+  .donor-theme > .dashboard-menu {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100dvh;
+  }
+
+  .donor-theme > .dashboard-menu .dashboard-logo,
+  .donor-theme > .dashboard-menu .menu-footer {
+    flex-shrink: 0;
+  }
+
+  .donor-theme > .dashboard-menu .nav-links {
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+.donor-theme .upcoming-appointment-card {
+  margin-top: 1.5rem;
+}

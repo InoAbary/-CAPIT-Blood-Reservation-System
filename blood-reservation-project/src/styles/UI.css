@@ -1,0 +1,107 @@
+.ui-dashboard {
+    --ui-font: 'Inter', system-ui, sans-serif;
+    --ui-text: #102440;
+    --ui-muted: #475569;
+    --ui-surface: #ffffff;
+    --ui-border: #d7e5f5;
+    --ui-radius: 14px;
+    font-family: var(--ui-font);
+    color: var(--ui-text);
+  }
+  
+  /* Dashboard.css currently sets a font on every element. */
+  .ui-dashboard :where(h1, h2, h3, p, a, button, input, select, textarea) {
+    font-family: var(--ui-font);
+  }
+  
+  .ui-dashboard .content-placeholder > h1 {
+    color: var(--ui-text);
+    font-size: clamp(1.6rem, 3vw, 2rem);
+    font-weight: 700;
+  }
+  
+  .ui-dashboard .content-placeholder > p {
+    color: var(--ui-muted);
+    font-size: 0.95rem;
+  }
+  
+  .ui-dashboard .info-card {
+    background: var(--ui-surface);
+    border: 1px solid var(--ui-border);
+    border-radius: var(--ui-radius);
+    box-shadow: 0 2px 8px rgb(16 36 64 / 6%);
+  }
+  
+  .ui-dashboard .info-card h3 {
+    color: var(--ui-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  
+  .ui-dashboard .info-card .stat {
+    color: var(--ui-text);
+    font-size: 2rem;
+    font-weight: 700;
+  }
+  
+  
+  .ui-dashboard .nav-link:focus-visible {
+    outline: 2px solid #bfdbfe;
+    outline-offset: -2px;
+  }
+
+  .ui-page-header {
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+  
+  .ui-page-header h1 {
+    margin: 0;
+    color: var(--ui-text, #102440);
+    font-family: var(--ui-font, 'Inter', system-ui, sans-serif);
+    font-size: clamp(1.6rem, 3vw, 2rem);
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  
+  .ui-page-header p {
+    margin: 0.4rem 0 0;
+    color: var(--ui-muted, #475569);
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+
+  .ui-page-header--card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1.25rem;
+    padding: 1.125rem 1.25rem;
+    background: var(--ui-surface, #fff);
+    border: 1px solid var(--ui-border, #d7e5f5);
+    border-left: 4px solid var(--donor-blue, #063b82);
+    border-radius: var(--ui-radius, 14px);
+  }
+  
+  .ui-page-header-action {
+    display: inline-block;
+    padding: 0.45rem 0.75rem;
+    border-radius: 8px;
+    background: #edf5ff;
+    color: #063b82;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  
+  .ui-page-header-action:hover {
+    background: #dbeafe;
+  }
+  
+  .ui-page-header-action:focus-visible {
+    outline: 2px solid #1459ad;
+    outline-offset: 2px;
+  }
