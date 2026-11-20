@@ -201,7 +201,7 @@ function BranchDashboard() {
               <div className="metric-value">{summary?.totalUsers ?? 0}</div>
               <div className="metric-subtext">Staff assigned to this facility</div>
             </article>
-            {['bsf', 'prc_chapter'].includes(facility?.facilityType) && (
+            {['bsf', 'prc_chapter'].includes(workspaceFacilityType) && (
               <article className="metric-card">
                 <div className="metric-header"><span className="metric-label">Pending blood requests</span><span className="metric-icon orange">◷</span></div>
                 <div className="metric-value">{summary?.pendingBloodRequests ?? 0}</div>
