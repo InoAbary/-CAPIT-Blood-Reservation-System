@@ -5,7 +5,6 @@ const Facility = require('../../db/models/facilities.cjs');
 const requireRequestStaff = require('../middleware/requireRequestAdmin.cjs');
 const router = express.Router();
 const REVIEW_ROLES = new Set(['staff', 'supervisor', 'admin']);
-const SENDER_TYPES = ['hospital', 'bsf_hospital'];
 const RECEIVER_TYPES = ['bsf', 'prc_chapter', 'bsf_hospital'];
 const COMPONENTS = ['Packed RBC', 'Platelets', 'Plasma', 'Whole Blood'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -22,11 +21,22 @@ async function assignedFacility(req) {
     if (!id || !mongoose.isObjectIdOrHexString(id)) return null;
     return Facility.findOne({ _id: id, isActive: true }).lean();
 }
+
+function canSubmitRequest(staff, facility) {
+    if (facility?.facilityType === 'bsf_hospital') {
+        return ['staff', 'hospital', 'branch-admin'].includes(staff.role);
+    }
+
+    return facility?.facilityType === 'hospital' &&
+        ['hospital', 'branch-admin'].includes(staff.role);
+}
+
 router.get('/context', async (req, res) => {
-    if (!['hospital', 'branch-admin'].includes(req.requestStaff.role)) return fail(res, 403, 'A hospital account is required.');
     try {
         const hospital = await assignedFacility(req);
-        if (!hospital || !SENDER_TYPES.includes(hospital.facilityType)) return fail(res, 403, 'Your account needs an active hospital facility assignment.');
+        if (!canSubmitRequest(req.requestStaff, hospital)) {
+            return fail(res, 403, 'Your account needs an active hospital facility assignment.');
+        }
         return res.json({ success: true, hospitalName: hospital.facilityName, hospitalFacilityID: String(hospital._id) });
     } catch (error) {
         console.error('Hospital request context error:', error.name);
@@ -35,12 +45,17 @@ router.get('/context', async (req, res) => {
 });
 
 async function requireReviewer(req, res, next) {
-    if (!REVIEW_ROLES.has(req.requestStaff.role)) return fail(res, 403, 'This account cannot review receiving-facility requests.');
     try {
         const facility = await assignedFacility(req);
-        if (!facility || !RECEIVER_TYPES.includes(facility.facilityType)) {
-            return fail(res, 403, 'Your account must be assigned to an active BSF or PRC facility.');
+        const role = req.requestStaff.role;
+        const canReview = facility?.facilityType === 'bsf_hospital'
+            ? ['staff', 'hospital', 'branch-admin'].includes(role)
+            : REVIEW_ROLES.has(role);
+
+        if (!canReview || !facility || !RECEIVER_TYPES.includes(facility.facilityType)) {
+            return fail(res, 403, 'This account cannot review requests at its assigned facility.');
         }
+
         req.receivingFacility = facility;
         return next();
     } catch (error) {
@@ -66,7 +81,6 @@ router.get('/receiving-facilities', async (req, res) => {
 // One request document per component/unit row. Shared fields are supplied again
 // by the multi-product form. Identity and source hospital come from the session.
 router.post('/', async (req, res) => {
-    if (!['hospital', 'branch-admin'].includes(req.requestStaff.role)) return fail(res, 403, 'Only hospital accounts may submit blood requests.');
     // Fail before creating anything if this process loaded an older model file.
     if (!BloodRequest.schema.path('receivingFacilityID')) {
         return fail(res, 500, 'The loaded BloodRequest model is missing receivingFacilityID. Update the model file imported by this route and restart the backend.');
@@ -91,7 +105,7 @@ router.post('/', async (req, res) => {
     if (body.priorTransfusion === 'yes' && (!priorDate || Number.isNaN(priorDate.getTime()) || priorDate > new Date())) return fail(res, 400, 'Enter a valid previous transfusion date.');
     try {
         const hospital = await assignedFacility(req);
-        if (!hospital || !SENDER_TYPES.includes(hospital.facilityType)) return fail(res, 403, 'Your hospital account needs an active hospital facility assignment.');
+        if (!canSubmitRequest(req.requestStaff, hospital)) return fail(res, 403, 'Your hospital account needs an active hospital facility assignment.');
         const receiver = await Facility.findOne({ _id: body.receivingFacilityID, isActive: true, facilityType: { $in: RECEIVER_TYPES } }).lean();
         if (!receiver) return fail(res, 400, 'The selected facility is not an active BSF or PRC chapter.');
         // Whitelist model fields; never accept requestedBy, hospitalFacilityID,

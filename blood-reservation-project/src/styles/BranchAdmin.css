@@ -1011,3 +1011,27 @@
 .staff-workspace-menu .nav-label {
   font-weight: 700;
 }
+
+.staff-workspace-menu .staff-workspace-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 14%);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.staff-workspace-menu .staff-workspace-switch:hover {
+  background: rgb(255 255 255 / 22%);
+  transform: none;
+}
+
+.staff-workspace-menu .staff-workspace-switch:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}

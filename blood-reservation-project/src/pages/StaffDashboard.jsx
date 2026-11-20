@@ -25,6 +25,7 @@ import {
   QueueListIcon,
   Squares2X2Icon,
   ArrowRightOnRectangleIcon,
+  ArrowsRightLeftIcon,
 } from '@heroicons/react/24/outline';
 
 async function request(path, options = {}) {
@@ -63,6 +64,7 @@ function StaffDashboard() {
   const { staff, logoutStaff } = useAuth();
 
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [workspace, setWorkspace] = useState(null);
   const [pendingBloodUnit, setPendingBloodUnit] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -91,9 +93,11 @@ function StaffDashboard() {
   const facility = dashboard?.facility;
   const summary = dashboard?.summary;
   const assignedFacilityType = facility?.facilityType;
+  const isHybridFacility = assignedFacilityType === 'bsf_hospital';
+  const defaultWorkspace = staff?.role === 'hospital' ? 'hospital' : 'bsf';
 
-  const facilityType = assignedFacilityType === 'bsf_hospital'
-    ? { hospital: 'hospital', staff: 'bsf' }[staff?.role]
+  const facilityType = isHybridFacility
+    ? (workspace ?? defaultWorkspace)
     : assignedFacilityType;
 
   const pendingCounts = usePendingCounts(
@@ -164,6 +168,19 @@ function StaffDashboard() {
 
         
         <div className="menu-footer">
+        {isHybridFacility && (
+          <button
+            className="quick-action-btn staff-logout-button"
+            type="button"
+            onClick={() => {
+              setWorkspace(facilityType === 'hospital' ? 'bsf' : 'hospital');
+              setActiveTab('dashboard');
+            }}
+          >
+            <ArrowsRightLeftIcon className="size-5 shrink-0" aria-hidden="true" />
+            <span>Switch to {facilityType === 'hospital' ? 'BSF' : 'Hospital'}</span>
+          </button>
+        )}
         <button
           className="quick-action-btn staff-logout-button"
           type="button"
