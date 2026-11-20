@@ -1,4 +1,7 @@
 import '../styles/DonorBadges.css';
+import { useState } from 'react';
+
+const BADGES_PER_PAGE = 6;
 
 async function downloadBadge(badge, donorName) {
     try {
@@ -6,7 +9,7 @@ async function downloadBadge(badge, donorName) {
         image.src = `/donor-badges/${badge.image}`;
         await image.decode();
 
-        const footerHeight = 300;
+        const footerHeight = badge.dateLabel ? 380 : 300;
         const canvas = document.createElement('canvas');
 
         canvas.width = image.naturalWidth;
@@ -16,6 +19,8 @@ async function downloadBadge(badge, donorName) {
         if (!ctx) throw new Error('Could not create badge image.');
 
         // Original badge
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(image, 0, 0);
 
         // Name section
@@ -45,6 +50,17 @@ async function downloadBadge(badge, donorName) {
             image.naturalHeight + 205,
             canvas.width - 160
         );
+
+        if (badge.dateLabel) {
+          ctx.fillStyle = '#fda4af';
+          ctx.font = '500 45px Arial';
+          ctx.fillText(
+            badge.dateLabel,
+            canvas.width / 2,
+            image.naturalHeight + 305,
+            canvas.width - 160
+          );
+        }
 
         // Download PNG
         const link = document.createElement('a');
@@ -98,22 +114,57 @@ const BADGES = [
     required: 100,
     image: '6.png',
   },
-  {
-    id: 'today',
-    name: 'I Donated Blood Today!',
-    daily: true,
-    image: '7.png',
-  },
 ];
+
+
+
+const donationDateFormat = new Intl.DateTimeFormat('en-PH', {
+  dateStyle: 'medium',
+  timeZone: 'Asia/Manila',
+});
 
 export default function DonorBadges({
     totalDonations = 0,
-    donatedToday = false,
+    donationBadges = [],
     donorName = '',
   }) {
-  const nextBadge = BADGES.find(
-    badge => !badge.daily && totalDonations < badge.required
+  
+  const nextBadge = BADGES.find(badge => totalDonations < badge.required);
+
+  const datedBadges = donationBadges.map(({ id, donatedAt }) => ({
+    id: `donation-${id}`,
+    name: 'I Donated Blood',
+    image: '7.png',
+    dateLabel: donationDateFormat.format(new Date(donatedAt)),
+  }));
+
+  const unlockedMilestones = BADGES
+  .filter(badge => totalDonations >= badge.required)
+  .map(badge => {
+    // The API sends donations newest first, so count from the end.
+    const donatedAt = donationBadges.at(-badge.required)?.donatedAt;
+    const timestamp = Date.parse(donatedAt);
+
+    return {
+      ...badge,
+      dateLabel: Number.isFinite(timestamp)
+        ? `Earned ${donationDateFormat.format(timestamp)}`
+        : undefined,
+    };
+  });
+  const lockedMilestones = BADGES.filter(
+    badge => totalDonations < badge.required
   );
+  
+  const displayedBadges = [
+    ...unlockedMilestones,
+    ...datedBadges,
+    ...lockedMilestones,
+  ];
+
+const [visibleCount, setVisibleCount] = useState(BADGES_PER_PAGE);
+const visibleBadges = displayedBadges.slice(0, visibleCount);
+const remainingCount = displayedBadges.length - visibleBadges.length;
 
   return (
     <section className="donor-badges">
@@ -135,11 +186,9 @@ export default function DonorBadges({
       </p>
 
       <div className="donor-badges-grid">
-        {BADGES.map(badge => {
-          const unlocked = badge.daily
-            ? donatedToday
-            : totalDonations >= badge.required;
-
+      {visibleBadges.map(badge => {
+      const unlocked = Boolean(badge.dateLabel) || totalDonations >= badge.required;
+            
           return (
             <article
               key={badge.id}
@@ -154,15 +203,14 @@ export default function DonorBadges({
               <h3>{badge.name}</h3>
 
               <p>
-                {badge.daily
-                  ? 'Donate blood today'
-                  : `${badge.required} donation${badge.required === 1 ? '' : 's'}`}
+                {badge.dateLabel ||
+                  `${badge.required} donation${badge.required === 1 ? '' : 's'}`}
               </p>
 
               <div className="donor-badge-footer">
-    <span className="donor-badge-status">
-        {unlocked ? '✓ Unlocked' : 'Locked'}
-    </span>
+            <span className="donor-badge-status">
+                {unlocked ? '✓ Unlocked' : 'Locked'}
+            </span>
 
     {unlocked && (
         <button
@@ -189,11 +237,35 @@ export default function DonorBadges({
             </svg>
         </button>
     )}
-</div>
+    </div>
             </article>
           );
         })}
       </div>
+
+      {displayedBadges.length > BADGES_PER_PAGE && (
+        <div className="flex flex-wrap items-center justify-center gap-3" style={{ marginTop: '1rem' }}>
+          {remainingCount > 0 && (
+            <button
+              type="button"
+              className="appointment-view-button"
+              onClick={() => setVisibleCount(count => count + BADGES_PER_PAGE)}
+            >
+              Show more ({remainingCount})
+            </button>
+          )}
+
+          {visibleCount > BADGES_PER_PAGE && (
+            <button
+              type="button"
+              className="appointment-view-button"
+              onClick={() => setVisibleCount(BADGES_PER_PAGE)}
+            >
+              Show less
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 }

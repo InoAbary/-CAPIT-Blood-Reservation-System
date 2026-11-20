@@ -156,3 +156,14 @@
 .donor-badge-footer .donor-badge-download {
     margin-top: 0;
 }
+
+
+.donor-badges .donor-badge,
+.donor-badges .donor-badge.unlocked {
+  background: #fff;
+  border-color: #e2e8f0;
+}
+
+.donor-badges .donor-badge h3 {
+  color: #8f1d2c;
+}

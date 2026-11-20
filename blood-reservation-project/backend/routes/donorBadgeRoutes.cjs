@@ -5,13 +5,13 @@ router.get('/', async (req, res) => {
   try {
     const donorID = req.user.id;
 
-    const [totalDonations, latestDonation] = await Promise.all([
-      Donation.countDocuments({ donorID }),
-      Donation.findOne({ donorID })
-        .select('dateTime')
-        .sort({ dateTime: -1 })
-        .lean(),
-    ]);
+    const donations = await Donation.find({ donorID })
+      .select('_id dateTime')
+      .sort({ dateTime: -1, _id: -1 })
+      .lean();
+
+    const totalDonations = donations.length;
+    const latestDonation = donations[0];
 
     const formatter = new Intl.DateTimeFormat('en-PH', {
       timeZone: 'Asia/Manila',
@@ -29,6 +29,10 @@ router.get('/', async (req, res) => {
     res.json({
       totalDonations,
       donatedToday,
+      donationBadges: donations.map(donation => ({
+        id: String(donation._id),
+        donatedAt: donation.dateTime,
+      })),
     });
   } catch (error) {
     console.error('Donor badges error:', error);
