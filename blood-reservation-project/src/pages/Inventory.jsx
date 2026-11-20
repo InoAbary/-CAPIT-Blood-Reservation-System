@@ -6,6 +6,7 @@ import '../styles/FulfillRequestsTab.css'
 import { apiFetch } from "../utils/api";
 import InventoryHistory from '../components/inventory/InventoryHistory';
 import FulfillRequestsTab from '../components/inventory/FulfillRequestsTab';
+import PrintLabelModal from '../components/inventory/PrintLabelModal';
 
 // Set REACT_APP_API_URL (CRA) or VITE_API_URL (Vite) if the API is somewhere else.
 const API_URL =
@@ -29,6 +30,7 @@ function Inventory({ fixedFacilityId = '', initialBloodUnit = null, onBloodUnitO
     const [loadingList, setLoadingList] = useState(true);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [error, setError] = useState('');
+    const [labelUnit, setLabelUnit] = useState(null);
 
     async function loadFacilityInventory(id) {
         if (!id) return;
@@ -132,6 +134,14 @@ function Inventory({ fixedFacilityId = '', initialBloodUnit = null, onBloodUnitO
 
     return (
         <div className="inv-page">
+
+        {labelUnit && (
+            <PrintLabelModal 
+                unit={labelUnit}
+                facility={facility}
+                onClose={(()=>setLabelUnit(null))}
+            />
+        )}
 
         {!showDashboard && (
             <div className="inv-picker">
@@ -283,10 +293,11 @@ function Inventory({ fixedFacilityId = '', initialBloodUnit = null, onBloodUnitO
             {activeTab === 'update' &&
                 (
                     <BloodUnitsTab
-                    facilityID={selectedId}
-                    initialBloodUnit={initialBloodUnit}
-                    onBloodUnitOpened={onBloodUnitOpened}
-                    onInventoryChanged={refreshInventory}
+                        facilityID={selectedId}
+                        initialBloodUnit={initialBloodUnit}
+                        onBloodUnitOpened={onBloodUnitOpened}
+                        onInventoryChanged={refreshInventory}
+                        onPrintLabel={(unit) => setLabelUnit(unit)}
                     />
                 )
             }

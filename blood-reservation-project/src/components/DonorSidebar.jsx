@@ -3,10 +3,11 @@ import {
   Squares2X2Icon,
   ClipboardDocumentListIcon,
   CalendarDaysIcon,
-  Cog6ToothIcon,
+  UsersIcon,
   MapIcon,
   ArrowsRightLeftIcon,
-} from '@heroicons/react/24/outline';
+  Cog6ToothIcon,
+} from "@heroicons/react/24/outline";
 
 const NAV_ITEMS = {
   donor: [

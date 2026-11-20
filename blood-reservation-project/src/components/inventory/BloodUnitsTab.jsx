@@ -665,6 +665,7 @@ function BloodUnitsTab({
     readOnly = false,
     initialBloodUnit = null,
     onBloodUnitOpened,
+    onPrintLabel
 }) {
 
     const [units, setUnits] = useState([]);
@@ -675,6 +676,14 @@ function BloodUnitsTab({
     const [typeFilter, setTypeFilter] = useState('all');
 
     const [page, setPage] = useState(1);
+
+    const PrinterIcon = () => (
+        <Icon size={14}>
+            <path d="M6 9V3h12v6" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect x="6" y="14" width="12" height="8" rx="1" />
+        </Icon>
+    );
 
     const [modal, setModal] = useState(() =>
         initialBloodUnit && !readOnly ? {
@@ -1348,6 +1357,30 @@ function BloodUnitsTab({
                 background: var(--accent-soft);
             }
 
+            .bu-actions-group {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                justify-content: flex-end;
+            }
+
+            .bu-released-tag {
+                font-size: 12px;
+                font-weight: 600;
+                color: var(--muted);
+                padding: 3px 8px;
+                border-radius: 6px;
+                background: #ececf0;
+            }
+
+            .bu-icon-btn[title*="Print"] {
+                background: #eef5ff;
+                color: #1d4ed8;
+            }
+            .bu-icon-btn[title*="Print"]:hover {
+                background: #dbe7ff;
+            }
+
             .bu-empty {
                 padding: 48px 16px;
                 text-align: center;
@@ -1672,9 +1705,9 @@ function BloodUnitsTab({
                     <th scope="col">Collected</th>
                     <th scope="col">Expires</th>
                     <th scope="col">Status</th>
-                    {!readOnly && <th scope="col" className="bu-actions">
+                    <th scope="col" className="bu-actions">
                         Actions
-                        </th>}
+                    </th>
                         </tr>
                         </thead>
 
@@ -1723,26 +1756,37 @@ function BloodUnitsTab({
                             </span>
                             </td>
 
-                            {!readOnly && <td className="bu-actions">
+                            <td className="bu-actions">
+                                <div className="bu-actions-group">
+                                    {!readOnly && unit.status !== 'Released' && !unit.requestID && (
+                                        <button
+                                            type="button"
+                                            className="bu-icon-btn"
+                                            aria-label={`Edit unit ${unit.bloodUnitID}`}
+                                            onClick={() =>
+                                                setModal({ mode: 'edit', unit, apiError: '' })
+                                            }
+                                        >
+                                            <PencilIcon />
+                                        </button>
+                                    )}
+                                    {!readOnly && (unit.status === 'Released' || unit.requestID) && (
+                                        <span className="bu-released-tag">Released</span>
+                                    )}
 
-                                {unit.status !== 'Released' && !unit.requestID ? <button
-                                    type="button"
-                                    className="bu-icon-btn"
-                                    aria-label={`Edit unit ${unit.bloodUnitID}`}
-                                    onClick={() =>
-                                        setModal({
-                                            mode: 'edit',
-                                            unit,
-                                            apiError: ''
-                                        })
-                                    }
+                                    <button
+                                        type="button"
+                                        className="bu-icon-btn"
+                                        aria-label={`Print label for unit ${unit.bloodUnitID}`}
+                                        title="Print label (no donor name)"
+                                        onClick={() => onPrintLabel?.(unit)}
                                     >
-                                    <PencilIcon />
-                                    </button> : <span>Released</span>}
+                                        <PrinterIcon />
+                                    </button>
+                                </div>
+                            </td>
 
-                                    </td>}
-
-                                    </tr>
+                            </tr>
                         ))}
 
                         </tbody>
