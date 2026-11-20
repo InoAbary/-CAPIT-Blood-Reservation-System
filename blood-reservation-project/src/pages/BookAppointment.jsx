@@ -7,7 +7,7 @@ import '../styles/CancelModal.css';
 import DonorSidebar from '../components/DonorSidebar';
 import '../styles/Dashboard.css';
 import '../styles/UI.css';
-import { BellIcon } from '@heroicons/react/24/outline';
+import { BellIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
 
@@ -70,6 +70,16 @@ function BookAppointment() {
   const appointmentDraft = location.state?.appointmentDraft;
   const [appointments, setAppointments] = useState([]);
   const [appointmentTab, setAppointmentTab] = useState('upcoming');
+  const [detailAppointment, setDetailAppointment] = useState(null);
+  const detailsDialog = useRef(null);
+
+  useEffect(() => {
+    const dialog = detailsDialog.current;
+    if (detailAppointment && dialog && !dialog.open) {
+      dialog.showModal();
+    }
+  }, [detailAppointment]);
+
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -311,7 +321,6 @@ function BookAppointment() {
   };
 
   const renderRow = (a) => {
-    const staff = staffLabel(a);
     return (
       <tr key={a._id}>
         <td>
@@ -326,38 +335,20 @@ function BookAppointment() {
         </td>
         <td>{a.venue?.facilityName || 'Venue unavailable'}</td>
         <td>
-          {staff ? (
-            <span className="appt-staff">
-              <span className="appt-staff-name">{staff}</span>
-            </span>
-          ) : a.status === 'pending' ? (
-            <span className="muted">Awaiting assignment</span>
-          ) : (
-            <span className="muted">—</span>
-          )}
-        </td>
-        <td>
           <span className={`status-badge status-${a.status}`}>
             {STATUS_LABEL[a.status] || a.status}
           </span>
-          {a.note && <span className="appt-note">Note: {a.note}</span>}
         </td>
         <td>
-          {['pending', 'approved'].includes(a.status) ? (
-            <button
-              type="button"
-              className="btn-secondary"
-              onClick={() => {
-                setCancelId(a._id);
-                setCancelReason('');
-                setCancelError('');
-              }}
-            >
-              Cancel
-            </button>
-          ) : (
-            <span className="muted">—</span>
-          )}
+          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="appointment-view-button"
+            onClick={() => setDetailAppointment(a)}
+          >
+            <EyeIcon className="size-4 shrink-0" aria-hidden="true" />
+          </button>
+          </div>
         </td>
       </tr>
     );
@@ -541,7 +532,7 @@ function BookAppointment() {
         </label>
 
 
-        <button type="submit" className="btn-action" disabled={
+        <button type="submit" className="appointment-submit-button" disabled={
             submitting ||
             formStatus === 'loading' ||
             formStatus === 'error'
@@ -568,6 +559,92 @@ function BookAppointment() {
         )}
 
       </form>
+
+      <dialog
+        ref={detailsDialog}
+        className="appointment-details-modal donor-appointment-dialog"
+        aria-labelledby="donor-appointment-details-title"
+        onClose={() => setDetailAppointment(null)}
+      >
+        {detailAppointment && (
+          <div className="appointment-details-content">
+            <div className="appointment-details-header">
+              <h3 id="donor-appointment-details-title">Appointment details</h3>
+              <button
+                type="button"
+                className="appointment-details-close"
+                aria-label="Close appointment details"
+                onClick={() => detailsDialog.current?.close()}
+              >
+                ×
+              </button>
+            </div>
+
+            <dl className="donor-details-grid">
+            <div>
+              <dt>Date</dt>
+              <dd>
+                {new Date(detailAppointment.date).toLocaleDateString('en-PH', {
+                  dateStyle: 'medium',
+                  timeZone: 'Asia/Manila',
+                })}
+              </dd>
+            </div>
+
+            <div>
+              <dt>Time</dt>
+              <dd>
+                {new Date(detailAppointment.date).toLocaleTimeString('en-PH', {
+                  timeStyle: 'short',
+                  timeZone: 'Asia/Manila',
+                })}
+              </dd>
+            </div>
+              <div>
+                <dt>Venue</dt>
+                <dd>{detailAppointment.venue?.facilityName || 'Venue unavailable'}</dd>
+              </div>
+              <div>
+                <dt>Status</dt>
+                <dd>{STATUS_LABEL[detailAppointment.status] || detailAppointment.status}</dd>
+              </div>
+              {staffLabel(detailAppointment) && (
+                <div>
+                  <dt>Assigned staff</dt>
+                  <dd>{staffLabel(detailAppointment)}</dd>
+                </div>
+              )}
+            </dl>
+
+            {detailAppointment.note && (
+              <section className="appointment-details-section">
+                <h4>Note</h4>
+                <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                  {detailAppointment.note}
+                </p>
+              </section>
+            )}
+
+            {showUpcoming && ['pending', 'approved'].includes(detailAppointment.status) && (
+              <footer className="appointment-details-section">
+                <button
+                  type="button"
+                  className="appointment-cancel-button"
+                  onClick={() => {
+                    const appointmentId = detailAppointment._id;
+                    detailsDialog.current?.close();
+                    setCancelReason('');
+                    setCancelError('');
+                    setCancelId(appointmentId);
+                  }}
+                >
+                  Cancel appointment
+                </button>
+              </footer>
+            )}
+          </div>
+        )}
+      </dialog>
 
         <section className="appointment-section" aria-label="Appointments">
         <div className="segmented-tabs" role="group" aria-label="Appointment view">
@@ -604,7 +681,6 @@ function BookAppointment() {
                   <th>Date</th>
                   <th>Time</th>
                   <th>Venue</th>
-                  <th>Staff</th>
                   <th>Status</th>
                   <th>Action</th>
                 </tr>
