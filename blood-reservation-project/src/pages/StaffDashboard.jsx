@@ -90,7 +90,12 @@ function StaffDashboard() {
 
   const facility = dashboard?.facility;
   const summary = dashboard?.summary;
-  const facilityType = facility?.facilityType;
+  const assignedFacilityType = facility?.facilityType;
+
+  const facilityType = assignedFacilityType === 'bsf_hospital'
+    ? { hospital: 'hospital', staff: 'bsf' }[staff?.role]
+    : assignedFacilityType;
+
   const pendingCounts = usePendingCounts(
     staff?._id || staff?.id,
     ['bsf', 'prc_chapter'].includes(facilityType)

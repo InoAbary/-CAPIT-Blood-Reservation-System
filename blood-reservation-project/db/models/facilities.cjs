@@ -14,7 +14,7 @@ const facilitySchema = new mongoose.Schema({
     facilityType: {
         type: String,
         required: true,
-        enum: ['bsf', 'hospital', 'prc_chapter']
+        enum: ['bsf', 'hospital', 'prc_chapter', 'bsf_hospital']
     },
     typeLabel: {
         type: String,

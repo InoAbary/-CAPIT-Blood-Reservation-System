@@ -28,7 +28,12 @@ async function request(path, options = {}) {
 }
 
 function BranchDashboard() {
-  const { activeTab, setActiveTab, setFacilityType } = useOutletContext();
+  const {
+    activeTab,
+    setActiveTab,
+    setFacilityType,
+    facilityType: workspaceFacilityType,
+  } = useOutletContext();
   const [pendingBloodUnit, setPendingBloodUnit] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -445,8 +450,10 @@ function BranchDashboard() {
             </section>
           )}
 
-      {activeTab === 'branch-requests' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <BranchRequests />}
-      {activeTab === 'my-requests' && facility?.facilityType === 'hospital' && <HospitalRequests />}
+      {activeTab === 'branch-requests' &&
+        ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <BranchRequests />}
+      {activeTab === 'my-requests' &&
+        workspaceFacilityType === 'hospital' && <HospitalRequests />}
       {activeTab === 'donor-forms' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonorForms />}
       {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonations onDonationRecorded={unit => {
             setPendingBloodUnit(unit);

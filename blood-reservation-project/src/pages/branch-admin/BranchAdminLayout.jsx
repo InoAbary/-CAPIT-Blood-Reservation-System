@@ -16,7 +16,12 @@ export default function BranchAdminLayout() {
   const { staff, loading, logoutStaff } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [facilityType, setFacilityType] = useState(null);
+  const [assignedFacilityType, setFacilityType] = useState(null);
+  const [workspace, setWorkspace] = useState('hospital');
+
+  const isHybridFacility = assignedFacilityType === 'bsf_hospital';
+  const facilityType = isHybridFacility ? workspace : assignedFacilityType;
+
   const pendingCounts = usePendingCounts(
     staff?._id || staff?.id,
     ['bsf', 'prc_chapter'].includes(facilityType)
@@ -90,7 +95,7 @@ export default function BranchAdminLayout() {
 
   return (
     <div className="app-container">
-      <aside className="sidebar">
+      <aside className="sidebar branch-workspace-sidebar" data-workspace={facilityType}>
         <div className="brand">
           <div className="brand-icon">+</div>
           <div>
@@ -128,6 +133,18 @@ export default function BranchAdminLayout() {
           ))}
         </nav>
         <div className="sidebar-footer">
+        {isHybridFacility && (
+          <button
+            className="logout-button"
+            type="button"
+            onClick={() => {
+              setWorkspace(current => current === 'hospital' ? 'bsf' : 'hospital');
+              setActiveTab('dashboard');
+            }}
+          >
+            Switch to {workspace === 'hospital' ? 'BSF' : 'Hospital'}
+          </button>
+        )}
           <button className="logout-button" type="button" onClick={handleLogout}>
             <span aria-hidden="true">↪</span>
             Log out
