@@ -1007,3 +1007,7 @@
 .staff-workspace-menu[data-facility-type="prc_chapter"] {
   background: linear-gradient(180deg, #8f1d2c 0%, #56111b 100%);
 }
+
+.staff-workspace-menu .nav-label {
+  font-weight: 700;
+}
