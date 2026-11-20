@@ -670,7 +670,7 @@ function BookAppointment() {
         {loading ? (
           <p>Loading…</p>
         ) : visibleAppointments.length === 0 ? (
-          <p className="muted">
+          <p className="muted text-center">
             {showUpcoming ? 'No upcoming appointments.' : 'No appointment history yet.'}
           </p>
         ) : (

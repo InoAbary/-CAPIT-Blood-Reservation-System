@@ -86,9 +86,13 @@ export default function DonorProfileForm() {
 
   return (
     <section className="donor-profile-card" aria-labelledby="profile-information-heading">
-      <div className="donor-profile-card-heading">
-        <div><h2 id="profile-information-heading">Your information</h2><p>Keep your details up to date. Fields marked * are required.</p></div>
-        <p className="donor-profile-id">Donor ID: <strong>{donor?.donorID || '—'}</strong></p>
+      <div>
+        <h2 id="profile-information-heading" className="ui-section-title">
+          Your information
+        </h2>
+        <p className="ui-section-help">
+          Keep your details up to date. Fields marked * are required.
+        </p>
       </div>
       <form onSubmit={save}>
         <fieldset className="donor-profile-fields" disabled={saving}>

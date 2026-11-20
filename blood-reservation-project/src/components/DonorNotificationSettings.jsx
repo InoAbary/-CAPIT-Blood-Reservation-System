@@ -35,7 +35,9 @@ export default function DonorNotificationSettings() {
 
   return (
     <section className="donor-notification-settings" aria-labelledby="notification-settings-heading">
-      <h2 id="notification-settings-heading">Notification preferences</h2>
+      <h2 id="notification-settings-heading" className="ui-section-title">
+      Notification preferences
+    </h2>
       <form onSubmit={handleSave}>
         <NotificationOptions value={value} onChange={handleChange} disabled={saving} />
         <div className="notification-contact">

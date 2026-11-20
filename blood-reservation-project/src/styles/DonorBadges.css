@@ -167,3 +167,15 @@
 .donor-badges .donor-badge h3 {
   color: #8f1d2c;
 }
+
+.ui-dashboard .donor-badges {
+  width: 100%;
+  max-width: none;
+  margin-top: 1.5rem;
+  padding: clamp(1rem, 3vw, 2rem);
+  border: 1px solid var(--ui-border, #d7e5f5);
+  border-radius: var(--ui-radius, 14px);
+  background: var(--ui-surface, #fff);
+  color: var(--ui-text, #102440);
+  text-align: left;
+}

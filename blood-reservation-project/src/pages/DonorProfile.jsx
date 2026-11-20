@@ -51,9 +51,15 @@ export default function DonorProfile() {
           </button>
         </header>
           <section className="donor-profile-card" aria-labelledby="mobile-number-heading">
-            <h2 id="mobile-number-heading">Mobile number</h2>
-            <p>{donor?.mobileNumber || 'No mobile number saved.'}</p>
-            <p>To update your mobile number, confirm the change through your registered email.</p>
+          <h2 id="mobile-number-heading" className="ui-section-title">
+            Mobile number
+          </h2>
+          <p className="ui-section-value">
+            {donor?.mobileNumber || 'No mobile number saved'}
+          </p>
+          <p className="ui-section-help">
+            You’ll confirm any change through your registered email.
+          </p>
             <Link className="donor-profile-change-number" to="/donor/change-number">Change mobile number</Link>
           </section>
           <DonorProfileForm />

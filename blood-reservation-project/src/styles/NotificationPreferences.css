@@ -43,3 +43,12 @@
 .notification-save:focus-visible, .notification-choice input:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
 .notification-status { color: #166534; margin-top: .75rem; line-height: 1.5; }
 .notification-error { color: #b91c1c; margin-top: .75rem; line-height: 1.5; }
+
+.donor-profile-page .donor-notification-settings {
+  max-width: none;
+  margin-top: 1.5rem;
+}
+
+.donor-profile-page .donor-notification-settings > form {
+  margin-top: 1rem;
+}

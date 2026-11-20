@@ -105,3 +105,25 @@
     outline: 2px solid #1459ad;
     outline-offset: 2px;
   }
+
+  .ui-dashboard .ui-section-title {
+    margin: 0 0 0.5rem;
+    color: var(--ui-text, #102440);
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+  
+  .ui-dashboard .ui-section-value {
+    margin: 0;
+    color: var(--ui-text, #102440);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  .ui-dashboard .ui-section-help {
+    margin: 0.375rem 0 0;
+    color: var(--ui-muted, #475569);
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }

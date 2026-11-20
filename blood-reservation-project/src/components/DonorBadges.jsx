@@ -170,8 +170,10 @@ const remainingCount = displayedBadges.length - visibleBadges.length;
     <section className="donor-badges">
       <div className="donor-badges-header">
         <div>
-          <h2>My Badges</h2>
-          <p>Achievements earned through your blood donations.</p>
+          <h2 className="ui-section-title">My Badges</h2>
+          <p className="ui-section-help">
+            View and download your donation and milestone badges.
+          </p>
         </div>
 
         <span className="donor-badges-count">
