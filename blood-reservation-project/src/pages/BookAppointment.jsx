@@ -65,9 +65,11 @@ function staffLabel(a) {
 
 function BookAppointment() {
   const location = useLocation();
+  const linkedAppointmentId = new URLSearchParams(location.search).get('appointment');
   const navigate = useNavigate();
   const appointmentDraft = location.state?.appointmentDraft;
   const [appointments, setAppointments] = useState([]);
+  const [appointmentTab, setAppointmentTab] = useState('upcoming');
   const [venues, setVenues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -171,14 +173,45 @@ function BookAppointment() {
     if (time && !availableTimes.includes(time)) setTime('');
   }, [availableTimes, time]);
 
-  const upcoming = useMemo(
-    () => appointments.filter((a) => new Date(a.date) >= new Date(new Date().toDateString())),
-    [appointments]
-  );
-  const past = useMemo(
-    () => appointments.filter((a) => new Date(a.date) < new Date(new Date().toDateString())),
-    [appointments]
-  );
+    const { upcoming, past } = useMemo(() => {
+    const manilaDay = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Asia/Manila',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    const today = manilaDay.format(new Date());
+    const upcoming = [];
+    const past = [];
+  
+    for (const appointment of appointments) {
+      const isOpen = ['pending', 'approved'].includes(appointment.status);
+      const scheduledTime = Date.parse(appointment.date);
+      const isTodayOrLater =
+        Number.isFinite(scheduledTime) && manilaDay.format(scheduledTime) >= today;
+
+      if (isOpen && isTodayOrLater) {
+        upcoming.push(appointment);
+      } else {
+        past.push(appointment);
+      }
+    }
+  
+    return { upcoming, past };
+  }, [appointments]);
+
+  const showUpcoming = appointmentTab === 'upcoming';
+  const visibleAppointments = showUpcoming ? upcoming : past;
+
+  useEffect(() => {
+    if (!linkedAppointmentId) return;
+
+    if (past.some(a => String(a._id) === linkedAppointmentId)) {
+      setAppointmentTab('history');
+    } else if (upcoming.some(a => String(a._id) === linkedAppointmentId)) {
+      setAppointmentTab('upcoming');
+    }
+  }, [linkedAppointmentId, location.key, upcoming, past]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -536,40 +569,36 @@ function BookAppointment() {
 
       </form>
 
-      <section className="appointment-section">
-        <h3>Upcoming</h3>
-        {loading ? (
-          <p>Loading…</p>
-        ) : upcoming.length === 0 ? (
-          <p className="muted">No upcoming appointments.</p>
-        ) : (
-          <div className="appt-table-wrap">
-            <table className="appt-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Venue</th>
-                  <th>Staff</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>{upcoming.map(renderRow)}</tbody>
-            </table>
-          </div>
-        )}
-      </section>
+        <section className="appointment-section" aria-label="Appointments">
+        <div className="segmented-tabs" role="group" aria-label="Appointment view">
+          <button
+            type="button"
+            className={`segmented-btn${showUpcoming ? ' segmented-btn--active' : ''}`}
+            aria-pressed={showUpcoming}
+            onClick={() => setAppointmentTab('upcoming')}
+          >
+            Upcoming
+          </button>
 
-      <section className="appointment-section">
-        <h3>History</h3>
+          <button
+            type="button"
+            className={`segmented-btn${!showUpcoming ? ' segmented-btn--active' : ''}`}
+            aria-pressed={!showUpcoming}
+            onClick={() => setAppointmentTab('history')}
+          >
+            History
+          </button>
+        </div>
+
         {loading ? (
           <p>Loading…</p>
-        ) : past.length === 0 ? (
-          <p className="muted">No past appointments.</p>
+        ) : visibleAppointments.length === 0 ? (
+          <p className="muted">
+            {showUpcoming ? 'No upcoming appointments.' : 'No appointment history yet.'}
+          </p>
         ) : (
           <div className="appt-table-wrap">
-            <table className="appt-table">
+            <table className="appt-table" aria-label={showUpcoming ? 'Upcoming appointments' : 'Appointment history'}>
               <thead>
                 <tr>
                   <th>Date</th>
@@ -580,7 +609,7 @@ function BookAppointment() {
                   <th>Action</th>
                 </tr>
               </thead>
-              <tbody>{past.map(renderRow)}</tbody>
+              <tbody>{visibleAppointments.map(renderRow)}</tbody>
             </table>
           </div>
         )}
