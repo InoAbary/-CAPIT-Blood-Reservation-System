@@ -7,6 +7,7 @@ import '../styles/CancelModal.css';
 import DonorSidebar from '../components/DonorSidebar';
 import '../styles/Dashboard.css';
 import '../styles/UI.css';
+import { BellIcon } from '@heroicons/react/24/outline';
 
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
 
@@ -419,11 +420,26 @@ function BookAppointment() {
 
       
       <main className="dashboard-content">
+
+      
+      <header className="ui-page-header ui-page-header--card">
+        <div className="ui-page-header-copy">
+          <h1>Book Appointment</h1>
+          <p>Choose a venue and preferred start time. Staff will review your request.</p>
+        </div>
+
+        <button
+          type="button"
+          disabled
+          aria-label="Notifications unavailable"
+          title="Notifications coming soon"
+          className="grid size-10 shrink-0 place-items-center rounded-lg border border-blue-100 bg-blue-50 text-[#063b82]"
+        >
+          <BellIcon className="size-5" aria-hidden="true" />
+        </button>
+      </header>
+
       <div className="appointment-container content-card">
-      <h2 className="card-title">Book a Blood Donation Appointment</h2>
-      <p className="card-subtitle">
-        Pick a venue and preferred start time for today. Your request will be pending until staff confirm it.
-      </p>
 
       {error && <p className="form-message error-message" role="alert">{error}</p>}
 

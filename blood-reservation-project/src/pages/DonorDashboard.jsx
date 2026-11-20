@@ -210,7 +210,7 @@ function DonorDashboard() {
                   {upcomingAppointment.status === 'approved' ? 'Approved' : 'Awaiting staff review'}
                 </p>
                 <Link
-                  className="mt-3 inline-block text-sm font-semibold text-blue-800 underline"
+                  className="mt-3 inline-block text-sm font-semibold text-[#8f1d2c] underline"
                   to={`/BookAppointment?appointment=${encodeURIComponent(upcomingAppointment._id)}`}
                 >
                   View appointment

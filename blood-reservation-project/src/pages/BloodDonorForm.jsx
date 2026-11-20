@@ -7,6 +7,7 @@ import '../styles/BloodDonorForm.css';
 import {useAuth} from '../context/AuthContext'
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
 import '../styles/UI.css';
+import { BellIcon } from '@heroicons/react/24/outline';
 
 const DATE_ONLY = [34, 37];
 const FEMALE_ONLY_QUESTIONS = new Set([33, 34, 35, 36, 37]);
@@ -114,6 +115,24 @@ const sidebar = (
         onChangeRole={handleChangeRole}
         onLogout={handleLogout}
     />
+);
+
+const pageHeader = (
+    <header className="ui-page-header ui-page-header--card">
+        <div className="ui-page-header-copy">
+            <h1>{t('questionnaire.pageTitle', 'Donor Application Form')}</h1>
+        </div>
+
+        <button
+            type="button"
+            disabled
+            aria-label="Notifications unavailable"
+            title="Notifications coming soon"
+            className="grid size-10 shrink-0 place-items-center rounded-lg border border-blue-100 bg-blue-50 text-[#063b82]"
+        >
+            <BellIcon className="size-5" aria-hidden="true" />
+        </button>
+    </header>
 );
 
     const userSex = donor?.sex
@@ -377,8 +396,8 @@ const sidebar = (
                 {sidebar}
     
                 <main className="dashboard-content submitted-form-page">
+                {pageHeader}
                     <div className="submitted-form-wrapper">
-    
                         <div className="language-switcher submitted-language-switcher">
                             <button onClick={() => i18n.changeLanguage('en')}>
                                 English
@@ -393,10 +412,8 @@ const sidebar = (
                             <div className="submitted-form-header">
                                 <div className="submitted-check">✓</div>
     
-                                <h2>Today's Prescreening Form</h2>
-    
                                 <p>
-                                    You have already completed your donor prescreening
+                                    You have already completed your donor prescreening <form action="" method="post"></form>
                                     for today. Your submitted answers are shown below
                                     and can no longer be edited.
                                 </p>
@@ -469,28 +486,20 @@ const sidebar = (
                                 })}
                             </div>
     
-                            <div className="submitted-form-actions">
-                                <button
-                                    type="button"
-                                    className="submit-btn"
-                                    onClick={() => {
-                                        if (returnTo) {
-                                            navigate(returnTo, {
-                                                replace: true,
-                                                state: appointmentDraft
-                                                    ? { appointmentDraft }
-                                                    : undefined,
-                                            });
-                                        } else {
-                                            navigate('/DonorDashboard');
-                                        }
-                                    }}
-                                >
-                                    {returnTo
-                                        ? 'Return to Appointment'
-                                        : 'Return to Dashboard'}
-                                </button>
-                            </div>
+                            {returnTo && (
+                                <div className="submitted-form-actions">
+                                    <button
+                                        type="button"
+                                        className="submit-btn"
+                                        onClick={() => navigate(returnTo, {
+                                            replace: true,
+                                            state: appointmentDraft ? { appointmentDraft } : undefined,
+                                        })}
+                                    >
+                                        Return to Appointment
+                                    </button>
+                                </div>
+                            )}
     
                         </div>
                     </div>
@@ -541,6 +550,7 @@ const sidebar = (
             {sidebar}
                 
                 <main className="dashboard-content">
+                 {pageHeader}
                     <div className="donorform-container">
                         <div className="language-switcher">
                             <button onClick={() => i18n.changeLanguage('en')}>English</button>
@@ -588,6 +598,7 @@ const sidebar = (
             {sidebar}
 
             <main className="dashboard-content">
+            {pageHeader}
                 <div className="donorform-container">
                     <div className="language-switcher">
                         <button onClick={() => i18n.changeLanguage('en')}>English</button>
