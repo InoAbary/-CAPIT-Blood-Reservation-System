@@ -917,3 +917,93 @@
     gap: 6px;
   }
 }
+
+.staff-workspace-menu[data-facility-type="hospital"] {
+  background: linear-gradient(180deg, #09284f 0%, #04152e 100%);
+}
+
+.staff-workspace-menu :is(h2, p, button, span) {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.staff-workspace-menu .dashboard-logo h2 {
+  margin: 0;
+  background: none;
+  color: #fff;
+  -webkit-text-fill-color: currentColor;
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.staff-workspace-menu .welcome-text {
+  margin-top: 0.25rem;
+  color: rgb(255 255 255 / 82%);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.staff-workspace-menu .nav-link {
+  font-size: 0.95rem;
+  line-height: 1.35;
+  text-align: left;
+}
+
+.staff-workspace-menu .staff-logout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid rgb(255 255 255 / 28%);
+  background: rgb(255 255 255 / 12%);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+
+.staff-workspace-menu .staff-logout-button:hover {
+  background: rgb(255 255 255 / 20%);
+  transform: none;
+}
+
+.staff-workspace-menu .staff-logout-button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.staff-workspace-menu .dashboard-logo,
+.staff-workspace-menu .dashboard-logo h2,
+.staff-workspace-menu .dashboard-logo .welcome-text {
+  text-align: left;
+}
+
+@media (min-width: 769px) {
+  .dashboard-menu.staff-workspace-menu {
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    box-sizing: border-box;
+    height: 100dvh;
+  }
+
+  .staff-workspace-menu .dashboard-logo,
+  .staff-workspace-menu .menu-footer {
+    flex-shrink: 0;
+  }
+
+  .staff-workspace-menu .nav-links {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .staff-workspace-menu .menu-footer {
+    margin-top: auto;
+  }
+}
+
+.staff-workspace-menu[data-facility-type="bsf"],
+.staff-workspace-menu[data-facility-type="prc_chapter"] {
+  background: linear-gradient(180deg, #8f1d2c 0%, #56111b 100%);
+}

@@ -12,6 +12,20 @@ import StaffDonorForms from './StaffDonorForms'
 import { useAuth } from '../context/AuthContext';
 import '../styles/BranchAdmin.css';
 import { usePendingCounts } from '../hooks/usePendingCounts';
+import {
+  ArchiveBoxIcon,
+  ArrowDownTrayIcon,
+  CalendarDaysIcon,
+  ChartBarIcon,
+  ClipboardDocumentListIcon,
+  Cog6ToothIcon,
+  DocumentPlusIcon,
+  HeartIcon,
+  MapPinIcon,
+  QueueListIcon,
+  Squares2X2Icon,
+  ArrowRightOnRectangleIcon,
+} from '@heroicons/react/24/outline';
 
 async function request(path, options = {}) {
   const response = await fetch(path, {
@@ -31,17 +45,17 @@ async function request(path, options = {}) {
 
 // Tabs a staff user can see. No create-user / users tabs.
 const STAFF_TABS = [
-  { key: 'dashboard', label: 'Overview', icon: '📊' },
-  { key: 'blood-locator', label: 'Blood Locator', icon: '📍' },
-  { key: 'utilization', label: 'Utilization Reports', icon: '📈' },
-  { key: 'reservation', label: 'Request Form', icon: '💝', facilityTypes: ['hospital'] },
-  { key: 'my-requests', label: 'My Requests', icon: '📋', facilityTypes: ['hospital'] },
-  { key: 'donor-forms', label: 'Donor Forms Submitted', icon: '📋', facilityTypes: ['bsf', 'prc_chapter'] },
-  { key: 'branch-requests', label: 'Incoming Requests', icon: '📥', facilityTypes: ['bsf', 'prc_chapter'] },
-  { key: 'inventory', label: 'Inventory', icon: '🩸', facilityTypes: ['bsf', 'prc_chapter'] },
-  { key: 'appointments', label: 'Appointments', icon: '📅', facilityTypes: ['bsf', 'prc_chapter'] },
-  { key: 'donations', label: 'Log Donations', icon: '📅', facilityTypes: ['bsf', 'prc_chapter'] },
-  { key: 'profile', label: 'Profile Settings', icon: '⚙️' },
+  { key: 'dashboard', label: 'Overview', icon: Squares2X2Icon },
+  { key: 'blood-locator', label: 'Blood Locator', icon: MapPinIcon },
+  { key: 'utilization', label: 'Utilization Reports', icon: ChartBarIcon },
+  { key: 'reservation', label: 'Request Form', icon: DocumentPlusIcon, facilityTypes: ['hospital'] },
+  { key: 'my-requests', label: 'My Requests', icon: QueueListIcon, facilityTypes: ['hospital'] },
+  { key: 'donor-forms', label: 'Donor Forms Submitted', icon: ClipboardDocumentListIcon, facilityTypes: ['bsf', 'prc_chapter'] },
+  { key: 'branch-requests', label: 'Incoming Requests', icon: ArrowDownTrayIcon, facilityTypes: ['bsf', 'prc_chapter'] },
+  { key: 'inventory', label: 'Inventory', icon: ArchiveBoxIcon, facilityTypes: ['bsf', 'prc_chapter'] },
+  { key: 'appointments', label: 'Appointments', icon: CalendarDaysIcon, facilityTypes: ['bsf', 'prc_chapter'] },
+  { key: 'donations', label: 'Log Donations', icon: HeartIcon, facilityTypes: ['bsf', 'prc_chapter'] },
+  { key: 'profile', label: 'Profile Settings', icon: Cog6ToothIcon },
 ];
 
 function StaffDashboard() {
@@ -106,11 +120,14 @@ function StaffDashboard() {
 
   return (
     <div className="dashboard-container">
-      <aside className="dashboard-menu">
+      <aside
+        className="dashboard-menu staff-workspace-menu"
+        data-facility-type={facilityType}
+      >
         <div className="dashboard-logo">
-          <h2>Staff Hub</h2>
+          <h2>Sandugo Staff Hub</h2>
           <p className="welcome-text">
-            Welcome back{staff?.firstName ? `, ${staff.firstName}` : ''}!
+            {staff?.firstName ? `Welcome, ${staff.firstName}` : 'Welcome!'}
           </p>
         </div>
 
@@ -126,7 +143,7 @@ function StaffDashboard() {
               className={`nav-link${activeTab === tab.key ? ' nav-link--active' : ''}`}
               onClick={() => setActiveTab(tab.key)}
             >
-              <span className="nav-icon">{tab.icon}</span>
+              <tab.icon className="size-5 shrink-0" aria-hidden="true" />
               <span className="nav-label">{tab.label}</span>
                 {pendingCounts?.[tab.key] > 0 && (
                   <span
@@ -142,9 +159,14 @@ function StaffDashboard() {
 
         
         <div className="menu-footer">
-          <button className="quick-action-btn" type="button" onClick={handleLogout}>
-            Log out
-          </button>
+        <button
+          className="quick-action-btn staff-logout-button"
+          type="button"
+          onClick={handleLogout}
+        >
+          <ArrowRightOnRectangleIcon className="size-5 shrink-0" aria-hidden="true" />
+          <span>Log out</span>
+        </button>
         </div>
       </aside>
 
