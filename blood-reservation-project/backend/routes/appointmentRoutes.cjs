@@ -16,6 +16,14 @@ const requireDonor = require('../middleware/requireDonor.cjs');
 const requireStaff = require('../middleware/requireStaff.cjs');
 
 const { checkDonationCooldown } = require('../utils/donationCooldown.cjs');
+
+const { isObjectIdOrHexString } = require('mongoose');
+
+const bookableFacilityFilter = {
+  facilityType: { $in: ['bsf', 'prc_chapter', 'bsf_hospital'] },
+  isActive: true,
+};
+
 /* ------------------------------------------------------------------ *
  * DONOR ROUTES
  * ------------------------------------------------------------------ */
@@ -64,7 +72,7 @@ router.get('/donation-eligibility', requireDonor, async (req, res) => {
 router.get('/venues', requireDonor, async (req, res) => {
   try {
     // Adjust the filter to your Facility schema (e.g. acceptBSF, acceptingDonations…)
-    const venues = await Facility.find({ facilityType: { $in: ['bsf', 'prc_chapter'] }, isActive: true, })
+    const venues = await Facility.find(bookableFacilityFilter)
       .select('facilityName address facilityType')
       .lean();
     return res.json({ venues });
@@ -142,6 +150,21 @@ router.post('/send-appointment', requireDonor, async (req, res) => {
       });
     }
 
+    if (!isObjectIdOrHexString(venue)) {
+      return res.status(400).json({ error: 'Please select a valid donation venue.' });
+    }
+    
+    const bookableVenue = await Facility.exists({
+      _id: venue,
+      ...bookableFacilityFilter,
+    });
+    
+    if (!bookableVenue) {
+      return res.status(400).json({
+        error: 'This facility is no longer available for donation appointments.',
+      });
+    }
+    
     const appt = await Appointment.create({
       donor: donorId,
       venue,
