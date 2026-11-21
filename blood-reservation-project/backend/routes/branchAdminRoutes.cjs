@@ -277,6 +277,11 @@ router.get('/my-requests', async (req, res) => {
     const requests = await BloodRequest.find({ hospitalFacilityID: context.facility._id })
       .populate('receivingFacilityID', 'facilityName facilityType typeLabel')
       .populate('reviewedBy', 'firstName lastName')
+      .populate({
+        path: 'requestedBy',
+        select: 'firstName lastName staffId',
+        transform: (account, id) => account ?? { _id: id },
+      })
       .sort({ createdAt: -1 })
       .lean();
 
@@ -285,6 +290,9 @@ router.get('/my-requests', async (req, res) => {
       facilityId: String(context.facility._id),
       requests: requests.map((request) => ({
         ...request,
+        requestedBy: request.requestedBy?._id ?? null,
+        requesterName: [request.requestedBy?.firstName, request.requestedBy?.lastName].filter(Boolean).join(' '),
+        requesterStaffId: request.requestedBy?.staffId || '',
         id: String(request._id),
         requestedFacilityName: request.receivingFacilityID?.facilityName || 'Branch unavailable',
         reviewerName: request.reviewedBy
@@ -380,7 +388,7 @@ router.patch('/requests/:id/fulfillment-details', async (req, res) => {
     if (!context) return;
     if (!canReceiveBranchRequests(context)) return res.status(403).json({ error: 'Only BSF and PRC branches can update fulfillment details.' });
     const request = await BloodRequest.findOneAndUpdate(
-      { _id: id, receivingFacilityID: context.facility._id, requestStatus: { $in: ['Approved', 'Partially Fulfilled', 'Fulfilled'] } },
+      { _id: id, receivingFacilityID: context.facility._id, requestStatus: { $in: ['Allocated', 'Approved', 'Partially Fulfilled', 'Fulfilled'] } },
       { $set: Object.fromEntries(fields.map((field) => [`fulfillmentDetails.${field}`, details[field]])) },
       { new: true, runValidators: true },
     );

@@ -1,0 +1,49 @@
+.hospital-my-requests-toolbar { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; }
+.hospital-my-request-tabs { flex-wrap:wrap; margin:14px 0; }
+.hospital-my-request-updates { margin:0 0 14px; padding:10px 14px; border:1px solid #e2e8f0; border-radius:9px; background:#f8fafc; color:#334155; font-size:.875rem; }
+.hospital-my-request-updates summary { cursor:pointer; font-weight:700; }
+.hospital-my-request-updates ul { margin:10px 0; padding-inline-start:20px; overflow-wrap:anywhere; }
+.hospital-my-request-table-wrap { overflow-x:auto; margin-top:8px; }
+.custom-table.hospital-my-request-table { min-width:680px; }
+.custom-table.hospital-my-request-table :is(th, td) { text-align:center; vertical-align:middle; padding-inline:8px; line-height:1.35; }
+.custom-table.hospital-my-request-table :is(th, td):nth-child(2) { text-align:left; }
+.hospital-my-requests .blood-request-status[data-status="Allocated"] { background:#e8f0ff; border-color:#c5d8fd; color:#174482; }
+.hospital-my-request-detail-button { display:inline-flex; align-items:center; justify-content:center; min-height:36px; padding:6px 10px; border:1px solid #d9e2ee; border-radius:8px; background:#fff; color:#174482; font:inherit; font-weight:650; cursor:pointer; }
+.hospital-my-request-detail-button:hover { background:#eef4ff; border-color:#b6cbee; }
+.hospital-my-request-detail-button:focus-visible { outline:2px solid #2763a7; outline-offset:2px; }
+.hospital-my-request-dialog { position:fixed; inset:0; margin:auto; box-sizing:border-box; width:min(880px,calc(100vw - 32px)); height:min(720px,calc(100dvh - 32px)); max-height:none; padding:0; overflow:hidden; border:1px solid #e2e8f0; border-radius:14px; background:#fff; color:#1e293b; box-shadow:0 20px 60px #17223940; text-align:left; }
+.hospital-my-request-dialog[open] { display:flex; flex-direction:column; }
+.hospital-my-request-dialog::backdrop { background:#17223980; }
+.hospital-my-request-dialog-header { flex:none; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 18px; border-bottom:1px solid #e2e8f0; background:#f7faff; }
+.hospital-my-request-dialog-header h3 { margin:0; font-size:1.1rem; font-weight:750; overflow-wrap:anywhere; }
+.hospital-my-requests .hospital-my-request-detail-nav { flex:none; flex-wrap:wrap; margin:0; padding:8px 18px; border-bottom:1px solid #e2e8f0; }
+.hospital-my-request-dialog-body { flex:1; min-height:0; overflow-y:auto; scrollbar-gutter:stable; padding:16px 18px; overscroll-behavior:contain; }
+.hospital-my-request-detail-section { margin-bottom:12px; padding:12px; border:1px solid #e2e8f0; border-radius:10px; }
+.hospital-my-request-detail-section h4 { margin:0 0 10px; font-size:.9rem; font-weight:750; }
+.hospital-my-request-detail-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,135px),1fr)); gap:10px 14px; margin:0; }
+.hospital-my-request-detail-grid dt { color:#526275; font-size:.75rem; }
+.hospital-my-request-detail-grid dd { margin:3px 0 0; font-size:.875rem; font-weight:600; overflow-wrap:anywhere; }
+.hospital-my-request-blood-grid { grid-template-columns:repeat(auto-fit,minmax(min(100%,115px),1fr)); }
+.hospital-my-request-disclosure summary { color:#334155; cursor:pointer; font-size:.875rem; font-weight:700; }
+.hospital-my-request-disclosure summary:focus-visible { outline:2px solid #2763a7; outline-offset:3px; }
+.hospital-my-request-disclosure-body, .hospital-my-request-section-divider { margin-top:12px; padding-top:12px; border-top:1px solid #e2e8f0; }
+.hospital-my-request-facts { margin:0; }
+.hospital-my-request-facts > div { display:grid; grid-template-columns:clamp(90px,24vw,150px) minmax(0,1fr); gap:3px 12px; align-items:baseline; padding:4px 0; }
+.hospital-my-request-facts dt { color:#526275; font-size:.75rem; }
+.hospital-my-request-facts dd { margin:0; font-size:.875rem; font-weight:600; overflow-wrap:anywhere; }
+.hospital-my-request-clinical-facts dd { white-space:pre-wrap; line-height:1.5; font-variant-numeric:tabular-nums; }
+.hospital-my-request-wide { grid-column:1 / -1; }
+.hospital-my-request-metrics { margin-bottom:16px; }
+.hospital-my-request-eye:focus-visible { outline:2px solid #2763a7; outline-offset:2px; }
+.hospital-my-request-eye { display:inline-grid; place-items:center; width:36px; height:36px; padding:0; border:1px solid #d9e2ee; border-radius:8px; background:#fff; color:#174482; cursor:pointer; }
+.hospital-my-request-eye:hover { background:#eef4ff; border-color:#b6cbee; }
+.hospital-my-request-eye svg { width:18px; height:18px; }
+.hospital-my-request-dialog-header .blood-request-status { margin-top:5px; }
+.hospital-my-request-histories { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,225px),1fr)); gap:14px; }
+.hospital-my-request-history-list h4 { margin:0 0 8px; color:#334155; font-size:.8125rem; font-weight:750; }
+.hospital-my-request-history-list ol { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.hospital-my-request-history-list li { padding:8px 10px; border-inline-start:2px solid #bbd0ef; border-radius:0 7px 7px 0; background:#f8fafc; font-size:.8125rem; }
+.hospital-my-request-history-list dl { display:flex; flex-wrap:wrap; gap:5px 12px; margin:4px 0 0; }
+.hospital-my-request-history-list dt { color:#526275; font-size:.6875rem; }
+.hospital-my-request-history-list dd { margin:0; font-size:.75rem; }
+.hospital-my-request-history-list p { margin:5px 0 0; color:#526275; font-size:.8125rem; overflow-wrap:anywhere; }
