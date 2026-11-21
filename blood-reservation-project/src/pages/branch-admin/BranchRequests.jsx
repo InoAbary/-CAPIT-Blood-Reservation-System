@@ -228,14 +228,10 @@ export default function BranchRequests() {
           <div className="form-group">
             <label htmlFor="branch-request-status">Filter by status</label>
             <select id="branch-request-status" className="form-control" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value="all">All statuses</option>
-              <option value="Allocated">Allocated</option>
-              <option value="Pending">Pending</option>
-              <option value="Awaiting Hospital Confirmation">Awaiting hospital confirmation</option>
-              <option value="Approved">Approved</option>
-              <option value="Partially Fulfilled">Partially fulfilled</option>
-              <option value="Fulfilled">Fulfilled</option>
-              <option value="Rejected">Rejected</option>
+            <option value="all">All statuses</option>
+            <option value="Allocated">Allocated</option>
+            <option value="Partially Fulfilled">Partially fulfilled</option>
+            <option value="Fulfilled">Fulfilled</option>
               <option value="Cancelled">Cancelled</option>
             </select>
           </div>
