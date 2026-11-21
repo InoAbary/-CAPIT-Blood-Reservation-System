@@ -74,6 +74,8 @@ export default function BranchRequests() {
     const query = search.trim().toLowerCase();
     return requests.filter((item) => {
       const matchesSearch = !query || [
+        item.requestID,
+        item.requestGroupID,
         item.id,
         item.hospitalName,
         item.requesterName,
@@ -100,7 +102,7 @@ export default function BranchRequests() {
     });
   }, [requests, search, statusFilter, sortBy]);
 
-  const selected = requests.find((item) => item.id === selectedId)
+  const selected = filteredRequests.find((item) => item.id === selectedId)
     || filteredRequests[0]
     || null;
   useEffect(() => {
@@ -222,7 +224,7 @@ export default function BranchRequests() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Hospital, patient, or blood type"
+              placeholder="Request ID, hospital, or blood type"
             />
           </div>
           <div className="form-group">
@@ -254,20 +256,20 @@ export default function BranchRequests() {
           <div className="table-scroll">
             <table className="custom-table branch-request-table">
               <thead>
-                <tr><th>Request</th><th>Creation Date</th><th>Creation Time</th><th>Hospital</th><th>Patient</th><th>Blood requested</th><th>Urgency</th><th>Status</th></tr>
+                <tr><th>Request ID</th><th>Creation Date</th><th>Hospital</th><th>Blood<br />Type</th><th>Blood<br />Component</th> <th> Units</th><th>Urgency</th><th>Status</th></tr>
               </thead>
               <tbody>
                 {filteredRequests.length ? filteredRequests.map((item) => (
-                  <tr key={item.id} className={`${selected?.id === item.id ? 'branch-request-selected' : ''} branch-request-row`} onClick={() => setSelectedId(item.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedId(item.id); } }} tabIndex={0} aria-label={`View request ${item.id.slice(-8).toUpperCase()} from ${item.hospitalName}`}>
+                  <tr key={item.id} className={`${selected?.id === item.id ? 'branch-request-selected' : ''} branch-request-row`} onClick={() => setSelectedId(item.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedId(item.id); } }} tabIndex={0} aria-label={`View request ${item.requestID || item.id.slice(-8).toUpperCase()} from ${item.hospitalName}`}>
                     <td>
-                      <span className="branch-request-select">{item.id.slice(-8).toUpperCase()}</span>
+                      <span className="branch-request-select">{item.requestID || item.id.slice(-8).toUpperCase()}</span>
                      
                     </td>
                     <td> {formatDate(item.createdAt)}</td>
-                    <td> {formatTime(item.createdAt)}</td>
                     <td>{item.hospitalName}</td>
-                    <td>{item.lastName}, {item.firstName}</td>
-                    <td><strong>{item.bloodType} · {item.units} unit{item.units === 1 ? '' : 's'}</strong><div className="subtext">{item.component}</div></td>
+                    <td>{item.bloodType}</td>
+                    <td>{item.component}</td>
+                    <td>{item.units ?? '—'}</td>
                     <td><span className={`branch-urgency ${item.urgency?.toLowerCase() === 'stat' ? 'urgent' : ''}`}>{item.urgency?.toLowerCase() === 'stat' ? 'STAT' : 'Routine'}</span></td>
                     <td>
                         <span
@@ -279,7 +281,7 @@ export default function BranchRequests() {
                     </td>
                   </tr>
                 )) : (
-                  <tr><td colSpan="6" className="empty-table">{requests.length ? 'No requests match these filters.' : 'No hospitals have sent a request to this branch yet.'}</td></tr>
+                  <tr><td colSpan="8" className="empty-table">{requests.length ? 'No requests match these filters.' : 'No hospitals have sent a request to this branch yet.'}</td></tr>
                 )}
               </tbody>
             </table>
@@ -292,6 +294,7 @@ export default function BranchRequests() {
               <p className="card-subtitle">{selected.hospitalName}{selected.wardRoom ? ` · ${selected.wardRoom}` : ''}</p>
               <dl>
                 <dt>Age / sex</dt><dd>{selected.age ?? '—'} / {selected.sex || '—'}</dd>
+                <dt>Group ID</dt><dd>{selected.requestGroupID || '—'}</dd>
                 <dt>Diagnosis</dt><dd>{selected.diagnosis || '—'}</dd>
                 <dt>Hemoglobin</dt><dd>{selected.hemoglobin || '—'}</dd>
                 <dt>Platelets</dt><dd>{selected.platelets || '—'}</dd>

@@ -1035,3 +1035,6 @@
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+
+.branch-request-table { min-width: 680px; }
+.custom-table.branch-request-table th, .custom-table.branch-request-table td { text-align: center; vertical-align: middle; padding-inline: 8px; }
