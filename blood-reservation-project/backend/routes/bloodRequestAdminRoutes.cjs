@@ -170,12 +170,11 @@ router.post('/receiving-facilities/availability', async (req, res) => {
             return fail(res, 400, 'Select a valid component and quantity for each row.');
         }
 
-        const total = (requestedByComponent.get(component) || 0) + units;
-        if (!Number.isSafeInteger(total)) {
-            return fail(res, 400, 'The requested quantity is too large.');
+        if (requestedByComponent.has(product.component)) {
+            return fail(res, 400, 'Choose each component once. Increase its quantity if you need more units.');
         }
-
-        requestedByComponent.set(component, total);
+        
+        requestedByComponent.set(product.component, units);
     }
 
     try {
@@ -241,13 +240,11 @@ router.post('/', async (req, res) => {
             return fail(res, 400, 'Select a valid component and enter a positive whole number of units.');
         }
     
-        const total = (requestedByComponent.get(product.component) ?? 0) + product.units;
-    
-        if (!Number.isSafeInteger(total)) {
-            return fail(res, 400, 'The requested quantity is too large.');
+        if (requestedByComponent.has(product.component)) {
+            return fail(res, 400, 'Choose each component once. Increase its quantity if you need more units.');
         }
-    
-        requestedByComponent.set(product.component, total);
+        
+        requestedByComponent.set(product.component, product.units);
     }
 
 

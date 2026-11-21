@@ -589,7 +589,19 @@ const partialMatches = receivingFacilities.filter(facility => !facility.canFillA
       <Field label={`Component ${index + 1}`} error={errors[`component-${product.rowId}`]} invalid={bad(`component-${product.rowId}`)} grow>
       <select name={`component-${product.rowId}`} value={product.component} onChange={event => updateProduct(product.rowId, "component", event.target.value)}>
       <option value="">Select</option>
-      {COMPONENTS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+      
+      {COMPONENTS.map(option => (
+        <option
+          key={option.value}
+          value={option.value}
+          disabled={values.products.some(other =>
+            other.rowId !== product.rowId && other.component === option.value
+          )}
+        >
+          {option.label}
+        </option>
+      ))}
+
       </select>
       </Field>
       <Field label="Units" error={errors[`units-${product.rowId}`]} invalid={bad(`units-${product.rowId}`)} width="sm" group>
