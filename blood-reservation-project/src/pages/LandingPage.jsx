@@ -161,7 +161,7 @@ export default function LandingPage() {
       {/* ---------- TABS ---------- */}
       <section className="landing-tabs-section">
         <div className="landing-tabs-container">
-          <div className="landing-tab-panel" ref={panelRef}>
+          <div className={authTab ? 'landing-tab-panel landing-tab-panel-auth' : 'landing-tab-panel'} ref={panelRef}>
             {authTab && <Outlet />}
             {activeTab === 'map' && (
               <div className="landing-panel landing-panel-map">

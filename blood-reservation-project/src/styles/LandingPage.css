@@ -159,7 +159,19 @@
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
   overflow: hidden;
 }
-.landing-tab-panel > .login-page { min-height: 0; }
+.landing-tab-panel-auth {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+.landing-tab-panel-auth > .login-page,
+.landing-tab-panel-auth > .register-page {
+  background: transparent;
+}
+.landing-tab-panel-auth > .login-page { min-height: 0; }
+.landing-tab-panel-auth .login-card,
+.landing-tab-panel-auth .register-page .register-form { border: 0; }
 .landing-panel { padding: 2rem; }
 .landing-panel-form {
   max-width: 480px;
