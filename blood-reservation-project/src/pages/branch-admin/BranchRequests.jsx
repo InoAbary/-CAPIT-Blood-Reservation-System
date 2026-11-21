@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import '../../styles/BranchAdmin.css';
 import '../../styles/BloodRequestStatus.css';
 
@@ -53,6 +53,7 @@ export default function BranchRequests() {
   const [savingProgress, setSavingProgress] = useState(false);
   const [fulfillmentDetails, setFulfillmentDetails] = useState({ pickupLocation: '', staffContactName: '' });
   const [savingDetails, setSavingDetails] = useState(false);
+  const pickupNoticeRef = useRef(null);
 
   const loadRequests = useCallback(async () => {
     try {
@@ -170,6 +171,10 @@ export default function BranchRequests() {
   }
 
   async function saveFulfillmentDetails() {
+    if (selected.requestStatus === 'Allocated') {
+      pickupNoticeRef.current?.showModal();
+      return;
+    }
     setSavingDetails(true);
     setError('');
     try {
@@ -193,6 +198,21 @@ export default function BranchRequests() {
         <h2 className="card-title">Incoming blood requests</h2>
         <p className="card-subtitle">Requests submitted by hospitals that selected this branch.</p>
       </section>
+
+      <dialog
+        ref={pickupNoticeRef}
+        className="branch-pickup-dialog"
+        aria-labelledby="pickup-notice-title"
+        aria-describedby="pickup-notice-text"
+      >
+        <h3 className="card-title" id="pickup-notice-title">Pickup details can’t be saved yet</h3>
+        <p id="pickup-notice-text">
+          You can save pickup details once the request is Partially Fulfilled or Fulfilled.
+        </p>
+        <form method="dialog" className="modal-actions">
+          <button type="submit" className="btn-action">Got it</button>
+        </form>
+      </dialog>
 
       {error && <p className="form-message error-message" role="alert">{error}</p>}
 
@@ -351,6 +371,8 @@ export default function BranchRequests() {
               {FULFILLMENT_STATUSES.includes(selected.requestStatus) && selected.confirmedFulfillmentMethod === 'Pickup' && (
                 <div className="branch-request-decision">
                   <strong>Pickup details</strong>
+
+                  
                   <label htmlFor="branch-pickup-location">Where to pick up</label><input id="branch-pickup-location" className="form-control" maxLength={300} value={fulfillmentDetails.pickupLocation} onChange={(event) => setFulfillmentDetails((current) => ({ ...current, pickupLocation: event.target.value }))} placeholder="Address, entrance, or desk" />
                   <label htmlFor="branch-staff-contact">Who to find</label>
                   <input id="branch-staff-contact" className="form-control" maxLength={150} value={fulfillmentDetails.staffContactName} onChange={(event) => setFulfillmentDetails((current) => ({ ...current, staffContactName: event.target.value }))} placeholder="Branch staff member" />
