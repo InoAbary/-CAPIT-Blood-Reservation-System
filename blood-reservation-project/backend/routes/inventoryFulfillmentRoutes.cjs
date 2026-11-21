@@ -23,18 +23,28 @@ router.get('/', async (req, res) => {
         ]);
         const released = await BloodUnits.aggregate([
             { $match: { requestID: { $in: requests.map(row => row._id) }, status: 'Released' } },
-                                                    { $group: { _id: '$requestID', count: { $sum: 1 } } }
+            { $group: { _id: '$requestID', count: { $sum: 1 }, bloodBagIDs: { $push: '$bloodUnitID' } } }
         ]);
         const activeOperations = await Operation.find({ facilityID, active: true }).select('requestID state').lean();
         const activeRequests = new Set(activeOperations.map(operation => String(operation.requestID)));
         const stock = new Map(counts.map(row => [`${row._id.bloodType}|${row._id.component}`, row.count]));
-        const progress = new Map(released.map(row => [String(row._id), row.count]));
-        res.json({ success: true, recoveryRequired: activeOperations.some(operation => operation.state === 'Needs Recovery'), requests: requests.map(row => ({ ...row,
-            fulfillmentPending: activeRequests.has(String(row._id)),
-                                                                                                                                                             fulfilledUnits: progress.get(String(row._id)) || 0,
-                                                                                                                                                             remainingUnits: Math.max(0, row.units - (progress.get(String(row._id)) || 0)),
-                                                                                                                                                             availableUnits: stock.get(`${row.bloodType}|${row.component}`) || 0
-        })) });
+        const releasedByRequest = new Map(released.map(row => [String(row._id), row]));
+        res.json({
+            success: true,
+            recoveryRequired: activeOperations.some(operation => operation.state === 'Needs Recovery'),
+            requests: requests.map(row => {
+                const progress = releasedByRequest.get(String(row._id));
+                const fulfilledUnits = progress?.count ?? 0;
+                return {
+                    ...row,
+                    fulfillmentPending: activeRequests.has(String(row._id)),
+                    fulfilledUnits,
+                    remainingUnits: Math.max(0, row.units - fulfilledUnits),
+                    releasedBloodBagIDs: progress?.bloodBagIDs.filter(Boolean).sort() ?? [],
+                    availableUnits: stock.get(`${row.bloodType}|${row.component}`) || 0
+                };
+            })
+        });
     } catch (error) {
         console.error('Fulfillment queue error:', error.name);
         res.status(500).json({ success: false, message: 'Could not load requests for fulfillment.' });
