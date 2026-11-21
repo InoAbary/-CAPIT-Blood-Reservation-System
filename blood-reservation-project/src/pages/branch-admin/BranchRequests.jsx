@@ -35,12 +35,22 @@ function formatTime(value) {
   return date.toLocaleTimeString([], {timeStyle: 'short'});
 }
 
+const CLOSED_REQUEST_STATUSES = new Set(['Cancelled', 'Rejected']);
+const COMPLETED_HANDOFFS = new Set(['Picked Up', 'Delivered']);
+
+function isInHistory(request) {
+  return CLOSED_REQUEST_STATUSES.has(request.requestStatus) ||
+    (request.requestStatus === 'Fulfilled' &&
+      (!request.fulfillmentStatus || COMPLETED_HANDOFFS.has(request.fulfillmentStatus)));
+}
+
 export default function BranchRequests() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [view, setView] = useState('ongoing');
   const [sortBy, setSortBy] = useState('stat-first');
   const [selectedId, setSelectedId] = useState('');
   const [decisionReason, setDecisionReason] = useState('');
@@ -70,41 +80,66 @@ export default function BranchRequests() {
     loadRequests();
   }, [loadRequests]);
 
-  const requests = data?.requests || [];
-  const filteredRequests = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return requests.filter((item) => {
-      const matchesSearch = !query || [
-        item.requestID,
-        item.id,
-        item.hospitalName,
-        item.requesterName,
-        item.firstName,
-        item.lastName,
-        item.bloodType,
-        item.component,
-      ].filter(Boolean).join(' ').toLowerCase().includes(query);
-      const matchesStatus = statusFilter === 'all' || item.requestStatus === statusFilter;
-      return matchesSearch && matchesStatus;
-    }).sort((a,b)=>{
-      const dateA = Date.parse(a.createdAt) || 0;
-      const dateB = Date.parse(b.createdAt) || 0;
+  const requests = useMemo(() => data?.requests ?? [], [data]);
 
-      if (sortBy === 'stat-first') {
-        const priority =
-          Number(b.urgency?.toLowerCase() === 'stat') -
-          Number(a.urgency?.toLowerCase() === 'stat');
+const { ongoing, history } = useMemo(() => ({
+  ongoing: requests.filter(item => !isInHistory(item)),
+  history: requests.filter(isInHistory),
+}), [requests]);
 
+const viewRequests = view === 'ongoing' ? ongoing : history;
+const statusOptions = [...new Set(
+  viewRequests
+    .map(item => item.requestStatus)
+    .filter(status => status && !['Pending', 'Approved', 'Rejected'].includes(status))
+)].sort();
+const activeStatus = statusOptions.includes(statusFilter) ? statusFilter : 'all';
+
+const filteredRequests = useMemo(() => {
+  const query = search.trim().toLowerCase();
+
+  return viewRequests.filter(item => {
+    const matchesStatus = activeStatus === 'all' || item.requestStatus === activeStatus;
+    const matchesSearch = !query || [
+      item.requestID,
+      item.id,
+      item.hospitalName,
+      item.requesterName,
+      item.firstName,
+      item.lastName,
+      item.bloodType,
+      item.component,
+    ].filter(Boolean).join(' ').toLowerCase().includes(query);
+
+    return matchesStatus && matchesSearch;
+      }).sort((a, b) => {
+        if (view === 'history') {
+          const updatedA = Date.parse(a.updatedAt) || Date.parse(a.createdAt) || 0;
+          const updatedB = Date.parse(b.updatedAt) || Date.parse(b.createdAt) || 0;
+          return updatedB - updatedA;
+        }
+
+        if (sortBy === 'stat-first') {
+          const priority = Number(b.urgency?.toLowerCase() === 'stat') -
+            Number(a.urgency?.toLowerCase() === 'stat');
           if (priority) return priority;
-      }
+        }
 
-      return sortBy === 'oldest' ? dateA - dateB : dateB - dateA;
-    });
-  }, [requests, search, statusFilter, sortBy]);
+        const dateA = Date.parse(a.createdAt) || 0;
+        const dateB = Date.parse(b.createdAt) || 0;
+        return sortBy === 'oldest' ? dateA - dateB : dateB - dateA;
+      });
+    }, [viewRequests, search, activeStatus, sortBy, view]);
 
-  const selected = filteredRequests.find((item) => item.id === selectedId)
-    || filteredRequests[0]
-    || null;
+    const selected = filteredRequests.find(item => item.id === selectedId) ??
+      filteredRequests[0] ?? null;
+
+    function changeView(nextView) {
+      if (nextView === view) return;
+      setView(nextView);
+      setStatusFilter('all');
+      setSelectedId('');
+    }
   useEffect(() => {
     setApprovalMethod(selected?.fulfillmentMethod || 'Pickup');
     setMethodNote('');
@@ -238,6 +273,26 @@ export default function BranchRequests() {
       </div>
 
       <section className="content-card">
+        <div className="segmented-tabs" role="group" aria-label="Incoming request view">
+          <button
+            type="button"
+            className={`segmented-btn${view === 'ongoing' ? ' segmented-btn--active' : ''}`}
+            aria-pressed={view === 'ongoing'}
+            onClick={() => changeView('ongoing')}
+          >
+            Ongoing ({ongoing.length})
+          </button>
+          <button
+            type="button"
+            className={`segmented-btn${view === 'history' ? ' segmented-btn--active' : ''}`}
+            aria-pressed={view === 'history'}
+            onClick={() => changeView('history')}
+          >
+            History ({history.length})
+          </button>
+        </div>
+
+
         <div className="branch-request-toolbar">
           <div className="form-group">
             <label htmlFor="branch-request-search">Search requests</label>
@@ -252,34 +307,41 @@ export default function BranchRequests() {
           </div>
           <div className="form-group">
             <label htmlFor="branch-request-status">Filter by status</label>
-            <select id="branch-request-status" className="form-control" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-            <option value="all">All statuses</option>
-            <option value="Allocated">Allocated</option>
-            <option value="Partially Fulfilled">Partially fulfilled</option>
-            <option value="Fulfilled">Fulfilled</option>
-              <option value="Cancelled">Cancelled</option>
+            <select
+              id="branch-request-status"
+              className="form-control"
+              value={activeStatus}
+              onChange={event => setStatusFilter(event.target.value)}
+            >
+              <option value="all">All statuses</option>
+              {statusOptions.map(status => (
+                <option key={status} value={status}>{status}</option>
+              ))}
             </select>
           </div>
+                  {view === 'ongoing' && (
           <div className="form-group">
-            <label htmlFor="branch-request-sort"> Sort by </label>
-            <select 
-            id="branch-request-sort" 
-            className="form-control" 
-            value={sortBy} 
-            onChange={(event) => setSortBy(event.target.value)}>
-              <option value="stat-first"> STAT first</option>
-              <option value="newest"> Newest first</option>
-              <option value="oldest"> Oldest first</option>
+            <label htmlFor="branch-request-sort">Sort by</label>
+            <select
+              id="branch-request-sort"
+              className="form-control"
+              value={sortBy}
+              onChange={event => setSortBy(event.target.value)}
+            >
+              <option value="stat-first">STAT first</option>
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
             </select>
           </div>
-          <span className="branch-user-count">Showing {filteredRequests.length} of {requests.length}</span>
+        )}
+          <span className="branch-user-count">Showing {filteredRequests.length} of {viewRequests.length}</span>
         </div>
 
         <div className="branch-request-list-layout">
           <div className="table-scroll">
             <table className="custom-table branch-request-table">
               <thead>
-                <tr><th>Request ID</th><th>Creation Date</th><th>Hospital</th><th>Blood<br />Type</th><th>Blood<br />Component</th> <th> Units</th><th>Urgency</th><th>Status</th></tr>
+                <tr><th>Request ID</th><th>Creation Date</th><th>Hospital</th><th scope="col">Patient name</th><th>Blood<br />Type</th><th>Blood<br />Component</th> <th> Units</th><th>Urgency</th><th>Status</th></tr>
               </thead>
               <tbody>
                 {filteredRequests.length ? filteredRequests.map((item) => (
@@ -290,6 +352,7 @@ export default function BranchRequests() {
                     </td>
                     <td> {formatDate(item.createdAt)}</td>
                     <td>{item.hospitalName}</td>
+                    <td>{[item.lastName, item.firstName].filter(Boolean).join(', ') || '—'}</td>
                     <td>{item.bloodType}</td>
                     <td>{item.component}</td>
                     <td>{item.units ?? '—'}</td>
@@ -304,7 +367,13 @@ export default function BranchRequests() {
                     </td>
                   </tr>
                 )) : (
-                  <tr><td colSpan="8" className="empty-table">{requests.length ? 'No requests match these filters.' : 'No hospitals have sent a request to this branch yet.'}</td></tr>
+                  <tr><td colSpan={9} className="empty-table">{viewRequests.length
+                      ? 'No requests match these filters.'
+                        : view === 'ongoing'
+                          ? 'No ongoing requests.'
+                          : 'No requests in history yet.'}
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
