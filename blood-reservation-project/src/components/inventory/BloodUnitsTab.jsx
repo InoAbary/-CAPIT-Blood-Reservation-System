@@ -170,7 +170,7 @@ function UnitModal({
         donorID: initial.donorID?._id || initial.donorID || '',
     }));
     const [errors, setErrors] = useState({});
-    const [expiryVerified, setExpiryVerified] = useState(false);
+    const [expiryVerified, setExpiryVerified] = useState(mode === 'edit');
     const [confirmingDelete, setConfirmingDelete] = useState(false);
     const [donorQuery, setDonorQuery] = useState(() => donorLabel(initial.donorID));
     const [donors, setDonors] = useState([]);
@@ -1353,9 +1353,7 @@ function BloodUnitsTab({
                 transition: background 0.15s ease;
             }
 
-            .bu-icon-btn:hover {
-                background: var(--accent-soft);
-            }
+            .bu-icon-btn:not(:disabled):hover { background: var(--accent-soft); }
 
             .bu-actions-group {
                 display: inline-flex;
@@ -1364,14 +1362,7 @@ function BloodUnitsTab({
                 justify-content: flex-end;
             }
 
-            .bu-released-tag {
-                font-size: 12px;
-                font-weight: 600;
-                color: var(--muted);
-                padding: 3px 8px;
-                border-radius: 6px;
-                background: #ececf0;
-            }
+            .bu-icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
             .bu-icon-btn[title*="Print"] {
                 background: #eef5ff;
@@ -1758,20 +1749,16 @@ function BloodUnitsTab({
 
                             <td className="bu-actions">
                                 <div className="bu-actions-group">
-                                    {!readOnly && unit.status !== 'Released' && !unit.requestID && (
-                                        <button
-                                            type="button"
-                                            className="bu-icon-btn"
-                                            aria-label={`Edit unit ${unit.bloodUnitID}`}
-                                            onClick={() =>
-                                                setModal({ mode: 'edit', unit, apiError: '' })
-                                            }
-                                        >
-                                            <PencilIcon />
-                                        </button>
-                                    )}
-                                    {!readOnly && (unit.status === 'Released' || unit.requestID) && (
-                                        <span className="bu-released-tag">Released</span>
+                                {!readOnly && (
+                                    <button
+                                        type="button"
+                                        className="bu-icon-btn"
+                                        aria-label={`Edit unit ${unit.bloodUnitID}`}
+                                        disabled={unit.status === 'Released' || Boolean(unit.requestID || unit.releaseOperationID)}
+                                        onClick={() => setModal({ mode: 'edit', unit, apiError: '' })}
+                                    >
+                                        <PencilIcon />
+                                    </button>
                                     )}
 
                                     <button
