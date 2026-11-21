@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const Facility = require('./../../db/models/facilities.cjs');   // adjust paths to your model files
 const Inventory = require('../../db/models/inventories.cjs');
 const syncInventory = require('../services/syncInventory.cjs');
+const { getStockBalances, stockKey } = require('../services/requestStock.cjs');
 const Counter = require('../../db/models/counters.cjs');
 const BloodUnits = require('../../db//models/bloodUnits.cjs')
 
@@ -72,22 +73,22 @@ router.get('/:id', validateId, async (req, res) => {
 
 router.get('/:id/inventory', ...authenticateInventory, authorizeFacility, validateId, async (req, res) => {
     try {
-        const facility = await Facility.findById(req.params.id).lean();
-        if (!facility) {
-            return res.status(404).json({ message: 'Facility not found.' });
-        }
+        const facility = req.inventoryFacility;
+        const readOnly = !req.inventoryAccess.canEdit;
+        const snapshot = await syncInventory(facility, { readOnly });
 
-        if (!req.inventoryAccess.canEdit) {
-            const items = await syncInventory(facility, { readOnly: true });
-            return res.json(items);
-        }
-        await syncInventory(facility);
+        const [items, balances] = await Promise.all([
+            readOnly ? snapshot : Inventory.find({ facilityID: facility._id })
+                .select('bloodType component availQuantity availStatus lastUpdated')
+                .lean(),
+            getStockBalances([facility._id]),
+        ]);
 
-        const items = await Inventory.find({ facilityID: facility._id })
-        .select('bloodType component availQuantity availStatus lastUpdated')
-        .lean();
-
-        res.json(items);
+        const emptyBalance = { inStockUnits: 0, allocatedUnits: 0, availableUnits: 0 };
+        return res.json(items.map(item => ({
+            ...item,
+            ...(balances.get(stockKey(facility._id, item.bloodType, item.component)) ?? emptyBalance),
+        })));
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Failed to load inventory.' });

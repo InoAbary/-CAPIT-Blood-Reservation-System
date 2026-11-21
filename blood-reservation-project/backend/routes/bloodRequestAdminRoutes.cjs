@@ -1,9 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
-const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const Counter = require('../../db/models/counters.cjs');
-const { eligibleStock } = require('../services/fulfillRequest.cjs');
+const { getStockBalances, stockKey } = require('../services/requestStock.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const requireRequestStaff = require('../middleware/requireRequestAdmin.cjs');
 const router = express.Router();
@@ -85,61 +84,14 @@ async function getRequestAvailability(facilities, bloodType, requestedByComponen
     const facilityIDs = facilities.map(facility => facility._id);
     const components = [...requestedByComponent.keys()];
 
-    const [stock, allocations] = await Promise.all([
-        BloodUnits.aggregate([
-            {
-                $match: {
-                    ...eligibleStock(null),
-                    facilityID: { $in: facilityIDs.map(String) },
-                    bloodType,
-                    component: { $in: components },
-                },
-            },
-            {
-                $group: {
-                    _id: { facilityID: '$facilityID', component: '$component' },
-                    units: { $sum: 1 },
-                },
-            },
-        ]),
-        BloodRequest.find({
-            receivingFacilityID: { $in: facilityIDs },
-            bloodType,
-            component: { $in: components },
-            $or: [
-                { requestStatus: 'Allocated' },
-                {
-                    requestStatus: 'Partially Fulfilled',
-                    requestGroupID: { $type: 'string' },
-                },
-            ],
-        }).select('receivingFacilityID component units fulfilledUnits').lean(),
-    ]);
-
-    const stockByKey = new Map(stock.map(row => [
-        `${row._id.facilityID}:${row._id.component}`,
-        row.units,
-    ]));
-    const reservedByKey = new Map();
-
-    for (const row of allocations) {
-        const key = `${row.receivingFacilityID}:${row.component}`;
-        const remaining = Math.max(0, row.units - (row.fulfilledUnits ?? 0));
-        reservedByKey.set(key, (reservedByKey.get(key) ?? 0) + remaining);
-    }
+    const balances = await getStockBalances(facilityIDs, { bloodType, components });
 
     return facilities.map(({ facilityID, ...facility }) => {
-        const coverage = [...requestedByComponent].map(([component, requested]) => {
-            const key = `${facility._id}:${component}`;
-            return {
-                component,
-                requested,
-                available: Math.max(
-                    0,
-                    (stockByKey.get(key) ?? 0) - (reservedByKey.get(key) ?? 0)
-                ),
-            };
-        });
+        const coverage = [...requestedByComponent].map(([component, requested]) => ({
+            component,
+            requested,
+            available: balances.get(stockKey(facility._id, bloodType, component))?.availableUnits ?? 0,
+        }));
 
         return {
             ...facility,
