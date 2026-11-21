@@ -2,6 +2,8 @@ const express = require('express');
 const mongoose = require('mongoose');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
+const Counter = require('../../db/models/counters.cjs');
+const { eligibleStock } = require('../services/fulfillRequest.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const requireRequestStaff = require('../middleware/requireRequestAdmin.cjs');
 const router = express.Router();
@@ -79,6 +81,74 @@ router.get('/receiving-facilities', async (req, res) => {
     }
 });
 
+async function getRequestAvailability(facilities, bloodType, requestedByComponent) {
+    const facilityIDs = facilities.map(facility => facility._id);
+    const components = [...requestedByComponent.keys()];
+
+    const [stock, allocations] = await Promise.all([
+        BloodUnits.aggregate([
+            {
+                $match: {
+                    ...eligibleStock(null),
+                    facilityID: { $in: facilityIDs.map(String) },
+                    bloodType,
+                    component: { $in: components },
+                },
+            },
+            {
+                $group: {
+                    _id: { facilityID: '$facilityID', component: '$component' },
+                    units: { $sum: 1 },
+                },
+            },
+        ]),
+        BloodRequest.find({
+            receivingFacilityID: { $in: facilityIDs },
+            bloodType,
+            component: { $in: components },
+            $or: [
+                { requestStatus: 'Allocated' },
+                {
+                    requestStatus: 'Partially Fulfilled',
+                    requestGroupID: { $type: 'string' },
+                },
+            ],
+        }).select('receivingFacilityID component units fulfilledUnits').lean(),
+    ]);
+
+    const stockByKey = new Map(stock.map(row => [
+        `${row._id.facilityID}:${row._id.component}`,
+        row.units,
+    ]));
+    const reservedByKey = new Map();
+
+    for (const row of allocations) {
+        const key = `${row.receivingFacilityID}:${row.component}`;
+        const remaining = Math.max(0, row.units - (row.fulfilledUnits ?? 0));
+        reservedByKey.set(key, (reservedByKey.get(key) ?? 0) + remaining);
+    }
+
+    return facilities.map(({ facilityID, ...facility }) => {
+        const coverage = [...requestedByComponent].map(([component, requested]) => {
+            const key = `${facility._id}:${component}`;
+            return {
+                component,
+                requested,
+                available: Math.max(
+                    0,
+                    (stockByKey.get(key) ?? 0) - (reservedByKey.get(key) ?? 0)
+                ),
+            };
+        });
+
+        return {
+            ...facility,
+            components: coverage,
+            canFillAll: coverage.every(item => item.available >= item.requested),
+        };
+    });
+}
+
 router.post('/receiving-facilities/availability', async (req, res) => {
     const { bloodType, products } = req.body || {};
 
@@ -122,51 +192,11 @@ router.post('/receiving-facilities/availability', async (req, res) => {
             .sort({ facilityName: 1 })
             .lean();
 
-        const keysFor = facility => [
-            ...new Set([String(facility._id), facility.facilityID].filter(Boolean)),
-        ];
-        const facilityKeys = [...new Set(facilities.flatMap(keysFor))];
-
-        const stock = await BloodUnits.aggregate([
-            {
-                $match: {
-                    facilityID: { $in: facilityKeys },
-                    bloodType,
-                    component: { $in: [...requestedByComponent.keys()] },
-                    status: 'In-stock',
-                    expiryDate: { $gt: new Date() },
-                },
-            },
-            {
-                $group: {
-                    _id: { facilityID: '$facilityID', component: '$component' },
-                    units: { $sum: 1 },
-                },
-            },
-        ]);
-
-        const stockByKey = new Map(stock.map(row => [
-            `${row._id.facilityID}:${row._id.component}`,
-            row.units,
-        ]));
-
-        const results = facilities.map(({ facilityID, ...facility }) => {
-            const keys = keysFor({ ...facility, facilityID });
-            const components = [...requestedByComponent].map(([component, requested]) => ({
-                component,
-                requested,
-                available: keys.reduce(
-                    (total, key) => total + (stockByKey.get(`${key}:${component}`) || 0),
-                    0
-                ),
-            }));
-
-            return {
-                ...facility,
-                components,
-                canFillAll: components.every(item => item.available >= item.requested),
-            };
-        });
+        const results = await getRequestAvailability(
+                facilities,
+                bloodType,
+                requestedByComponent
+        );
 
         return res.json({
             success: true,
@@ -191,8 +221,36 @@ router.post('/', async (req, res) => {
     if (!body || typeof body !== 'object' || Array.isArray(body)) return fail(res, 400, 'Invalid request body.');
     if (!mongoose.isObjectIdOrHexString(body.receivingFacilityID)) return fail(res, 400, 'Select a valid receiving facility.');
     if (!['Pickup', 'Delivery'].includes(body.fulfillmentMethod)) return fail(res, 400, 'Choose pickup or delivery.');
-    if (!COMPONENTS.includes(body.component) || !BLOOD_TYPES.includes(body.bloodType)) return fail(res, 400, 'Select a valid blood type and component.');
-    if (typeof body.units !== 'number' || !Number.isSafeInteger(body.units) || body.units < 1) return fail(res, 400, 'Units must be a positive whole number.');
+    
+    if (!BLOOD_TYPES.includes(body.bloodType)) {
+        return fail(res, 400, 'Select a valid blood type.');
+    }
+    
+    const isBatch = body.products !== undefined;
+    const products = isBatch ? body.products : [body];
+    
+    if (!Array.isArray(products) || products.length < 1 || products.length > COMPONENTS.length) {
+        return fail(res, 400, 'Select between one and four components.');
+    }
+    
+    const requestedByComponent = new Map();
+    
+    for (const product of products) {
+        if (!COMPONENTS.includes(product?.component) ||
+            !Number.isSafeInteger(product.units) || product.units < 1) {
+            return fail(res, 400, 'Select a valid component and enter a positive whole number of units.');
+        }
+    
+        const total = (requestedByComponent.get(product.component) ?? 0) + product.units;
+    
+        if (!Number.isSafeInteger(total)) {
+            return fail(res, 400, 'The requested quantity is too large.');
+        }
+    
+        requestedByComponent.set(product.component, total);
+    }
+
+
     if (['firstName', 'lastName', 'diagnosis'].some(field => typeof body[field] !== 'string' || !body[field].trim())) return fail(res, 400, 'Patient name and diagnosis are required.');
     if (!['Male', 'Female'].includes(body.sex)) return fail(res, 400, 'Select a valid sex.');
     const age = Number(body.age);
@@ -222,6 +280,45 @@ router.post('/', async (req, res) => {
         data.receivingFacilityID = receiver._id;
         data.requestStatus = 'Pending';
         data.fulfilledAt = null;
+
+        if (isBatch) {
+            const [availability] = await getRequestAvailability(
+                [receiver],
+                body.bloodType,
+                requestedByComponent
+            );
+        
+            const short = availability.components.find(item => item.available < item.requested);
+        
+            if (short) {
+                return fail(
+                    res,
+                    409,
+                    `Only ${short.available} of ${short.requested} ${short.component} units are available. Review your quantities and choose a facility again.`
+                );
+            }
+        
+            const counter = await Counter.findOneAndUpdate(
+                { _id: 'bloodRequestGroup' },
+                { $inc: { sequence: 1 } },
+                { upsert: true, returnDocument: 'after' }
+            );
+        
+            const requestGroupID = `R${String(counter.sequence).padStart(6, '0')}`;
+            const requests = await BloodRequest.insertMany(
+                products.map(({ component, units }, index) => ({
+                    ...data,
+                    component,
+                    units,
+                    requestGroupID,
+                    requestID: `${requestGroupID}-${String(index + 1).padStart(2, '0')}`,
+                    requestStatus: 'Allocated',
+                }))
+            );
+        
+            return res.status(201).json({ success: true, requestGroupID, requests });
+        }
+
         const created = await BloodRequest.create(data);
         return res.status(201).json({ success: true, request: created, bloodRequest: created });
     } catch (error) {

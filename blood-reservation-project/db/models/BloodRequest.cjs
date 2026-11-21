@@ -20,6 +20,17 @@ const bloodRequestSchema = new mongoose.Schema(
         bloodType: String,
         component: String,
         units: Number,
+        requestGroupID: {
+            type: String,
+            trim: true,
+            index: true,
+        },
+        requestID: {
+            type: String,
+            trim: true,
+            unique: true,
+            sparse: true,
+        },
         urgency: String,
         reviewedBy: { // Authenticated staff member who reviewed the request.
 
@@ -68,6 +79,7 @@ const bloodRequestSchema = new mongoose.Schema(
             type: String,
             enum: [
                 'Pending',
+                'Allocated',
                 'Awaiting Hospital Confirmation',
                 'Approved',
                 'Partially Fulfilled',
