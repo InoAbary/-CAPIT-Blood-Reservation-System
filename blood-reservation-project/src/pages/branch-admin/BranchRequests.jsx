@@ -109,8 +109,12 @@ export default function BranchRequests() {
     setApprovalMethod(selected?.fulfillmentMethod || 'Pickup');
     setMethodNote('');
   }, [selected?.id, selected?.fulfillmentMethod]);
-  const pendingCount = requests.filter((item) => item.requestStatus === 'Pending').length;
-  const urgentCount = requests.filter((item) => item.urgency?.toLowerCase() === 'stat' && item.requestStatus === 'Pending').length;
+  const requestsNeedingAction = requests.filter(({ requestStatus }) =>
+    ['Allocated', 'Partially Fulfilled',].includes(requestStatus)
+  );
+  const urgentCount = requestsNeedingAction.filter(
+    ({ urgency }) => urgency?.toLowerCase() === 'stat'
+  ).length;
   const fulfilledCount = requests.filter((item) => item.requestStatus === 'Fulfilled').length;
 
   async function decide(decision) {
@@ -222,8 +226,8 @@ export default function BranchRequests() {
           <div className="metric-subtext">Addressed to this branch</div>
         </article>
         <article className="metric-card">
-          <div className="metric-header"><span className="metric-label">Pending review</span><span className="metric-icon orange">◷</span></div>
-          <div className="metric-value">{pendingCount}</div>
+          <div className="metric-header"><span className="metric-label">Requests needing action</span><span className="metric-icon orange">◷</span></div>
+          <div className="metric-value">{requestsNeedingAction.length}</div>
           <div className="metric-subtext">{urgentCount} urgent request{urgentCount === 1 ? '' : 's'}</div>
         </article>
         <article className="metric-card">

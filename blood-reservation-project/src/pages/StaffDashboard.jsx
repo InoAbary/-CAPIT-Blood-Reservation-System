@@ -226,7 +226,7 @@ function StaffDashboard() {
                 {['bsf', 'prc_chapter'].includes(facilityType) && (
                   <article className="metric-card">
                     <div className="metric-header">
-                      <span className="metric-label">Pending blood requests</span>
+                      <span className="metric-label">Requests needing action</span>
                       <span className="metric-icon orange">◷</span>
                     </div>
                     <div className="metric-value">{summary?.pendingBloodRequests ?? 0}</div>
