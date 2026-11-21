@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import '../../styles/BranchAdmin.css';
 import '../../styles/BloodRequestStatus.css';
 
+const FULFILLMENT_STATUSES = ['Allocated', 'Approved', 'Partially Fulfilled', 'Fulfilled'];
+
 async function request(path) {
   const response = await fetch(path, { credentials: 'include' });
   const data = await readResponse(response);
@@ -227,6 +229,7 @@ export default function BranchRequests() {
             <label htmlFor="branch-request-status">Filter by status</label>
             <select id="branch-request-status" className="form-control" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               <option value="all">All statuses</option>
+              <option value="Allocated">Allocated</option>
               <option value="Pending">Pending</option>
               <option value="Awaiting Hospital Confirmation">Awaiting hospital confirmation</option>
               <option value="Approved">Approved</option>
@@ -299,12 +302,13 @@ export default function BranchRequests() {
                 <dt>Previous transfusion</dt><dd>{selected.priorTransfusion || '—'}</dd>
                 {selected.priorTransfusionNotes && <><dt>Transfusion notes</dt><dd>{selected.priorTransfusionNotes}</dd></>}
                 <dt>Requested by</dt><dd>{selected.requesterName || 'Hospital staff'}</dd>
-                <dt>Submitted</dt><dd>{formatDate(selected.createdAt)}</dd>
+                <dt>Submitted date</dt><dd>{formatDate(selected.createdAt)}</dd>
+                <dt>Submitted time</dt><dd>{formatTime(selected.createdAt)}</dd>
                 <dt>Requested method</dt><dd>{selected.fulfillmentMethod || 'Not specified'}</dd>
                 {selected.confirmedFulfillmentMethod && <><dt>Branch method</dt><dd>{selected.confirmedFulfillmentMethod}</dd></>}
                 {selected.requestStatus === 'Awaiting Hospital Confirmation' && <><dt>Method offer</dt><dd>Waiting for hospital to accept or decline</dd></>}
                 {selected.confirmedFulfillmentMethod && selected.confirmedFulfillmentMethod !== selected.fulfillmentMethod && selected.fulfillmentMethodNote && <><dt>Method change note</dt><dd>{selected.fulfillmentMethodNote}</dd></>}
-                {(selected.requestStatus === 'Approved' || selected.requestStatus === 'Partially Fulfilled' || selected.requestStatus === 'Fulfilled') && <><dt>Units provided</dt><dd>{selected.fulfilledUnits || 0} of {selected.units}</dd></>}
+                {FULFILLMENT_STATUSES.includes(selected.requestStatus)}
                 {selected.fulfillmentStatus && <><dt>Fulfillment progress</dt><dd>{selected.fulfillmentStatus}</dd></>}
                 {selected.reviewedAt && <><dt>Reviewed</dt><dd>{formatDate(selected.reviewedAt)}</dd></>}
                 {selected.reviewedBy && <><dt>Reviewed by</dt><dd>{`${selected.reviewedBy.firstName || ''} ${selected.reviewedBy.lastName || ''}`.trim()}</dd></>}
@@ -335,7 +339,7 @@ export default function BranchRequests() {
                 </div>
               )}
               {selected.requestStatus === 'Awaiting Hospital Confirmation' && <p className="form-message" role="status">Alternative offered. Waiting for the hospital to respond.</p>}
-              {['Approved', 'Partially Fulfilled', 'Fulfilled'].includes(selected.requestStatus) && availableProgress && (
+              {FULFILLMENT_STATUSES.includes(selected.requestStatus) && availableProgress && (
                 <div className="branch-request-decision">
                   <strong>Update {selected.confirmedFulfillmentMethod?.toLowerCase()} progress</strong>
                   <label htmlFor="branch-progress-next">Next step</label>
@@ -345,7 +349,7 @@ export default function BranchRequests() {
                   <button className="btn-action" type="button" disabled={savingProgress} onClick={updateProgress}>{savingProgress ? 'Saving…' : 'Post progress update'}</button>
                 </div>
               )}
-              {['Approved', 'Partially Fulfilled', 'Fulfilled'].includes(selected.requestStatus) && selected.confirmedFulfillmentMethod === 'Pickup' && (
+              {FULFILLMENT_STATUSES.includes(selected.requestStatus) && selected.confirmedFulfillmentMethod === 'Pickup' && (
                 <div className="branch-request-decision">
                   <strong>Pickup details</strong>
                   <label htmlFor="branch-pickup-location">Where to pick up</label><input id="branch-pickup-location" className="form-control" maxLength={300} value={fulfillmentDetails.pickupLocation} onChange={(event) => setFulfillmentDetails((current) => ({ ...current, pickupLocation: event.target.value }))} placeholder="Address, entrance, or desk" />

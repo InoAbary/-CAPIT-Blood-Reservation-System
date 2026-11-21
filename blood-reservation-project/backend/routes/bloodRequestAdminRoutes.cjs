@@ -275,49 +275,50 @@ router.post('/', async (req, res) => {
         data.hospitalFacilityID = hospital._id;
         data.requestedBy = req.requestStaff._id;
         data.receivingFacilityID = receiver._id;
-        data.requestStatus = 'Pending';
+       
+        data.requestStatus = 'Allocated';
+        data.confirmedFulfillmentMethod = body.fulfillmentMethod;
+        data.fulfillmentStatus = 'Preparing';
         data.fulfilledAt = null;
 
-        if (isBatch) {
-            const [availability] = await getRequestAvailability(
-                [receiver],
-                body.bloodType,
-                requestedByComponent
+        const [availability] = await getRequestAvailability(
+            [receiver],
+            body.bloodType,
+            requestedByComponent
+        );
+
+        const short = availability.components.find(item => item.available < item.requested);
+
+        if (short) {
+            return fail(
+                res,
+                409,
+                `Only ${short.available} of ${short.requested} ${short.component} units are available. Review your quantities and choose a facility again.`
             );
-        
-            const short = availability.components.find(item => item.available < item.requested);
-        
-            if (short) {
-                return fail(
-                    res,
-                    409,
-                    `Only ${short.available} of ${short.requested} ${short.component} units are available. Review your quantities and choose a facility again.`
-                );
-            }
-        
-            const counter = await Counter.findOneAndUpdate(
-                { _id: 'bloodRequestGroup' },
-                { $inc: { sequence: 1 } },
-                { upsert: true, returnDocument: 'after' }
-            );
-        
-            const requestGroupID = `R${String(counter.sequence).padStart(6, '0')}`;
-            const requests = await BloodRequest.insertMany(
-                products.map(({ component, units }, index) => ({
-                    ...data,
-                    component,
-                    units,
-                    requestGroupID,
-                    requestID: `${requestGroupID}-${String(index + 1).padStart(2, '0')}`,
-                    requestStatus: 'Allocated',
-                }))
-            );
-        
-            return res.status(201).json({ success: true, requestGroupID, requests });
         }
 
-        const created = await BloodRequest.create(data);
-        return res.status(201).json({ success: true, request: created, bloodRequest: created });
+        const counter = await Counter.findOneAndUpdate(
+            { _id: 'bloodRequestGroup' },
+            { $inc: { sequence: 1 } },
+            { upsert: true, returnDocument: 'after' }
+        );
+
+        const requestGroupID = `R${String(counter.sequence).padStart(6, '0')}`;
+        const requests = await BloodRequest.insertMany(
+            products.map(({ component, units }, index) => ({
+                ...data,
+                component,
+                units,
+                requestGroupID,
+                requestID: `${requestGroupID}-${String(index + 1).padStart(2, '0')}`,
+            }))
+        );
+
+        return res.status(201).json(isBatch
+            ? { success: true, requestGroupID, requests }
+            : { success: true, request: requests[0], bloodRequest: requests[0] }
+        );
+
     } catch (error) {
         console.error('Blood request creation error:', error.name);
         return fail(res, ['ValidationError', 'CastError'].includes(error.name) ? 400 : 500,

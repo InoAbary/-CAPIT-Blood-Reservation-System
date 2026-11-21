@@ -18,9 +18,142 @@ function Icon({ name, ...props }) {
     };
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[name] || paths.info} /></svg>;
 }
-const statusTone = status => ({ Approved: 'ready', 'Partially Fulfilled': 'partial', Pending: 'pending', Fulfilled: 'done' }[status] || 'neutral');
+
+const RELEASE_STATUSES = ['Allocated', 'Approved', 'Partially Fulfilled'];
+
+const requiresBagCodes = row =>
+    row.requestStatus === 'Allocated' || Boolean(row.requestGroupID);
+
+const statusTone = status => ({ Allocated: 'ready', Approved: 'ready', 'Partially Fulfilled': 'partial', Pending: 'pending', Fulfilled: 'done' }[status] || 'neutral');
 function StatusBadge({ status }) {
     return <span className={`fr-status fr-status--${statusTone(status)}`}><span className="fr-status-dot" />{status}</span>;
+}
+
+function BagPicker({ requestID, quantity, selectedCodes, onChange }) {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        const timer = setTimeout(async () => {
+            try {
+                const search = encodeURIComponent(query.trim());
+                const response = await apiFetch(
+                    `${ENDPOINT}/${requestID}/eligible-units?q=${search}`,
+                    { signal: controller.signal }
+                );
+                const body = await response.json();
+
+                if (!response.ok || !Array.isArray(body.units)) {
+                    throw new Error(body.message || 'Could not load eligible bags.');
+                }
+
+                if (!controller.signal.aborted) setResults(body.units);
+            } catch (err) {
+                if (!controller.signal.aborted) setError(err.message);
+            } finally {
+                if (!controller.signal.aborted) setLoading(false);
+            }
+        }, 200);
+
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [requestID, query]);
+
+    return (
+        <div>
+            <label className="fr-bag-search">
+                Search blood bag codes
+                <input
+                    className="form-control"
+                    type="search"
+                    value={query}
+                    maxLength={64}
+                    placeholder="Enter part of a bag code"
+                    onChange={event => {
+                        setQuery(event.target.value);
+                        setResults([]);
+                        setError('');
+                        setLoading(true);
+                    }}
+                />
+            </label>
+
+            <p className="fr-bag-count" aria-live="polite">{selectedCodes.length} of {quantity} bags selected</p>
+
+            {selectedCodes.length > 0 && (
+            <ul className="fr-selected-bags" aria-label="Selected blood bags">
+                    {selectedCodes.map(code => (
+                        <li key={code}>
+                            {code}{' '}
+                            <button
+                                type="button"
+                                aria-label={`Remove ${code}`}
+                                onClick={() => onChange(selectedCodes.filter(value => value !== code))}
+                            >
+                                Remove
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            {loading && <p role="status">Searching eligible bags…</p>}
+            {error && <p role="alert">{error}</p>}
+            {!loading && !error && results.length === 0 && <p>No eligible bags found.</p>}
+
+            {results.length > 0 && (
+    <div className="fr-bag-results">
+        <div className="fr-bag-row fr-bag-heading" aria-hidden="true">
+            <span />
+            <span>Blood unit ID</span>
+            <span>Expiration date</span>
+        </div>
+        <ul aria-label="Matching blood bags">
+            {results.map(({ bloodUnitID, storageLocation, expiryDate }) => {
+                const checked = selectedCodes.includes(bloodUnitID);
+                const expires = expiryDate ? new Date(expiryDate) : null;
+
+                return (
+                    <li key={bloodUnitID}>
+                        <label className="fr-bag-row">
+                            <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={!checked && selectedCodes.length >= quantity}
+                                onChange={event => onChange(event.target.checked
+                                    ? [...selectedCodes, bloodUnitID]
+                                    : selectedCodes.filter(code => code !== bloodUnitID)
+                                )}
+                            />
+                            <span>
+                                <strong>{bloodUnitID}</strong>
+                                {storageLocation && <small>{storageLocation}</small>}
+                            </span>
+                            <span className="fr-bag-expiry">
+                                {expires && !Number.isNaN(expires.getTime())
+                                    ? expires.toLocaleDateString('en-PH', {
+                                        dateStyle: 'medium',
+                                        timeZone: 'UTC',
+                                    })
+                                    : '—'}
+                            </span>
+                        </label>
+                    </li>
+                );
+            })}
+        </ul>
+    </div>
+)}
+
+            {results.length === 20 && <p>Showing up to 20 bags. Refine your search to find a specific code.</p>}
+        </div>
+    );
 }
 
 export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
@@ -67,19 +200,23 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
             if (!Number.isSafeInteger(units) || units < 1 || units > maximum) {
                 setError(`Enter a whole number from 1 to ${maximum}.`); return;
             }
-            setError(''); setConfirmation({ row, units });
+            setError(''); setConfirmation({ row, units, bloodUnitIDs: [] });
         }
 
-        async function fulfill(row, units) {
+        async function fulfill(row, units, bloodUnitIDs) {
             if (inFlight.current || needsRefresh) return;
             const maximum = Math.min(row.remainingUnits, row.availableUnits);
-            if (!['Approved', 'Partially Fulfilled'].includes(row.requestStatus) || !Number.isSafeInteger(units) || units < 1 || units > maximum) return;
+            if (!RELEASE_STATUSES.includes(row.requestStatus) || !Number.isSafeInteger(units) || units < 1 || units > maximum) return;
             dialogRef.current?.close(); setConfirmation(null);
             inFlight.current = true; setBusyID(row._id); setError(''); setMessage('');
             try {
                 const response = await apiFetch(`${ENDPOINT}/${row._id}/fulfill`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ units, expectedFulfilledUnits: row.fulfilledUnits })
+                    body: JSON.stringify({
+                        units,
+                        expectedFulfilledUnits: row.fulfilledUnits,
+                        ...(requiresBagCodes(row) ? { bloodUnitIDs } : {}),
+                    }),
                 });
                 const body = await response.json().catch(() => { throw new Error('The server returned an unreadable response. Refresh to check request progress.'); });
                 if (!response.ok) throw new Error(body.message || 'Could not confirm fulfillment.');
@@ -101,7 +238,7 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
         }
 
         const visible = requests.filter(row => showCompleted || row.requestStatus !== 'Fulfilled');
-        const readyCount = requests.filter(row => ['Approved', 'Partially Fulfilled'].includes(row.requestStatus) && Math.min(row.remainingUnits, row.availableUnits) > 0).length;
+        const readyCount = requests.filter(row => RELEASE_STATUSES.includes(row.requestStatus) && Math.min(row.remainingUnits, row.availableUnits) > 0).length;
         const pendingCount = requests.filter(row => row.requestStatus === 'Pending').length;
         const outstanding = requests.reduce((total, row) => total + (row.requestStatus === 'Fulfilled' ? 0 : Math.max(0, Number(row.remainingUnits) || 0)), 0);
         return <section className="fr" aria-label="Release blood units to requests" aria-busy={loading}>
@@ -137,7 +274,7 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
             <thead><tr>{['Patient / Submitted', 'Hospital', 'Blood product', 'Release progress', 'Eligible stock', 'Status', 'Action'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
             <tbody>{visible.map(row => {
                 const maximum = Math.min(row.remainingUnits, row.availableUnits);
-                const allowed = ['Approved', 'Partially Fulfilled'].includes(row.requestStatus) && maximum > 0;
+                const allowed = RELEASE_STATUSES.includes(row.requestStatus) && maximum > 0;
                 const disabled = !allowed || busyID !== null || loading || needsRefresh;
                 const progress = row.units > 0 ? Math.min(100, Math.max(0, row.fulfilledUnits / row.units * 100)) : 0;
                 const name = [row.firstName, row.middleName, row.lastName].filter(Boolean).join(' ') || 'Unnamed patient';
@@ -162,12 +299,72 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
 
             <dialog className="fr-dialog" ref={dialogRef} aria-labelledby="release-confirm-title" onCancel={() => setConfirmation(null)} onClose={() => setConfirmation(null)}>
             {confirmation && <>
-                <div className="fr-dialog-header"><span className="fr-dialog-icon"><Icon name="drop" /></span><button type="button" className="fr-icon-button" aria-label="Close confirmation" onClick={() => { dialogRef.current?.close(); setConfirmation(null); }}><Icon name="close" /></button></div>
-                <span className="fr-eyebrow">REVIEW HANDOVER</span><h2 id="release-confirm-title">Confirm release</h2><p className="fr-dialog-subtitle">Review the details before releasing these units.</p>
-                <div className="fr-release-summary"><span className="fr-blood-type">{confirmation.row.bloodType}</span><div><strong>{confirmation.units} unit{confirmation.units === 1 ? '' : 's'}</strong><span>{confirmation.row.component}</span></div></div>
-                <dl className="fr-details"><div><dt>Patient</dt><dd>{[confirmation.row.firstName, confirmation.row.middleName, confirmation.row.lastName].filter(Boolean).join(' ') || 'Unnamed patient'}</dd></div><div><dt>Hospital</dt><dd>{confirmation.row.hospital || '—'}</dd></div><div><dt>Remaining after release</dt><dd>{confirmation.row.remainingUnits - confirmation.units} unit(s)</dd></div></dl>
-                <div className="fr-dialog-info"><Icon name="info" /><p>The oldest eligible units will be assigned to this request and marked <strong>Released</strong>.</p></div>
-                <div className="fr-dialog-actions"><button type="button" className="fr-button fr-button--secondary" onClick={() => { dialogRef.current?.close(); setConfirmation(null); }}>Cancel</button><button type="button" className="fr-button fr-button--primary" disabled={busyID !== null || loading || needsRefresh} onClick={() => fulfill(confirmation.row, confirmation.units)}>Confirm release<Icon name="arrow" /></button></div>
+                <div className="fr-dialog-body">
+                <div className="fr-dialog-header">
+    <h2 id="release-confirm-title">Confirm release</h2>
+    <button
+        type="button"
+        className="fr-icon-button"
+        aria-label="Close confirmation"
+        onClick={() => {
+            dialogRef.current?.close();
+            setConfirmation(null);
+        }}
+    >
+        <Icon name="close" />
+    </button>
+</div>
+
+<div className="fr-release-summary">
+    <span className="fr-blood-type">{confirmation.row.bloodType}</span>
+    <strong>
+        {confirmation.units} {confirmation.units === 1 ? 'unit' : 'units'} of{' '}
+        {confirmation.row.component}
+    </strong>
+            </div>
+
+            <dl className="fr-details">
+                <div>
+                    <dt>Patient</dt>
+                    <dd>
+                        {[confirmation.row.firstName, confirmation.row.middleName, confirmation.row.lastName]
+                            .filter(Boolean).join(' ') || 'Unnamed patient'}
+                    </dd>
+                </div>
+                <div>
+                    <dt>Hospital</dt>
+                    <dd>{confirmation.row.hospital || '—'}</dd>
+                </div>
+                <div>
+                    <dt>Remaining after release</dt>
+                    <dd>{confirmation.row.remainingUnits - confirmation.units}</dd>
+                </div>
+            </dl>
+                {requiresBagCodes(confirmation.row) ? (
+                    <BagPicker
+                        key={confirmation.row._id}
+                        requestID={confirmation.row._id}
+                        quantity={confirmation.units}
+                        selectedCodes={confirmation.bloodUnitIDs}
+                        onChange={bloodUnitIDs => {
+                            setConfirmation(previous => previous ? { ...previous, bloodUnitIDs } : null);
+                        }}
+                    />
+                ) : (
+                    <div className="fr-dialog-info">
+                        <Icon name="info" />
+                        <p>The oldest eligible units will be assigned to this request and marked <strong>Released</strong>.</p>
+                    </div>
+                )}
+
+
+                </div>
+                <div className="fr-dialog-actions"><button type="button" className="fr-button fr-button--secondary" onClick={() => { dialogRef.current?.close(); setConfirmation(null); }}>Cancel</button><button type="button" className="fr-button fr-button--primary" disabled={
+    busyID !== null ||
+    loading ||
+    needsRefresh ||
+    (requiresBagCodes(confirmation.row) &&
+        confirmation.bloodUnitIDs.length !== confirmation.units)} onClick={() => fulfill(confirmation.row, confirmation.units, confirmation.bloodUnitIDs)} >Confirm release<Icon name="arrow" /></button></div>
                 </>}
                 </dialog>
                 </section>;
@@ -271,28 +468,227 @@ const STYLES = `
 .fr .fr-empty { padding:50px 20px; text-align:center; }
 .fr .fr-empty > span { display:grid; place-items:center; width:50px; height:50px; border-radius:15px; background:#f5f7fa; color:#8e9bb0; margin:0 auto 15px; }
 .fr .fr-empty p { color:#8a94a3; font-size:12px; margin:9px 0 0; }
-.fr .fr-dialog { width:min(460px,calc(100vw - 32px)); max-height:calc(100dvh - 40px); overflow-y:auto; border:1px solid #e7eaf0; border-radius:20px; padding:28px; color:var(--fr-ink); background:#fff; box-shadow:0 24px 90px #101d3240; }
+
+
 .fr .fr-dialog::backdrop { background:#17223980; backdrop-filter:blur(3px); }
-.fr .fr-dialog-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; }
-.fr .fr-dialog-icon { width:48px; height:48px; border-radius:14px; }
-.fr .fr-dialog-icon svg { width:25px; height:25px; }
-.fr .fr-icon-button { display:grid; place-items:center; border:0; background:#f5f6f8; border-radius:50%; width:30px; height:30px; color:#8a94a3; }
-.fr .fr-icon-button:hover { background:#e9edf2; color:#4b5a70; }
-.fr .fr-icon-button svg { width:15px; height:15px; }
-.fr .fr-dialog h2 { font-size:25px; margin-top:5px; }
-.fr .fr-dialog-subtitle { font-size:12px; color:#8792a2; line-height:1.7; margin:10px 0 22px; }
-.fr .fr-release-summary { display:flex; align-items:center; gap:13px; border:1px solid #f0e0e4; border-radius:12px; padding:17px; background:#fffbfc; }
-.fr .fr-release-summary .fr-blood-type { height:46px; min-width:46px; font-size:16px; }
-.fr .fr-release-summary strong { display:block; font-size:20px; letter-spacing:-.5px; }
-.fr .fr-release-summary div > span { display:block; font-size:11px; color:#8b7681; margin-top:4px; }
-.fr .fr-details { margin:20px 0; }
-.fr .fr-details > div { display:flex; justify-content:space-between; gap:18px; padding:11px 0; border-bottom:1px solid #f0f2f5; font-size:12px; line-height:1.6; }
-.fr .fr-details dt { color:#8892a2; }
-.fr .fr-details dd { margin:0; font-weight:600; text-align:right; max-width:60%; overflow-wrap:anywhere; }
-.fr .fr-dialog-info { display:flex; align-items:flex-start; gap:9px; padding:13px; background:#f5f7fb; border-radius:9px; color:#7c899b; }
+
+.fr .fr-dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.fr .fr-dialog-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    line-height: 1.25;
+}
+
+.fr .fr-icon-button {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border: 0;
+    border-radius: 50%;
+    background: #f5f6f8;
+    color: var(--fr-muted);
+}
+
+.fr .fr-icon-button:hover {
+    background: #e9edf2;
+}
+
+.fr .fr-icon-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+.fr .fr-release-summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid #f0e0e4;
+    border-radius: 8px;
+    background: #fffbfc;
+    font-size: 0.875rem;
+}
+
+.fr .fr-release-summary .fr-blood-type {
+    min-width: 38px;
+    height: 30px;
+    font-size: 0.8125rem;
+}
+
+.fr .fr-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
+    gap: 8px 16px;
+    margin: 0 0 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--fr-line);
+}
+
+.fr .fr-details dt {
+    color: var(--fr-muted);
+    font-size: 0.75rem;
+}
+
+.fr .fr-details dd {
+    margin: 2px 0 0;
+    font-size: 0.875rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
 .fr .fr-dialog-info svg { width:16px; height:16px; margin-top:1px; }
 .fr .fr-dialog-info p { font-size:11px; line-height:1.7; margin:0; }
-.fr .fr-dialog-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:24px; }
+.fr .fr-dialog {
+    width: min(740px, calc(100vw - 32px));
+    max-height: min(82dvh, 720px);
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #e7eaf0;
+    border-radius: 16px;
+    color: var(--fr-ink);
+    background: #fff;
+    box-shadow: 0 24px 90px #101d3240;
+}
+
+.fr .fr-dialog[open] {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+}
+
+.fr .fr-dialog-body {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: clamp(14px, 4vw, 24px);
+}
+
+.fr .fr-dialog-actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 9px;
+    margin: 0;
+    padding: 12px clamp(14px, 4vw, 24px);
+    border-top: 1px solid var(--fr-line);
+    background: #fff;
+}
+
+.fr .fr-bag-search {
+    display: grid;
+    gap: 6px;
+    color: var(--fr-ink);
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.fr .fr-bag-search input {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+}
+
+.fr .fr-bag-count {
+    margin: 10px 0 6px;
+    color: var(--fr-muted);
+    font-size: 0.8125rem;
+}
+
+.fr .fr-selected-bags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fr .fr-selected-bags li {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    background: #faedf0;
+    color: #842338;
+    font-size: 0.8125rem;
+}
+
+.fr .fr-selected-bags button {
+    padding: 2px 3px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font-size: 0.75rem;
+    text-decoration: underline;
+}
+
+.fr .fr-bag-results {
+    margin-top: 12px;
+    overflow: hidden;
+    border: 1px solid var(--fr-line);
+    border-radius: 10px;
+}
+
+.fr .fr-bag-results ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.fr .fr-bag-row {
+    display: grid;
+    grid-template-columns: 1rem minmax(0, 1fr) minmax(5.75rem, auto);
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    text-align: left;
+}
+
+.fr .fr-bag-heading {
+    background: #f5f7fb;
+    color: var(--fr-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.fr .fr-bag-results li {
+    border-top: 1px solid var(--fr-line);
+}
+
+.fr .fr-bag-row:has(input:checked) {
+    background: #fff3f5;
+}
+
+.fr .fr-bag-row input {
+    margin: 0;
+    accent-color: var(--fr-red);
+}
+
+.fr .fr-bag-row strong,
+.fr .fr-bag-row small {
+    display: block;
+    overflow-wrap: anywhere;
+}
+
+.fr .fr-bag-row small,
+.fr .fr-bag-expiry {
+    color: var(--fr-muted);
+}
 .fr .fr-dialog-actions .fr-button { min-height:42px; }
 @keyframes fr-rotate { to { transform:rotate(360deg); } }
 .fr .fr-spin { animation:fr-rotate 1.2s linear infinite; }
@@ -324,6 +720,5 @@ const STYLES = `
     .fr .fr-hospital { max-width:none; }
     .fr .fr-footer { padding:14px 15px; align-items:flex-start; }
     .fr .fr-fifo { display:none; }
-    .fr .fr-dialog { padding:23px; }
 }
 `;

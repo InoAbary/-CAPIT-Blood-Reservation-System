@@ -5,7 +5,23 @@ import '../../styles/BloodRequestStatus.css';
 function formatDate(value) {
   if (!value) return '—';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString();
+  return Number.isNaN(date.getTime())
+    ? '—'
+    : date.toLocaleDateString('en-PH', {
+        dateStyle: 'medium',
+        timeZone: 'Asia/Manila',
+      });
+}
+
+function formatTime(value) {
+  if (!value) return '—';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? '—'
+    : date.toLocaleTimeString('en-PH', {
+        timeStyle: 'short',
+        timeZone: 'Asia/Manila',
+      });
 }
 
 async function readResponse(response) {
@@ -130,7 +146,8 @@ export default function HospitalRequests() {
                 <div className="hospital-request-summary">
                   <div><span>Requested method</span><strong>{item.fulfillmentMethod || 'Not specified'}</strong></div>
                   {item.confirmedFulfillmentMethod && <div><span>Agreed method</span><strong>{item.confirmedFulfillmentMethod}</strong></div>}
-                  <div><span>Submitted</span><strong>{formatDate(item.createdAt)}</strong></div>
+                  <div><span>Submitted date</span><strong>{formatDate(item.createdAt)}</strong></div>
+                  <div><span>Submitted time</span><strong>{formatTime(item.createdAt)}</strong></div>
                   {['Approved', 'Partially Fulfilled', 'Fulfilled'].includes(item.requestStatus) && <div><span>Units provided</span><strong>{item.fulfilledUnits || 0} of {item.units}</strong></div>}
                 </div>
                 {item.requestStatus === 'Awaiting Hospital Confirmation' && <div className="hospital-request-action">
@@ -139,10 +156,26 @@ export default function HospitalRequests() {
                 </div>}
                 {item.requestStatus === 'Pending' && <div className="hospital-request-action"><span>Waiting for the branch to review your request.</span><button className="btn-action" type="button" onClick={() => cancelRequest(item.id)}>Cancel request</button></div>}
                 {item.requestStatus === 'Rejected' && item.decisionReason && <p className="hospital-request-reason"><strong>Decline reason:</strong> {item.decisionReason}</p>}
-                {item.fulfillmentStatus && <div className="hospital-request-progress"><span className="branch-eyebrow">CURRENT PROGRESS</span><strong>{item.fulfillmentStatus}</strong><span>{latest ? formatDate(latest.updatedAt) : ''}{latest?.note ? ` · ${latest.note}` : ''}</span></div>}
+
+
+                {item.fulfillmentStatus && (
+                  <div className="hospital-request-progress">
+                    <span className="branch-eyebrow">CURRENT PROGRESS</span>
+                    <strong>{item.fulfillmentStatus}</strong>
+                    {latest?.updatedAt && (
+                      <>
+                        <span>Updated on {formatDate(latest.updatedAt)}</span>
+                        <span>At {formatTime(latest.updatedAt)}</span>
+                      </>
+                    )}
+                    {latest?.note && <span>{latest.note}</span>}
+                  </div>
+                )}
+
+
                 {item.confirmedFulfillmentMethod === 'Pickup' && (item.fulfillmentDetails?.pickupLocation || item.fulfillmentDetails?.staffContactName) && <div className="hospital-pickup-details"><span className="branch-eyebrow">PICKUP DETAILS</span>{item.fulfillmentDetails.pickupLocation && <span><strong>Where:</strong> {item.fulfillmentDetails.pickupLocation}</span>}{item.fulfillmentDetails.staffContactName && <span><strong>Who to find:</strong> {item.fulfillmentDetails.staffContactName}</span>}</div>}
-                {item.fulfillmentEvents?.length > 1 && <details className="hospital-request-history"><summary>View update history ({item.fulfillmentEvents.length})</summary><ol>{item.fulfillmentEvents.map((event, index) => <li key={`${item.id}-event-${index}`}><strong>{event.status}</strong><span>{formatDate(event.updatedAt)}</span>{event.note && <p>{event.note}</p>}</li>)}</ol></details>}
-                {item.reviewedAt && <div className="subtext">Reviewed {formatDate(item.reviewedAt)}{item.reviewerName ? ` by ${item.reviewerName}` : ''}</div>}
+                {item.fulfillmentEvents?.length > 1 && <details className="hospital-request-history"><summary>View update history ({item.fulfillmentEvents.length})</summary><ol>{item.fulfillmentEvents.map((event, index) => <li key={`${item.id}-event-${index}`}><strong>{event.status}</strong><span>{formatDate(event.updatedAt)}</span> <span>{formatTime(event.updatedAt)}</span> {event.note && <p>{event.note}</p>}</li>)}</ol></details>}
+                {item.reviewedAt && <div className="subtext">Reviewed {formatDate(item.reviewedAt)} at {formatTime(item.reviewedAt)} {item.reviewerName ? ` by ${item.reviewerName}` : ''}</div>}
               </article>;
             })}
           </div>

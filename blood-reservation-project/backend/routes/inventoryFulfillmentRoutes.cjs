@@ -13,7 +13,9 @@ router.get('/', async (req, res) => {
     try {
         const facilityID = req.inventoryAccess.facility._id;
         const requests = await BloodRequest.find({ receivingFacilityID: facilityID,
-            requestStatus: { $in: ['Pending', 'Approved', 'Partially Fulfilled', 'Fulfilled'] } })
+            requestStatus: {
+                $in: ['Pending', 'Allocated', 'Approved', 'Partially Fulfilled', 'Fulfilled']
+            } })
         .sort({ createdAt: 1, _id: 1 }).lean();
         const counts = await BloodUnits.aggregate([
             { $match: eligibleStock(facilityID) },
@@ -38,16 +40,65 @@ router.get('/', async (req, res) => {
         res.status(500).json({ success: false, message: 'Could not load requests for fulfillment.' });
     }
 });
+
+router.get('/:id/eligible-units', async (req, res) => {
+    if (!mongoose.isObjectIdOrHexString(req.params.id)) {
+        return res.status(400).json({ message: 'Invalid request ID.' });
+    }
+
+    const q = req.query.q ?? '';
+    if (typeof q !== 'string' || q.trim().length > 64) {
+        return res.status(400).json({ message: 'Enter a bag code of up to 64 characters.' });
+    }
+
+    try {
+        const facilityID = req.inventoryAccess.facility._id;
+        const request = await BloodRequest.findOne({
+            _id: req.params.id,
+            receivingFacilityID: facilityID,
+            requestStatus: { $in: ['Allocated', 'Approved', 'Partially Fulfilled'] },
+        }).select('bloodType component').lean();
+
+        if (!request) {
+            return res.status(404).json({ message: 'Open request not found at your facility.' });
+        }
+
+        const filter = {
+            ...eligibleStock(facilityID),
+            bloodType: request.bloodType,
+            component: request.component,
+        };
+
+        const search = q.trim();
+        if (search) {
+            const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            filter.bloodUnitID = { $regex: escaped, $options: 'i' };
+        }
+
+        const units = await BloodUnits.find(filter)
+            .select('bloodUnitID storageLocation expiryDate -_id')
+            .sort({ bloodUnitID: 1 })
+            .limit(20)
+            .lean();
+
+        return res.json({ success: true, units });
+    } catch (error) {
+        console.error('Eligible blood unit lookup failed:', error.name);
+        return res.status(500).json({ message: 'Could not load eligible blood bags.' });
+    }
+});
+
+
 router.post('/:id/fulfill', async (req, res) => {
     if (!mongoose.isObjectIdOrHexString(req.params.id)) return res.status(400).json({ message: 'Invalid request ID.' });
     const body = req.body;
-    if (!body || Array.isArray(body) || Object.keys(body).some(key => !['units', 'expectedFulfilledUnits'].includes(key))) {
-        return res.status(400).json({ message: 'Send units and expectedFulfilledUnits only.' });
+    if (!body || Array.isArray(body) || Object.keys(body).some(key => !['units', 'expectedFulfilledUnits', 'bloodUnitIDs'].includes(key))) {
+        return res.status(400).json({ message: 'Send units, expectedFulfilledUnits, and bloodUnitIDs only.' });
     }
     try {
         const result = await fulfillRequest({ requestID: req.params.id,
             facilityID: req.inventoryAccess.facility._id, actorID: req.inventoryAccess.account._id,
-            units: body.units, expectedFulfilledUnits: body.expectedFulfilledUnits });
+            units: body.units, expectedFulfilledUnits: body.expectedFulfilledUnits, bloodUnitIDs: body.bloodUnitIDs });
         return res.json({ success: true, ...result });
     } catch (error) {
         console.error('Fulfill request error:', error.message);

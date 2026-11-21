@@ -3,7 +3,7 @@ const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const Inventory = require('../../db/models/inventories.cjs');
 const History = require('../../db/models/bloodUnitsHistory.cjs');
 const Operation = require('../../db/models/fulfillmentOperation.cjs');
-const ALLOWED_STATUSES = ['Approved', 'Partially Fulfilled'];
+const ALLOWED_STATUSES = ['Allocated','Approved', 'Partially Fulfilled'];
 const COMPONENTS = ['Packed RBC', 'Plasma', 'Platelets', 'Whole Blood'];
 const fail = (status, message) => Object.assign(new Error(message), { status });
 function expiryCutoff(now = new Date()) {
@@ -31,7 +31,7 @@ async function readRequest(requestID, facilityID) {
 }
 function validateRequest(request) {
     if (!request) throw fail(404, 'Request not found in your facility.');
-    if (!ALLOWED_STATUSES.includes(request.requestStatus)) throw fail(409, 'Only approved or partially fulfilled requests can be fulfilled.');
+    if (!ALLOWED_STATUSES.includes(request.requestStatus)) throw fail(409, 'Only allocated, approved, or partially fulfilled requests can be fulfilled.');
     if (!Number.isSafeInteger(request.units) || request.units < 1 || !COMPONENTS.includes(request.component)) throw fail(409, 'Invalid request product details.');
 }
 // Idempotent completion: no stock allocation happens here. Also used by recovery
@@ -83,18 +83,53 @@ async function finishOperation(operation) {
         await Operation.updateOne({ _id: operation._id }, { $set: { active: false, state: 'Completed', result, lastError: '' } });
         return result;
 }
-async function fulfillRequest({ requestID, facilityID, actorID, units, expectedFulfilledUnits }) {
+async function fulfillRequest({
+    requestID, facilityID, actorID, units, expectedFulfilledUnits, bloodUnitIDs,
+}) {
     if (!Number.isSafeInteger(units) || units < 1) throw fail(400, 'Units must be a positive whole number.');
     if (!Number.isSafeInteger(expectedFulfilledUnits) || expectedFulfilledUnits < 0) throw fail(400, 'Refresh before releasing units.');
+
+    let selectedCodes;
+
+    if (bloodUnitIDs !== undefined) {
+        if (
+            !Array.isArray(bloodUnitIDs) ||
+            bloodUnitIDs.length !== units ||
+            bloodUnitIDs.some(code => typeof code !== 'string' || !code.trim())
+        ) {
+            throw fail(400, 'Enter one blood bag code for each unit being released.');
+        }
+    
+        selectedCodes = bloodUnitIDs.map(code => code.trim()).sort();
+    
+        if (new Set(selectedCodes).size !== selectedCodes.length) {
+            throw fail(400, 'Enter each blood bag code only once.');
+        }
+    }
+
     await ensureIndexes();
     // Scope is checked even for replay, so a foreign facility cannot inspect a job.
     const request = await readRequest(requestID, facilityID);
     if (!request) throw fail(404, 'Request not found in your facility.');
+    if ((request.requestStatus === 'Allocated' || request.requestGroupID) && !selectedCodes) {
+        throw fail(400, 'Enter the actual blood bag codes for this request.');
+    }
     const previous = await Operation.findOne({ requestID, expectedFulfilledUnits }).lean();
     if (previous) {
         if (String(previous.facilityID) !== String(facilityID)) throw fail(404, 'Request not found in your facility.');
         if (previous.active) throw fail(409, 'This request has a release in progress or awaiting recovery. Refresh; if it stays blocked, stop the backend and run the recovery script.');
-        if (previous.units !== units) throw fail(409, 'This progress point was already processed. Refresh before choosing another release quantity.');
+        
+
+        const previousCodes = previous.bloodUnitIDs ?? [];
+        const currentCodes = selectedCodes ?? [];
+
+        if (
+            previous.units !== units ||
+            previousCodes.length !== currentCodes.length ||
+            previousCodes.some((code, index) => code !== currentCodes[index])
+        ) {
+            throw fail(409, 'A release was already processed at this progress point. Refresh the queue.');
+        }
         return { ...previous.result, replayed: true };
     }
     validateRequest(request);
@@ -103,7 +138,7 @@ async function fulfillRequest({ requestID, facilityID, actorID, units, expectedF
         operation = await Operation.create({ requestID, facilityID, actorID,
             receivingHospitalID: request.hospitalFacilityID || null,
             bloodType: request.bloodType, component: request.component,
-            units, expectedFulfilledUnits, active: true, state: 'Processing' });
+            units, expectedFulfilledUnits, bloodUnitIDs: selectedCodes, active: true, state: 'Processing' });
     } catch (error) {
         if (error.code === 11000) throw fail(409, 'Another release is already processing this request. Refresh the queue.');
         throw error;
@@ -117,14 +152,32 @@ async function fulfillRequest({ requestID, facilityID, actorID, units, expectedF
         if (alreadyReleased !== expectedFulfilledUnits) throw fail(409, 'Request progress changed. Refresh before releasing more units.');
         if (units > current.units - alreadyReleased) throw fail(409, 'Release quantity exceeds the remaining request.');
         const filter = { ...eligibleStock(facilityID), bloodType: current.bloodType, component: current.component };
-        const available = await BloodUnits.countDocuments(filter);
-        if (available < units) throw fail(409, `Only ${available} eligible units are available. Choose a smaller release quantity.`);
+        
+        const available = await BloodUnits.countDocuments(
+            selectedCodes ? { ...filter, bloodUnitID: { $in: selectedCodes } } : filter
+        );
+        
+        if (available < units) {
+            throw fail(409, selectedCodes
+                ? 'One or more bag codes are unavailable or do not match this request. Check the codes and refresh.'
+                : `Only ${available} eligible units are available. Choose a smaller release quantity.`);
+        }
+
         startedClaims = true;
         for (let i = 0; i < units; i++) {
             // Each unit is claimed and marked Released in ONE atomic MongoDB write.
             // Competing requests cannot claim the same unit, even on standalone MongoDB.
             const now = new Date();
-            const unit = await BloodUnits.findOneAndUpdate({ ...eligibleStock(facilityID, now), bloodType: current.bloodType, component: current.component }, {
+
+            const claimFilter = {
+                ...eligibleStock(facilityID, now),
+                bloodType: current.bloodType,
+                component: current.component,
+                ...(selectedCodes ? { bloodUnitID: selectedCodes[i] } : {}),
+            };
+
+
+            const unit = await BloodUnits.findOneAndUpdate(claimFilter,{ ...eligibleStock(facilityID, now), bloodType: current.bloodType, component: current.component }, {
                 $set: { status: 'Released', requestID: current._id, releaseOperationID: operation._id, releasedAt: now, lastUpdated: now }
             }, { sort: { collectionDate: 1, dateAdded: 1, _id: 1 }, returnDocument: 'after', runValidators: true }).lean();
             if (!unit) break; // Another request took the remaining stock; keep actual releases.

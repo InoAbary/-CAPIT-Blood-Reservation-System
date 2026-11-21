@@ -334,9 +334,9 @@ router.patch('/requests/:id/progress', async (req, res) => {
     if (!canReceiveBranchRequests(context)) return res.status(403).json({ error: 'Only BSF and PRC branches can update fulfillment progress.' });
     const current = await BloodRequest.findOne({
       _id: id, receivingFacilityID: context.facility._id,
-      requestStatus: { $in: ['Approved', 'Partially Fulfilled', 'Fulfilled'] },
+      requestStatus: { $in: ['Allocated', 'Approved', 'Partially Fulfilled', 'Fulfilled'] },
     }).lean();
-    if (!current) return res.status(404).json({ error: 'Active approved request not found for this branch.' });
+    if (!current) return res.status(404).json({ error: 'Active request not found for this branch.' });
     const deliverySteps = ['Preparing', 'On the Way', 'Delivered'];
     const pickupSteps = ['Preparing', 'Ready for Pickup', 'Picked Up'];
     const steps = current.confirmedFulfillmentMethod === 'Delivery' ? deliverySteps : pickupSteps;
