@@ -35,7 +35,8 @@ const RELEASE_STATUSES = ['Allocated', 'Approved', 'Partially Fulfilled'];
 const QUEUE_STATUSES = ['Allocated', 'Partially Fulfilled', 'Fulfilled'];
 
 const requiresBagCodes = row =>
-    row.requestStatus === 'Allocated' || Boolean(row.requestGroupID);
+    row.requestStatus === 'Allocated' ||
+    row.usesStockAllocation === true;
 
 const statusTone = status => ({ Allocated: 'ready', Approved: 'ready', 'Partially Fulfilled': 'partial', Pending: 'pending', Fulfilled: 'done' }[status] || 'neutral');
 function StatusBadge({ status }) {
@@ -404,7 +405,6 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
                                     <div><dt>Blood type</dt><dd>{detailRow.bloodType}</dd></div>
                                     <div><dt>Component</dt><dd>{detailRow.component}</dd></div>
                                     <div><dt>Request ID</dt><dd>{detailRow.requestID || '—'}</dd></div>
-                                    <div><dt>Group ID</dt><dd>{detailRow.requestGroupID || '—'}</dd></div>
                                 </dl>
                             </section>
 

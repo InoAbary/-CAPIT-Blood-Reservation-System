@@ -287,8 +287,7 @@ const partialMatches = receivingFacilities.filter(facility => !facility.canFillA
       }
   
       if (
-        !result?.requestGroupID ||
-        !Array.isArray(result.requests) ||
+        !Array.isArray(result?.requests) ||
         result.requests.length !== products.length ||
         !result.requests.every(row => row.requestID && row.requestStatus === "Allocated")
       ) {
@@ -327,7 +326,7 @@ const partialMatches = receivingFacilities.filter(facility => !facility.canFillA
       <h1>{savedRequest ? "Request allocated" : "Review your request"}</h1>
       <p className="brf-lead">
         {savedRequest
-          ? `Request ${savedRequest.requestGroupID} has been allocated.`
+          ? `"Each component has its own Request ID below."`
           : "All components will be submitted together to the selected facility."}
       </p>
 

@@ -111,7 +111,11 @@ async function fulfillRequest({
     // Scope is checked even for replay, so a foreign facility cannot inspect a job.
     const request = await readRequest(requestID, facilityID);
     if (!request) throw fail(404, 'Request not found in your facility.');
-    if ((request.requestStatus === 'Allocated' || request.requestGroupID) && !selectedCodes) {
+    if (
+        (request.requestStatus === 'Allocated' ||
+            request.usesStockAllocation === true) &&
+        !selectedCodes
+    ) {
         throw fail(400, 'Enter the actual blood bag codes for this request.');
     }
     const previous = await Operation.findOne({ requestID, expectedFulfilledUnits }).lean();

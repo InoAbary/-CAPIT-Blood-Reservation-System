@@ -33,7 +33,7 @@ async function getStockBalances(facilityIDs, { bloodType, components } = {}) {
             ...products,
             $or: [
                 { requestStatus: 'Allocated' },
-                { requestStatus: 'Partially Fulfilled', requestGroupID: { $type: 'string' } },
+                { requestStatus: 'Partially Fulfilled', usesStockAllocation: true },
             ],
         }).select('receivingFacilityID bloodType component units fulfilledUnits').lean(),
     ]);

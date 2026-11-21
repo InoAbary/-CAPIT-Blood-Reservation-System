@@ -229,6 +229,7 @@ router.post('/', async (req, res) => {
         data.receivingFacilityID = receiver._id;
        
         data.requestStatus = 'Allocated';
+        data.usesStockAllocation = true;
         data.confirmedFulfillmentMethod = body.fulfillmentMethod;
         data.fulfillmentStatus = 'Preparing';
         data.fulfilledAt = null;
@@ -250,24 +251,23 @@ router.post('/', async (req, res) => {
         }
 
         const counter = await Counter.findOneAndUpdate(
-            { _id: 'bloodRequestGroup' },
-            { $inc: { sequence: 1 } },
+            { _id: 'bloodRequestID' },
+            { $inc: { sequence: products.length } },
             { upsert: true, returnDocument: 'after' }
         );
-
-        const requestGroupID = `R${String(counter.sequence).padStart(6, '0')}`;
+        
+        const firstSequence = counter.sequence - products.length + 1;
         const requests = await BloodRequest.insertMany(
             products.map(({ component, units }, index) => ({
                 ...data,
                 component,
                 units,
-                requestGroupID,
-                requestID: `${requestGroupID}-${String(index + 1).padStart(2, '0')}`,
+                requestID: `BR${String(firstSequence + index).padStart(6, '0')}`,
             }))
         );
-
+        
         return res.status(201).json(isBatch
-            ? { success: true, requestGroupID, requests }
+            ? { success: true, requests }
             : { success: true, request: requests[0], bloodRequest: requests[0] }
         );
 

@@ -20,16 +20,15 @@ const bloodRequestSchema = new mongoose.Schema(
         bloodType: String,
         component: String,
         units: Number,
-        requestGroupID: {
-            type: String,
-            trim: true,
-            index: true,
-        },
         requestID: {
             type: String,
             trim: true,
             unique: true,
             sparse: true,
+        },
+        usesStockAllocation: {
+            type: Boolean,
+            default: false,
         },
         urgency: String,
         reviewedBy: { // Authenticated staff member who reviewed the request.

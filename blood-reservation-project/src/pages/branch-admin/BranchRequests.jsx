@@ -76,7 +76,6 @@ export default function BranchRequests() {
     return requests.filter((item) => {
       const matchesSearch = !query || [
         item.requestID,
-        item.requestGroupID,
         item.id,
         item.hospitalName,
         item.requesterName,
@@ -244,7 +243,7 @@ export default function BranchRequests() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Request ID, hospital, or blood type"
+              placeholder="Request ID, hospital, or patient"
             />
           </div>
           <div className="form-group">
@@ -314,7 +313,6 @@ export default function BranchRequests() {
               <p className="card-subtitle">{selected.hospitalName}{selected.wardRoom ? ` · ${selected.wardRoom}` : ''}</p>
               <dl>
                 <dt>Age / sex</dt><dd>{selected.age ?? '—'} / {selected.sex || '—'}</dd>
-                <dt>Group ID</dt><dd>{selected.requestGroupID || '—'}</dd>
                 <dt>Diagnosis</dt><dd>{selected.diagnosis || '—'}</dd>
                 <dt>Hemoglobin</dt><dd>{selected.hemoglobin || '—'}</dd>
                 <dt>Platelets</dt><dd>{selected.platelets || '—'}</dd>
