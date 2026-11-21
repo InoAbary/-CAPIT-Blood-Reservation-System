@@ -40,9 +40,7 @@ async function syncInventory(facility, { readOnly = false } = {}) {
         day: '2-digit'
     }).format(now);
 
-    const startOfToday = new Date(
-        `${philippineDate}T00:00:00.000Z`
-    );
+    const startOfToday = new Date(`${philippineDate}T00:00:00.000Z`);
 
     /*
      * Automatically expire units whose listed expiry date has passed.
@@ -101,6 +99,8 @@ async function syncInventory(facility, { readOnly = false } = {}) {
             },
         },
     ]);
+
+    
 
     const countMap = new Map();
 

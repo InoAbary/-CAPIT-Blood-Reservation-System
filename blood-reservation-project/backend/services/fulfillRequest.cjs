@@ -11,8 +11,10 @@ function expiryCutoff(now = new Date()) {
     return new Date(`${date}T00:00:00.000Z`);
 }
 function eligibleStock(facilityID, now = new Date()) {
-    return { facilityID: String(facilityID), status: 'In-stock', requestID: null, releaseOperationID: null,
-        expiryDate: { $gte: expiryCutoff(now) }, collectionDate: { $lte: now } };
+    const cutoff = expiryCutoff(now);
+    return { facilityID: String(facilityID), status: 'In-stock', requestID: null,
+        releaseOperationID: null,
+        expiryDate: { $gte: cutoff }, collectionDate: { $lte: cutoff } };
 }
 let indexPromise;
 async function ensureIndexes() {

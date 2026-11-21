@@ -84,6 +84,8 @@ router.get('/:id/inventory', ...authenticateInventory, authorizeFacility, valida
             getStockBalances([facility._id]),
         ]);
 
+        
+
         const emptyBalance = { inStockUnits: 0, allocatedUnits: 0, availableUnits: 0 };
         return res.json(items.map(item => ({
             ...item,
