@@ -220,7 +220,7 @@ function UnitModal({
     }, [onClose, confirmingDelete]);
 
     const set = (field) => (e) => {
-        if (fromDonation && field !== 'storageLocation') return;
+        if (fromDonation && !['storageLocation', 'expiryDate'].includes(field)) return;
         const value = e.target.value;
     
         setForm((current) => {
@@ -472,8 +472,8 @@ function UnitModal({
     >
     <input
     id="bu-expiry"
-    readOnly="true"
-    className="bu-readonly"
+    readOnly={mode !== 'add'}
+    className={mode !== 'add' ? 'bu-readonly' : undefined}
     type="date"
     value={form.expiryDate}
     onChange={set('expiryDate')}
@@ -518,10 +518,10 @@ function UnitModal({
     </div>
 
     <p className="bu-expiry-note">
-    {fromDonation
-        ? 'Donation details and the calculated expiry date are read-only. Enter the storage location and verify the expiry date before saving.'
-        : 'The expiry date is automatically suggested based on the blood component and collection date. Please adjust it according to the blood bag label, preservative, and storage conditions.'}
-        </p>
+    {mode === 'add'
+        ? 'Check the suggested expiry date. Adjust it if needed before confirming.'
+        : 'Confirm that the expiry date is accurate before saving.'}
+    </p>
 
         <label className="bu-expiry-check">
             <input
