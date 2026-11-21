@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { EyeIcon } from '@heroicons/react/24/outline';
 
 const API_URL =
 (typeof import.meta !== 'undefined' &&
@@ -33,20 +34,14 @@ const COMPONENTS = [
 ];
 
 
-function formatDate(date) {
+function formatDate(date, options = { dateStyle: 'medium', timeStyle: 'short' }) {
     if (!date) return '—';
-
+  
     const parsed = new Date(date);
-
-    if (Number.isNaN(parsed.getTime())) {
-        return '—';
-    }
-
-    return new Intl.DateTimeFormat('en-PH', {
-        dateStyle: 'medium',
-        timeStyle: 'short'
-    }).format(parsed);
-}
+    if (Number.isNaN(parsed.getTime())) return '—';
+  
+    return new Intl.DateTimeFormat('en-PH', options).format(parsed);
+  }
 
 
 function formatValue(value) {
@@ -149,9 +144,12 @@ function InventoryHistory({ facilityID }) {
     const [componentFilter, setComponentFilter] = useState('all');
 
     const [page, setPage] = useState(1);
+    const [selectedDetails, setSelectedDetails] = useState(null);
+    const detailsDialogRef = useRef(null);
 
 
     useEffect(() => {
+        setSelectedDetails(null);
         if (!facilityID) {
             setHistory([]);
             setLoading(false);
@@ -446,7 +444,8 @@ function InventoryHistory({ facilityID }) {
 
         <thead>
         <tr>
-        <th>Date & Time</th>
+        <th scope="col">Date</th>
+        <th scope="col">Time</th>
         <th>Blood Unit</th>
         <th>Action</th>
         <th>Blood Type</th>
@@ -469,10 +468,8 @@ function InventoryHistory({ facilityID }) {
             return (
                 <tr key={record._id}>
 
-                <td>
-                {formatDate(record.date)}
-                </td>
-
+                <td>{formatDate(record.date, { dateStyle: 'medium' })}</td>
+                <td>{formatDate(record.date, { timeStyle: 'short' })}</td>
 
                 <td>
                 <span className="inv-history-unit">
@@ -499,13 +496,21 @@ function InventoryHistory({ facilityID }) {
                 {record.component || '—'}
                 </td>
 
-
                 <td>
-                <HistoryDetails
-                record={record}
-                />
+                <button
+                type="button"
+                className="inv-history-view"
+                aria-label={`View ${record.action.toLowerCase()} details for ${record.bloodUnitID}`}
+                aria-haspopup="dialog"
+                title="View details"
+                onClick={() => {
+                    setSelectedDetails({ record, performer });
+                    detailsDialogRef.current?.showModal();
+                }}
+                >
+                <EyeIcon aria-hidden="true" />
+                </button>
                 </td>
-
 
                 <td>
                 {performer}
@@ -521,6 +526,33 @@ function InventoryHistory({ facilityID }) {
 
         </div>
     )}
+
+    <dialog
+    ref={detailsDialogRef}
+    className="inv-history-dialog"
+    aria-labelledby="inv-history-dialog-title"
+    onClose={() => setSelectedDetails(null)}
+    >
+    <header className="inv-history-dialog-header">
+        <h2 id="inv-history-dialog-title">History details</h2>
+        <form method="dialog">
+        <button type="submit">Close</button>
+        </form>
+    </header>
+
+    {selectedDetails && (
+        <>
+        <p className="inv-history-dialog-meta">
+            <strong>{selectedDetails.record.bloodUnitID}</strong>
+            {' · '}{selectedDetails.record.action}
+            <br />
+            {formatDate(selectedDetails.record.date)}
+            {' · '}{selectedDetails.performer}
+        </p>
+        <HistoryDetails record={selectedDetails.record} />
+        </>
+    )}
+    </dialog>
 
 
     <div className="inv-history-footer">
