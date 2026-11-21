@@ -176,10 +176,25 @@ async function fulfillRequest({
                 ...(selectedCodes ? { bloodUnitID: selectedCodes[i] } : {}),
             };
 
-
-            const unit = await BloodUnits.findOneAndUpdate(claimFilter,{ ...eligibleStock(facilityID, now), bloodType: current.bloodType, component: current.component }, {
-                $set: { status: 'Released', requestID: current._id, releaseOperationID: operation._id, releasedAt: now, lastUpdated: now }
-            }, { sort: { collectionDate: 1, dateAdded: 1, _id: 1 }, returnDocument: 'after', runValidators: true }).lean();
+            const unit = await BloodUnits.findOneAndUpdate(
+                claimFilter,
+                {
+                    $set: {
+                        status: 'Released',
+                        requestID: current._id,
+                        releaseOperationID: operation._id,
+                        releasedAt: now,
+                        lastUpdated: now,
+                    },
+                },
+                {
+                    sort: { collectionDate: 1, dateAdded: 1, _id: 1 },
+                    returnDocument: 'after',
+                    runValidators: true,
+                }
+            ).lean();
+            
+            
             if (!unit) break; // Another request took the remaining stock; keep actual releases.
         }
         const result = await finishOperation(operation);
