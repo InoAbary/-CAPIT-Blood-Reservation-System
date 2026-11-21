@@ -345,6 +345,11 @@ router.patch('/requests/:id/progress', async (req, res) => {
       requestStatus: { $in: ['Allocated', 'Approved', 'Partially Fulfilled', 'Fulfilled'] },
     }).lean();
     if (!current) return res.status(404).json({ error: 'Active request not found for this branch.' });
+    if (!['Partially Fulfilled', 'Fulfilled'].includes(current.requestStatus)) {
+      return res.status(409).json({
+        error: 'Release at least one blood bag before posting a pickup or delivery update.',
+      });
+    }
     const deliverySteps = ['Preparing', 'On the Way', 'Delivered'];
     const pickupSteps = ['Preparing', 'Ready for Pickup', 'Picked Up'];
     const steps = current.confirmedFulfillmentMethod === 'Delivery' ? deliverySteps : pickupSteps;
