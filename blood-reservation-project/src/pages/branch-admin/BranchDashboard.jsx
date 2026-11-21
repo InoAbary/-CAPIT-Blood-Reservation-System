@@ -203,7 +203,7 @@ function BranchDashboard() {
             </article>
             {['bsf', 'prc_chapter'].includes(workspaceFacilityType) && (
               <article className="metric-card">
-                <div className="metric-header"><span className="metric-label">Pending blood requests</span><span className="metric-icon orange">◷</span></div>
+                <div className="metric-header"><span className="metric-label">Requests needing action</span><span className="metric-icon orange">◷</span></div>
                 <div className="metric-value">{summary?.pendingBloodRequests ?? 0}</div>
                 <div className="metric-subtext">{summary?.totalBloodRequests ?? 0} total requests for this branch</div>
                 <button className="btn-action" type="button" onClick={() => setActiveTab('branch-requests')}>Review requests</button>

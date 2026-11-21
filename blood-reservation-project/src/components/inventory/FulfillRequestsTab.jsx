@@ -1,11 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '../../utils/api';
+import { EyeIcon } from '@heroicons/react/24/outline';
 
 const ENDPOINT = '/api/inventory-fulfillment';
-const formatDate = value => value && !Number.isNaN(new Date(value).getTime()) ? new Intl.DateTimeFormat('en-PH', {
-    timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short'
-}).format(new Date(value)) : '—';
-function Icon({ name, ...props }) {
+const formatDate = value => value
+    ? new Date(value).toLocaleDateString('en-PH', {
+        dateStyle: 'medium',
+        timeZone: 'Asia/Manila',
+    })
+    : '—';
+
+const formatTime = value => value
+    ? new Date(value).toLocaleTimeString('en-PH', {
+        timeStyle: 'short',
+        timeZone: 'Asia/Manila',
+    })
+    : '—';
+
+    function Icon({ name, ...props }) {
     const paths = {
         drop: 'M12 3s-6 6.3-6 10a6 6 0 0 0 12 0c0-3.7-6-10-6-10Z',
         refresh: 'M20 7v5h-5M4 17v-5h5M6.1 7a7 7 0 0 1 11.5-2L20 8M4 16l2.4 3A7 7 0 0 0 18 17',
@@ -18,22 +30,159 @@ function Icon({ name, ...props }) {
     };
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[name] || paths.info} /></svg>;
 }
-const statusTone = status => ({ Approved: 'ready', 'Partially Fulfilled': 'partial', Pending: 'pending', Fulfilled: 'done' }[status] || 'neutral');
+
+const RELEASE_STATUSES = ['Allocated', 'Approved', 'Partially Fulfilled'];
+const QUEUE_STATUSES = ['Allocated', 'Partially Fulfilled', 'Fulfilled'];
+
+const requiresBagCodes = row =>
+    row.requestStatus === 'Allocated' ||
+    row.usesStockAllocation === true;
+
+const statusTone = status => ({ Allocated: 'ready', Approved: 'ready', 'Partially Fulfilled': 'partial', Pending: 'pending', Fulfilled: 'done' }[status] || 'neutral');
 function StatusBadge({ status }) {
     return <span className={`fr-status fr-status--${statusTone(status)}`}><span className="fr-status-dot" />{status}</span>;
 }
 
+function BagPicker({ requestID, quantity, selectedCodes, onChange }) {
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        const timer = setTimeout(async () => {
+            try {
+                const search = encodeURIComponent(query.trim());
+                const response = await apiFetch(
+                    `${ENDPOINT}/${requestID}/eligible-units?q=${search}`,
+                    { signal: controller.signal }
+                );
+                const body = await response.json();
+
+                if (!response.ok || !Array.isArray(body.units)) {
+                    throw new Error(body.message || 'Could not load eligible bags.');
+                }
+
+                if (!controller.signal.aborted) setResults(body.units);
+            } catch (err) {
+                if (!controller.signal.aborted) setError(err.message);
+            } finally {
+                if (!controller.signal.aborted) setLoading(false);
+            }
+        }, 200);
+
+        return () => {
+            clearTimeout(timer);
+            controller.abort();
+        };
+    }, [requestID, query]);
+
+    return (
+        <div>
+            <label className="fr-bag-search">
+                Search blood bag IDs
+                <input
+                    type="search"
+                    value={query}
+                    maxLength={64}
+                    placeholder="Enter part of a blood bag ID"
+                    onChange={event => {
+                        setQuery(event.target.value);
+                        setResults([]);
+                        setError('');
+                        setLoading(true);
+                    }}
+                />
+            </label>
+
+            <p className="fr-bag-count" aria-live="polite">{selectedCodes.length} of {quantity} bags selected</p>
+
+            {selectedCodes.length > 0 && (
+            <ul className="fr-selected-bags" aria-label="Selected blood bags">
+                    {selectedCodes.map(code => (
+                        <li key={code}>
+                            {code}{' '}
+                            <button
+                                type="button"
+                                aria-label={`Remove ${code}`}
+                                onClick={() => onChange(selectedCodes.filter(value => value !== code))}
+                            >
+                                Remove
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            )}
+
+            {loading && <p role="status">Searching eligible bags…</p>}
+            {error && <p role="alert">{error}</p>}
+            {!loading && !error && results.length === 0 && <p>No eligible bags found.</p>}
+
+            {results.length > 0 && (
+    <div className="fr-bag-results">
+        <div className="fr-bag-row fr-bag-heading" aria-hidden="true">
+            <span />
+            <span>Blood unit ID</span>
+            <span>Expiration date</span>
+        </div>
+        <ul aria-label="Matching blood bags">
+            {results.map(({ bloodUnitID, storageLocation, expiryDate }) => {
+                const checked = selectedCodes.includes(bloodUnitID);
+                const expires = expiryDate ? new Date(expiryDate) : null;
+
+                return (
+                    <li key={bloodUnitID}>
+                        <label className="fr-bag-row">
+                            <input
+                                type="checkbox"
+                                checked={checked}
+                                disabled={!checked && selectedCodes.length >= quantity}
+                                onChange={event => onChange(event.target.checked
+                                    ? [...selectedCodes, bloodUnitID]
+                                    : selectedCodes.filter(code => code !== bloodUnitID)
+                                )}
+                            />
+                            <span>
+                                <strong>{bloodUnitID}</strong>
+                                {storageLocation && <small>{storageLocation}</small>}
+                            </span>
+                            <span className="fr-bag-expiry">
+                                {expires && !Number.isNaN(expires.getTime())
+                                    ? expires.toLocaleDateString('en-PH', {
+                                        dateStyle: 'medium',
+                                        timeZone: 'UTC',
+                                    })
+                                    : '—'}
+                            </span>
+                        </label>
+                    </li>
+                );
+            })}
+        </ul>
+    </div>
+)}
+
+            {results.length === 20 && <p>Showing up to 20 bags. Refine your search to find a specific blood bag ID.</p>}
+        </div>
+    );
+}
+
 export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
+    const [detailID, setDetailID] = useState(null);
+    const detailDialogRef = useRef(null);
     const [confirmation, setConfirmation] = useState(null);
     const dialogRef = useRef(null);
     const [requests, setRequests] = useState([]);
-    const [quantities, setQuantities] = useState({});
+    const detailRow = requests.find(row => row._id === detailID);
+    const releasedBloodBagIDs = detailRow?.releasedBloodBagIDs ?? [];
     const [loading, setLoading] = useState(true);
     const [busyID, setBusyID] = useState(null);
     const [error, setError] = useState('');
     const [message, setMessage] = useState('');
     const [needsRefresh, setNeedsRefresh] = useState(true);
-    const [showCompleted, setShowCompleted] = useState(false);
+    const [statusFilter, setStatusFilter] = useState('open');
     const inFlight = useRef(false);
 
     const loadRequests = useCallback(async signal => {
@@ -44,7 +193,7 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
             if (!response.ok) throw new Error(body.message || 'Could not load fulfillment requests.');
             if (!Array.isArray(body.requests)) throw new Error('Invalid request list.');
             if (signal?.aborted) return false;
-            setRequests(body.requests.filter(row => !facilityID || String(row.receivingFacilityID?._id || row.receivingFacilityID) === String(facilityID))); setQuantities({}); setNeedsRefresh(false);
+            setRequests(body.requests.filter(row => !facilityID || String(row.receivingFacilityID?._id || row.receivingFacilityID) === String(facilityID))); setNeedsRefresh(false);
             return true;
         } catch (err) {
             if (err.name !== 'AbortError') { setError(err.message); setNeedsRefresh(true); }
@@ -63,23 +212,28 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
 
         function prepareRelease(row) {
             const maximum = Math.min(row.remainingUnits, row.availableUnits);
-            const units = Number(quantities[row._id] ?? maximum);
-            if (!Number.isSafeInteger(units) || units < 1 || units > maximum) {
-                setError(`Enter a whole number from 1 to ${maximum}.`); return;
-            }
-            setError(''); setConfirmation({ row, units });
+        
+            if (!RELEASE_STATUSES.includes(row.requestStatus) || maximum < 1 ||
+                row.fulfillmentPending || inFlight.current || needsRefresh) return;
+        
+            setError('');
+            setConfirmation({ row, units: maximum, bloodUnitIDs: [] });
         }
 
-        async function fulfill(row, units) {
+        async function fulfill(row, units, bloodUnitIDs) {
             if (inFlight.current || needsRefresh) return;
             const maximum = Math.min(row.remainingUnits, row.availableUnits);
-            if (!['Approved', 'Partially Fulfilled'].includes(row.requestStatus) || !Number.isSafeInteger(units) || units < 1 || units > maximum) return;
+            if (!RELEASE_STATUSES.includes(row.requestStatus) || !Number.isSafeInteger(units) || units < 1 || units > maximum) return;
             dialogRef.current?.close(); setConfirmation(null);
             inFlight.current = true; setBusyID(row._id); setError(''); setMessage('');
             try {
                 const response = await apiFetch(`${ENDPOINT}/${row._id}/fulfill`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ units, expectedFulfilledUnits: row.fulfilledUnits })
+                    body: JSON.stringify({
+                        units,
+                        expectedFulfilledUnits: row.fulfilledUnits,
+                        ...(requiresBagCodes(row) ? { bloodUnitIDs } : {}),
+                    }),
                 });
                 const body = await response.json().catch(() => { throw new Error('The server returned an unreadable response. Refresh to check request progress.'); });
                 if (!response.ok) throw new Error(body.message || 'Could not confirm fulfillment.');
@@ -100,11 +254,30 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
             }
         }
 
-        const visible = requests.filter(row => showCompleted || row.requestStatus !== 'Fulfilled');
-        const readyCount = requests.filter(row => ['Approved', 'Partially Fulfilled'].includes(row.requestStatus) && Math.min(row.remainingUnits, row.availableUnits) > 0).length;
-        const pendingCount = requests.filter(row => row.requestStatus === 'Pending').length;
+        useEffect(() => {
+            const dialog = detailDialogRef.current;
+            if (!dialog) return;
+            if (detailRow && !dialog.open) dialog.showModal();
+            if (!detailRow && dialog.open) dialog.close();
+        }, [detailRow]);
+        
+        const releaseMaximum = confirmation
+            ? Math.min(confirmation.row.remainingUnits, confirmation.row.availableUnits)
+            : 0;
+        const releaseUnits = Number(confirmation?.units);
+        const validReleaseUnits = Number.isSafeInteger(releaseUnits) &&
+            releaseUnits >= 1 && releaseUnits <= releaseMaximum;
+            
+        const visible = requests.filter(({ requestStatus }) => {
+            if (statusFilter === 'all') return true;
+            if (statusFilter === 'open') return requestStatus !== 'Fulfilled';
+            return requestStatus === statusFilter;
+        });
+        const readyCount = requests.filter(row => RELEASE_STATUSES.includes(row.requestStatus) && Math.min(row.remainingUnits, row.availableUnits) > 0).length;
+        const partialCount = requests.filter(row => row.requestStatus === 'Partially Fulfilled').length;
         const outstanding = requests.reduce((total, row) => total + (row.requestStatus === 'Fulfilled' ? 0 : Math.max(0, Number(row.remainingUnits) || 0)), 0);
-        return <section className="fr" aria-label="Release blood units to requests" aria-busy={loading}>
+        return (
+        <section className="fr" aria-label="Release blood units to requests" aria-busy={loading}>
         <style>{STYLES}</style>
         <header className="fr-header">
         <div className="fr-title-group">
@@ -117,8 +290,8 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
         </header>
 
         <div className="fr-stats">
-        <div className="fr-stat"><div><span className="fr-stat-label">Ready to release</span><strong>{loading || needsRefresh ? '—' : readyCount}</strong><small>Approved requests with eligible stock</small></div><span className="fr-stat-icon fr-stat-icon--green"><Icon name="check" /></span></div>
-        <div className="fr-stat"><div><span className="fr-stat-label">Awaiting approval</span><strong>{loading || needsRefresh ? '—' : pendingCount}</strong><small>Pending requests in your queue</small></div><span className="fr-stat-icon fr-stat-icon--amber"><Icon name="clock" /></span></div>
+        <div className="fr-stat"><div><span className="fr-stat-label">Ready to release</span><strong>{loading || needsRefresh ? '—' : readyCount}</strong><small>Requests with eligible stock</small></div><span className="fr-stat-icon fr-stat-icon--green"><Icon name="check" /></span></div>
+        <div className="fr-stat"><div><span className="fr-stat-label">Partially fulfilled</span><strong>{loading || needsRefresh ? '—' : partialCount}</strong><small>Requests with units still to release</small></div><span className="fr-stat-icon fr-stat-icon--amber"><Icon name="clock" /></span></div>
         <div className="fr-stat"><div><span className="fr-stat-label">Units outstanding</span><strong>{loading || needsRefresh ? '—' : outstanding}</strong><small>Units remaining across open requests</small></div><span className="fr-stat-icon fr-stat-icon--red"><Icon name="drop" /></span></div>
         </div>
 
@@ -129,48 +302,277 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
         <div className="fr-queue">
         <div className="fr-toolbar">
         <div className="fr-queue-heading"><h3>Request queue <span className="fr-count">{visible.length}</span></h3><p>Patient requests assigned to this facility</p></div>
-        <label className="fr-toggle"><input type="checkbox" checked={showCompleted} onChange={event => setShowCompleted(event.target.checked)} /><span className="fr-toggle-track" aria-hidden="true" /><span>Show fulfilled</span></label>
+        <label className="fr-status-filter">
+            <span>Request status</span>
+            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+                <option value="open">Open requests</option>
+                <option value="all">All requests</option>
+                {QUEUE_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
+            </select>
+        </label>
         </div>
         {loading && <div className="fr-loading" role="status"><Icon name="refresh" className="fr-spin" />Updating requests and eligible stock…</div>}
-        {!loading && !needsRefresh && visible.length === 0 && <div className="fr-empty"><span><Icon name="list" /></span><h3>Your queue is clear</h3><p>No {showCompleted ? '' : 'open '}requests to display for this facility.</p></div>}
-        {visible.length > 0 && <div className="fr-table-wrap"><table className="fr-table">
-            <thead><tr>{['Patient / Submitted', 'Hospital', 'Blood product', 'Release progress', 'Eligible stock', 'Status', 'Action'].map(label => <th key={label} scope="col">{label}</th>)}</tr></thead>
-            <tbody>{visible.map(row => {
-                const maximum = Math.min(row.remainingUnits, row.availableUnits);
-                const allowed = ['Approved', 'Partially Fulfilled'].includes(row.requestStatus) && maximum > 0;
-                const disabled = !allowed || busyID !== null || loading || needsRefresh;
-                const progress = row.units > 0 ? Math.min(100, Math.max(0, row.fulfilledUnits / row.units * 100)) : 0;
-                const name = [row.firstName, row.middleName, row.lastName].filter(Boolean).join(' ') || 'Unnamed patient';
-                const initials = [row.firstName, row.lastName].filter(Boolean).map(part => part[0]).join('').slice(0, 2) || 'P';
-            return <tr key={row._id}>
-            <td data-label="Patient"><div className="fr-patient"><span className="fr-avatar" aria-hidden="true">{initials}</span><div><strong>{name}</strong><small>{formatDate(row.createdAt)}</small></div></div></td>
-            <td data-label="Hospital"><span className="fr-hospital">{row.hospital || '—'}</span></td>
-            <td data-label="Blood product"><div className="fr-product"><span className="fr-blood-type">{row.bloodType}</span><span>{row.component}</span></div></td>
-            <td data-label="Progress"><div className="fr-progress"><div><strong>{row.fulfilledUnits}<span> / {row.units}</span></strong><small>{Math.round(progress)}%</small></div><progress value={row.fulfilledUnits} max={Math.max(1, row.units)} aria-label={`Release progress for ${name}`} /><small>{row.remainingUnits} unit{row.remainingUnits === 1 ? '' : 's'} remaining</small></div></td>
-            <td data-label="Eligible stock"><div className={`fr-stock ${row.availableUnits > 0 ? 'fr-stock--available' : 'fr-stock--empty'}`}><span className="fr-stock-dot" /><strong>{row.availableUnits}</strong><span>unit{row.availableUnits === 1 ? '' : 's'}</span></div></td>
-            <td data-label="Status"><StatusBadge status={row.requestStatus} /></td>
-            <td data-label="Action">{row.requestStatus === 'Pending' ? <span className="fr-action-note"><Icon name="clock" />Awaiting approval</span> : row.remainingUnits <= 0 ? <span className="fr-action-note fr-action-note--done"><Icon name="check" />Completed</span> : !maximum ? <span className="fr-action-note">No eligible stock</span> : <div className="fr-release-controls">
-                <div className="fr-release-row"><input type="number" min={1} max={maximum} step={1} aria-label={`Units to release for ${name}, ${row.component}`} value={quantities[row._id] ?? maximum} onChange={event => setQuantities(previous => ({ ...previous, [row._id]: event.target.value }))} disabled={disabled} />
-                <button type="button" className="fr-button fr-button--primary" onClick={() => prepareRelease(row)} disabled={disabled}>{busyID === row._id ? 'Releasing…' : 'Release'}<Icon name="arrow" /></button></div>
-                <small>Up to {maximum} unit{maximum === 1 ? '' : 's'} this release</small>
-                </div>}</td>
-                </tr>;
-            })}</tbody>
-            </table></div>}
-            <footer className="fr-footer"><Icon name="info" /><p><strong>Oldest eligible units first.</strong> Blood type and component must match. Partial releases are supported.</p><span className="fr-fifo">FIFO</span></footer>
+        {!loading && !needsRefresh && visible.length === 0 && (
+            <div className="fr-empty">
+                <span><Icon name="list" /></span>
+                <h3>{requests.length === 0 ? 'Your queue is clear' : 'No requests match this filter'}</h3>
+            </div>
+        )}
+        
+        {visible.length > 0 && (
+    <div className="fr-table-wrap">
+        <table className="fr-table">
+            <thead>
+                <tr>
+                    {['Patient name', 'Submitted date', 'Submitted time', 'Blood type', 'Component', 'Status', 'Action'].map(label => (
+                        <th key={label} scope="col">{label}</th>
+                    ))}
+                </tr>
+            </thead>
+            <tbody>
+                {visible.map(row => {
+                    const name = [row.firstName, row.middleName, row.lastName]
+                        .filter(Boolean).join(' ') || 'Unnamed patient';
+
+                    return (
+                        <tr key={row._id}>
+                            <td data-label="Patient name"><strong>{name}</strong></td>
+                            <td data-label="Submitted date">{formatDate(row.createdAt)}</td>
+                            <td data-label="Submitted time">{formatTime(row.createdAt)}</td>
+                            <td data-label="Blood type">
+                                <span className="fr-blood-type">{row.bloodType}</span>
+                            </td>
+                            <td data-label="Component">{row.component}</td>
+                            <td data-label="Status"><StatusBadge status={row.requestStatus} /></td>
+                            <td data-label="Action">
+                                <div className="fr-row-actions">
+                                    <button
+                                        type="button"
+                                        className="fr-view-details"
+                                        aria-label={`View details for ${name}, ${row.component}`}
+                                        title="View details"
+                                        onClick={() => setDetailID(row._id)}
+                                    >
+                                        <EyeIcon aria-hidden="true" />
+                                    </button>
+                                    {RELEASE_STATUSES.includes(row.requestStatus) && row.remainingUnits > 0 && (
+                                        <button
+                                            type="button"
+                                            className="fr-button fr-button--primary"
+                                            disabled={loading || needsRefresh || busyID !== null ||
+                                                row.availableUnits < 1 || row.fulfillmentPending}
+                                            onClick={() => prepareRelease(row)}
+                                        >
+                                            Release
+                                        </button>
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    );
+                })}
+            </tbody>
+        </table>
+    </div>
+)}
             </div>
 
-            <dialog className="fr-dialog" ref={dialogRef} aria-labelledby="release-confirm-title" onCancel={() => setConfirmation(null)} onClose={() => setConfirmation(null)}>
-            {confirmation && <>
-                <div className="fr-dialog-header"><span className="fr-dialog-icon"><Icon name="drop" /></span><button type="button" className="fr-icon-button" aria-label="Close confirmation" onClick={() => { dialogRef.current?.close(); setConfirmation(null); }}><Icon name="close" /></button></div>
-                <span className="fr-eyebrow">REVIEW HANDOVER</span><h2 id="release-confirm-title">Confirm release</h2><p className="fr-dialog-subtitle">Review the details before releasing these units.</p>
-                <div className="fr-release-summary"><span className="fr-blood-type">{confirmation.row.bloodType}</span><div><strong>{confirmation.units} unit{confirmation.units === 1 ? '' : 's'}</strong><span>{confirmation.row.component}</span></div></div>
-                <dl className="fr-details"><div><dt>Patient</dt><dd>{[confirmation.row.firstName, confirmation.row.middleName, confirmation.row.lastName].filter(Boolean).join(' ') || 'Unnamed patient'}</dd></div><div><dt>Hospital</dt><dd>{confirmation.row.hospital || '—'}</dd></div><div><dt>Remaining after release</dt><dd>{confirmation.row.remainingUnits - confirmation.units} unit(s)</dd></div></dl>
-                <div className="fr-dialog-info"><Icon name="info" /><p>The oldest eligible units will be assigned to this request and marked <strong>Released</strong>.</p></div>
-                <div className="fr-dialog-actions"><button type="button" className="fr-button fr-button--secondary" onClick={() => { dialogRef.current?.close(); setConfirmation(null); }}>Cancel</button><button type="button" className="fr-button fr-button--primary" disabled={busyID !== null || loading || needsRefresh} onClick={() => fulfill(confirmation.row, confirmation.units)}>Confirm release<Icon name="arrow" /></button></div>
-                </>}
-                </dialog>
-                </section>;
+            <dialog
+                className="fr-dialog fr-request-dialog"
+                ref={detailDialogRef}
+                aria-labelledby="fr-request-details-title"
+                onClose={() => setDetailID(null)}
+            >
+                {detailRow && (
+                    <>
+                        <div className="fr-dialog-body">
+                            <div className="fr-dialog-header">
+                                <h2 id="fr-request-details-title">Request details</h2>
+                                <StatusBadge status={detailRow.requestStatus} />
+                            </div>
+
+                            <section className="fr-request-section" aria-labelledby="fr-patient-request-heading">
+                                <h3 id="fr-patient-request-heading">Patient and request</h3>
+                                <dl className="fr-details">
+                                    <div>
+                                        <dt>Patient name</dt>
+                                        <dd>
+                                            {[detailRow.firstName, detailRow.middleName, detailRow.lastName]
+                                                .filter(Boolean).join(' ') || 'Unnamed patient'}
+                                        </dd>
+                                    </div>
+                                    <div><dt>Hospital</dt><dd>{detailRow.hospital || '—'}</dd></div>
+                                    <div><dt>Blood type</dt><dd>{detailRow.bloodType}</dd></div>
+                                    <div><dt>Component</dt><dd>{detailRow.component}</dd></div>
+                                    <div><dt>Request ID</dt><dd>{detailRow.requestID || '—'}</dd></div>
+                                </dl>
+                            </section>
+
+                            <section className="fr-request-section" aria-labelledby="fr-fulfillment-heading">
+                                <h3 id="fr-fulfillment-heading">Fulfillment</h3>
+                                <dl className="fr-details">
+                                    <div>
+                                        <dt>Method</dt>
+                                        <dd>{detailRow.confirmedFulfillmentMethod || detailRow.fulfillmentMethod || '—'}</dd>
+                                    </div>
+                                    <div><dt>Progress</dt><dd>{detailRow.fulfillmentStatus || '—'}</dd></div>
+                                    <div><dt>Eligible stock</dt><dd>{detailRow.availableUnits}</dd></div>
+                                </dl>
+                            </section>
+
+                            <section className="fr-detail-progress" aria-labelledby="fr-release-progress-heading">
+                                <h3 id="fr-release-progress-heading">Release progress</h3>
+                                <progress
+                                    value={detailRow.fulfilledUnits}
+                                    max={Math.max(1, detailRow.units)}
+                                    aria-labelledby="fr-release-progress-heading"
+                                />
+                                <dl className="fr-progress-counts">
+                                    <div><dt>Requested</dt><dd>{detailRow.units}</dd></div>
+                                    <div><dt>Released</dt><dd>{detailRow.fulfilledUnits}</dd></div>
+                                    <div><dt>Remaining</dt><dd>{detailRow.remainingUnits}</dd></div>
+                                </dl>
+                            </section>
+
+                            <section className="fr-request-section fr-released-bags" aria-labelledby="fr-released-bags-heading">
+                                <h3 id="fr-released-bags-heading">Assigned blood bags</h3>
+                                {releasedBloodBagIDs.length > 0 && (
+                                    <ul className="fr-selected-bags">
+                                        {releasedBloodBagIDs.map(id => <li key={id}>{id}</li>)}
+                                    </ul>
+                                )}
+                                {releasedBloodBagIDs.length < detailRow.fulfilledUnits && (
+                                    <p>Some blood bag IDs are unavailable. Refresh requests to check again.</p>
+                                )}
+                                {releasedBloodBagIDs.length === 0 && detailRow.fulfilledUnits === 0 && (
+                                    <p>No blood bags assigned yet.</p>
+                                )}
+                            </section>
+                        </div>
+
+                        <div className="fr-dialog-actions">
+                            <button
+                                type="button"
+                                className="fr-button fr-button--secondary"
+                                onClick={() => detailDialogRef.current?.close()}
+                            >
+                                Close
+                            </button>
+                        </div>
+                    </>
+                )}
+            </dialog>
+
+            <dialog
+                className="fr-dialog fr-confirm-dialog"
+                ref={dialogRef}
+                aria-labelledby="release-confirm-title"
+                onCancel={() => setConfirmation(null)}
+                onClose={() => setConfirmation(null)}
+            >
+                {confirmation && (
+                    <>
+                        <div className="fr-dialog-body">
+                            <div className="fr-dialog-header">
+                                <h2 id="release-confirm-title">Confirm release</h2>
+                                <button
+                                    type="button"
+                                    className="fr-icon-button"
+                                    aria-label="Close confirmation"
+                                    onClick={() => dialogRef.current?.close()}
+                                >
+                                    <Icon name="close" />
+                                </button>
+                            </div>
+
+                            <p className="fr-release-summary">
+                                <span className="fr-blood-type">{confirmation.row.bloodType}</span>
+                                <span>
+                                    {validReleaseUnits && (
+                                        <><span>{releaseUnits} {releaseUnits === 1 ? 'unit' : 'units'}</span>{' of '}</>
+                                    )}
+                                    <span>{confirmation.row.component}</span>
+                                </span>
+                            </p>
+
+                            <dl className="fr-details">
+                                <div>
+                                    <dt>Patient name</dt>
+                                    <dd>
+                                        {[confirmation.row.firstName, confirmation.row.middleName, confirmation.row.lastName]
+                                            .filter(Boolean).join(' ') || 'Unnamed patient'}
+                                    </dd>
+                                </div>
+                                <div><dt>Hospital</dt><dd>{confirmation.row.hospital || '—'}</dd></div>
+                                <div>
+                                    <dt>Remaining after release</dt>
+                                    <dd>{validReleaseUnits ? confirmation.row.remainingUnits - releaseUnits : '—'}</dd>
+                                </div>
+                            </dl>
+
+                            <div className="fr-confirm-quantity-row">
+                                <label className="fr-confirm-quantity">
+                                    Units to release
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        max={releaseMaximum}
+                                        step={1}
+                                        value={confirmation.units}
+                                        aria-invalid={!validReleaseUnits}
+                                        aria-describedby="fr-release-limit"
+                                        onChange={event => {
+                                            const units = event.target.value;
+                                            setConfirmation(previous => previous
+                                                ? { ...previous, units, bloodUnitIDs: [] }
+                                                : null);
+                                        }}
+                                    />
+                                </label>
+                                <small id="fr-release-limit">Max {releaseMaximum}</small>
+                            </div>
+
+                            {requiresBagCodes(confirmation.row) ? (
+                                validReleaseUnits && <BagPicker
+                                    key={confirmation.row._id}
+                                    requestID={confirmation.row._id}
+                                    quantity={releaseUnits}
+                                    selectedCodes={confirmation.bloodUnitIDs}
+                                    onChange={bloodUnitIDs => {
+                                        setConfirmation(previous => previous ? { ...previous, bloodUnitIDs } : null);
+                                    }}
+                                />
+                            ) : (
+                                <div className="fr-dialog-info">
+                                    <Icon name="info" />
+                                    <p>The oldest eligible units will be assigned to this request and marked <strong>Released</strong>.</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="fr-dialog-actions">
+                            <button
+                                type="button"
+                                className="fr-button fr-button--secondary"
+                                onClick={() => dialogRef.current?.close()}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="fr-button fr-button--primary"
+                                disabled={busyID !== null || loading || needsRefresh || !validReleaseUnits ||
+                                    (requiresBagCodes(confirmation.row) && confirmation.bloodUnitIDs.length !== releaseUnits)}
+                                onClick={() => fulfill(confirmation.row, releaseUnits, confirmation.bloodUnitIDs)}
+                            >
+                                Confirm release<Icon name="arrow" />
+                            </button>
+                        </div>
+                    </>
+                )}
+            </dialog>
+        </section>
+    );
 }
 
 const STYLES = `
@@ -183,7 +585,7 @@ const STYLES = `
 .fr button:focus-visible, .fr input:focus-visible { outline:3px solid #dd91a2; outline-offset:3px; }
 .fr .fr-header { display:flex; justify-content:space-between; gap:24px; align-items:center; margin-bottom:26px; }
 .fr .fr-title-group { display:flex; align-items:center; gap:15px; }
-.fr .fr-title-icon, .fr .fr-dialog-icon { display:grid; place-items:center; width:52px; height:56px; border-radius:16px; background:#faedf0; color:var(--fr-red); flex-shrink:0; }
+.fr .fr-title-icon { display:grid; place-items:center; width:52px; height:56px; border-radius:16px; background:#faedf0; color:var(--fr-red); flex-shrink:0; }
 .fr .fr-title-icon svg { width:28px; height:28px; }
 .fr .fr-eyebrow { display:block; color:var(--fr-red); font-size:10px; font-weight:750; letter-spacing:.13em; margin-bottom:5px; }
 .fr h2 { margin:0; color:var(--fr-ink); font-size:25px; font-weight:750; letter-spacing:-.6px; line-height:1.25; }
@@ -213,55 +615,23 @@ const STYLES = `
 .fr .fr-queue-heading h3 { display:flex; align-items:center; gap:8px; }
 .fr .fr-count { display:inline-flex; align-items:center; justify-content:center; border-radius:6px; background:#f2f4f7; color:#606b7c; font-size:11px; min-width:23px; padding:3px 7px; }
 .fr .fr-queue-heading p { margin:6px 0 0; color:var(--fr-muted); font-size:12px; }
-.fr .fr-toggle { display:flex; align-items:center; gap:9px; color:#596576; cursor:pointer; font-size:12px; white-space:nowrap; position:relative; }
-.fr .fr-toggle input { position:absolute; width:34px; height:20px; opacity:0; margin:0; cursor:pointer; }
-.fr .fr-toggle-track { width:34px; height:20px; border-radius:20px; background:#d5dce5; transition:background .15s; }
-.fr .fr-toggle-track::after { content:''; display:block; width:14px; height:14px; background:white; border-radius:50%; margin:3px; box-shadow:0 1px 3px #0002; transition:transform .15s; }
-.fr .fr-toggle input:checked + .fr-toggle-track { background:var(--fr-red); }
-.fr .fr-toggle input:checked + .fr-toggle-track::after { transform:translateX(14px); }
-.fr .fr-toggle input:focus-visible + .fr-toggle-track { outline:3px solid #dd91a2; outline-offset:3px; }
+.fr .fr-status-filter { display:flex; flex-wrap:wrap; align-items:center; gap:6px 9px; color:var(--fr-muted); font-size:.8125rem; font-weight:600; }
+.fr .fr-status-filter select { max-width:100%; min-height:36px; padding:5px 8px; border:1px solid #d6dee9; border-radius:8px; background:#fff; color:var(--fr-ink); font:inherit; }
+.fr .fr-status-filter select:focus-visible { outline:3px solid #dd91a2; outline-offset:2px; }
 .fr .fr-table-wrap { overflow-x:auto; }
-.fr .fr-table { width:100%; min-width:1050px; border-collapse:collapse; border:0; margin:0; }
+.fr .fr-table { width:100%; min-width:720px; border-collapse:collapse; border:0; margin:0; }
 .fr .fr-table th { background:#f8f9fb; border-top:1px solid var(--fr-line); border-bottom:1px solid var(--fr-line); color:#7a8594; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.065em; padding:13px 16px; text-align:left; white-space:nowrap; }
 .fr .fr-table th:first-child, .fr .fr-table td:first-child { padding-left:23px; }
 .fr .fr-table td { padding:21px 16px; border-bottom:1px solid #f0f2f5; vertical-align:middle; font-size:12px; text-align:left; }
 .fr .fr-table tr:last-child td { border-bottom:0; }
 .fr .fr-table tbody tr { transition:background .15s; }
 .fr .fr-table tbody tr:hover { background:#fcfcfe; }
-.fr .fr-patient { display:flex; gap:10px; align-items:center; min-width:170px; }
-.fr .fr-avatar { display:grid; place-items:center; width:34px; height:34px; border:1px solid #e7eaf0; background:#f3f5f9; border-radius:50%; color:#718099; font-size:10px; font-weight:700; flex-shrink:0; text-transform:uppercase; }
-.fr .fr-patient strong { display:block; max-width:200px; overflow-wrap:anywhere; font-size:12px; line-height:1.5; font-weight:700; }
-.fr .fr-patient small { display:block; color:#8a94a3; font-size:10px; margin-top:4px; line-height:1.5; }
-.fr .fr-hospital { display:block; max-width:150px; min-width:95px; line-height:1.6; color:#667286; overflow-wrap:anywhere; }
-.fr .fr-product { display:flex; align-items:center; gap:8px; color:#677386; font-size:11px; line-height:1.5; }
 .fr .fr-blood-type { display:inline-flex; align-items:center; justify-content:center; min-width:36px; height:36px; padding:0 7px; background:#fceef1; color:var(--fr-red); border:1px solid #f7dde3; border-radius:9px; font-size:13px; font-weight:800; white-space:nowrap; }
-.fr .fr-progress { min-width:114px; max-width:160px; }
-.fr .fr-progress > div { display:flex; align-items:center; justify-content:space-between; gap:15px; margin-bottom:7px; }
-.fr .fr-progress strong { font-size:12px; font-weight:750; }
-.fr .fr-progress strong span { color:#9aa3b0; font-weight:400; }
-.fr .fr-progress small { font-size:10px; color:#8a94a3; white-space:nowrap; }
-.fr .fr-progress progress { appearance:none; -webkit-appearance:none; border:0; border-radius:20px; overflow:hidden; background:#eff1f5; width:100%; height:5px; display:block; margin:0 0 7px; color:var(--fr-red); }
-.fr .fr-progress progress::-webkit-progress-bar { background:#eff1f5; border-radius:20px; }
-.fr .fr-progress progress::-webkit-progress-value { background:var(--fr-red); border-radius:20px; }
-.fr .fr-progress progress::-moz-progress-bar { background:var(--fr-red); border-radius:20px; }
-.fr .fr-stock { display:flex; align-items:center; gap:5px; white-space:nowrap; color:#7a8594; font-size:10px; }
-.fr .fr-stock strong { font-size:15px; color:#354258; font-variant-numeric:tabular-nums; }
-.fr .fr-stock-dot { width:6px; height:6px; background:#24a575; border-radius:50%; margin-right:2px; }
-.fr .fr-stock--empty .fr-stock-dot { background:#c2c9d3; }
-.fr .fr-stock--empty strong { color:#9aa3b0; }
 .fr .fr-status { display:inline-flex; align-items:center; gap:6px; border-radius:6px; padding:6px 8px; font-size:10px; font-weight:650; white-space:nowrap; line-height:1.4; background:#f1f3f6; color:#697587; }
 .fr .fr-status-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
 .fr .fr-status--ready, .fr .fr-status--done { color:#218260; background:#edf8f2; }
 .fr .fr-status--partial { color:#477ac2; background:#eef4fd; }
 .fr .fr-status--pending { color:#a57720; background:#fff7e7; }
-.fr .fr-release-controls { min-width:161px; }
-.fr .fr-release-row { display:flex; align-items:center; gap:7px; }
-.fr .fr-release-row input { width:57px; height:36px; border:1px solid #dfe4ec; border-radius:7px; padding:7px; background:white; text-align:center; font-size:12px; color:#364256; }
-.fr .fr-release-row .fr-button { min-height:36px; padding:8px 11px; font-size:11px; border-radius:7px; }
-.fr .fr-release-controls > small { display:block; color:#929bab; font-size:10px; margin-top:6px; }
-.fr .fr-action-note { display:flex; align-items:center; gap:6px; color:#939dab; font-size:11px; line-height:1.5; }
-.fr .fr-action-note svg { width:15px; height:15px; }
-.fr .fr-action-note--done { color:#218260; }
 .fr .fr-footer { display:flex; gap:9px; align-items:center; padding:15px 23px; background:#fafbfd; border-top:1px solid var(--fr-line); color:#8792a2; }
 .fr .fr-footer svg { width:15px; height:15px; }
 .fr .fr-footer p { margin:0; font-size:11px; line-height:1.7; flex:1; }
@@ -270,34 +640,73 @@ const STYLES = `
 .fr .fr-loading { display:flex; align-items:center; justify-content:center; gap:9px; padding:18px; background:#f9fafc; color:#738095; font-size:12px; }
 .fr .fr-empty { padding:50px 20px; text-align:center; }
 .fr .fr-empty > span { display:grid; place-items:center; width:50px; height:50px; border-radius:15px; background:#f5f7fa; color:#8e9bb0; margin:0 auto 15px; }
-.fr .fr-empty p { color:#8a94a3; font-size:12px; margin:9px 0 0; }
-.fr .fr-dialog { width:min(460px,calc(100vw - 32px)); max-height:calc(100dvh - 40px); overflow-y:auto; border:1px solid #e7eaf0; border-radius:20px; padding:28px; color:var(--fr-ink); background:#fff; box-shadow:0 24px 90px #101d3240; }
 .fr .fr-dialog::backdrop { background:#17223980; backdrop-filter:blur(3px); }
-.fr .fr-dialog-header { display:flex; align-items:flex-start; justify-content:space-between; margin-bottom:24px; }
-.fr .fr-dialog-icon { width:48px; height:48px; border-radius:14px; }
-.fr .fr-dialog-icon svg { width:25px; height:25px; }
-.fr .fr-icon-button { display:grid; place-items:center; border:0; background:#f5f6f8; border-radius:50%; width:30px; height:30px; color:#8a94a3; }
-.fr .fr-icon-button:hover { background:#e9edf2; color:#4b5a70; }
-.fr .fr-icon-button svg { width:15px; height:15px; }
-.fr .fr-dialog h2 { font-size:25px; margin-top:5px; }
-.fr .fr-dialog-subtitle { font-size:12px; color:#8792a2; line-height:1.7; margin:10px 0 22px; }
-.fr .fr-release-summary { display:flex; align-items:center; gap:13px; border:1px solid #f0e0e4; border-radius:12px; padding:17px; background:#fffbfc; }
-.fr .fr-release-summary .fr-blood-type { height:46px; min-width:46px; font-size:16px; }
-.fr .fr-release-summary strong { display:block; font-size:20px; letter-spacing:-.5px; }
-.fr .fr-release-summary div > span { display:block; font-size:11px; color:#8b7681; margin-top:4px; }
-.fr .fr-details { margin:20px 0; }
-.fr .fr-details > div { display:flex; justify-content:space-between; gap:18px; padding:11px 0; border-bottom:1px solid #f0f2f5; font-size:12px; line-height:1.6; }
-.fr .fr-details dt { color:#8892a2; }
-.fr .fr-details dd { margin:0; font-weight:600; text-align:right; max-width:60%; overflow-wrap:anywhere; }
-.fr .fr-dialog-info { display:flex; align-items:flex-start; gap:9px; padding:13px; background:#f5f7fb; border-radius:9px; color:#7c899b; }
+.fr .fr-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.fr .fr-dialog-header h2 { margin: 0; font-size: 1.25rem; line-height: 1.25; }
+.fr .fr-icon-button { display: grid; place-items: center; flex-shrink: 0; width: 32px; height: 32px; border: 0; border-radius: 50%; background: #f5f6f8; color: var(--fr-muted); }
+.fr .fr-icon-button:hover { background: #e9edf2; }
+.fr .fr-icon-button svg { width: 16px; height: 16px; }
+.fr .fr-release-summary { display:flex; align-items:center; gap:10px; margin:0 0 12px; padding:7px 10px; border:1px solid #f0e0e4; border-radius:9px; background:#fdf8fa; font-size:.9375rem; font-weight:700; text-align:left; }
+.fr .fr-release-summary .fr-blood-type { min-width: 38px; height: 30px; font-size: 0.8125rem; }
+.fr .fr-details { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,9rem),1fr)); gap:10px 16px; margin:0 0 14px; padding:0 0 12px; border-bottom:1px solid var(--fr-line); text-align:left; }
+.fr .fr-details dt { color:var(--fr-muted); font-size:.8125rem; }
+.fr .fr-details dd { margin:4px 0 0; font-size:.9375rem; font-weight:650; overflow-wrap:anywhere; }
 .fr .fr-dialog-info svg { width:16px; height:16px; margin-top:1px; }
+.fr .fr-dialog-info { display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border:1px solid var(--fr-line); border-radius:8px; background:#f8fafc; color:var(--fr-muted); }
 .fr .fr-dialog-info p { font-size:11px; line-height:1.7; margin:0; }
-.fr .fr-dialog-actions { display:flex; justify-content:flex-end; gap:9px; margin-top:24px; }
+.fr .fr-dialog { width:min(740px,calc(100vw - 32px)); max-height:min(calc(100dvh - 32px),720px); padding:0; overflow:hidden; border:1px solid #e7eaf0; border-radius:16px; color:var(--fr-ink); background:#fff; box-shadow:0 24px 90px #101d3240; color-scheme:light; text-align:left; }
+.fr .fr-dialog[open] { position:fixed; inset:0; margin:auto; height:fit-content; display:flex; flex-direction:column; }
+.fr .fr-dialog-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: clamp(14px, 4vw, 24px); }
+.fr .fr-dialog-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; justify-content: flex-end; gap: 9px; margin: 0; padding: 12px clamp(14px, 4vw, 24px); border-top: 1px solid var(--fr-line); background: #fff; }
+.fr .fr-bag-search { display: grid; gap: 6px; color: var(--fr-ink); font-size: 0.875rem; font-weight: 600; }
+.fr .fr-bag-search input { width:100%; min-width:0; min-height:44px; margin:0; padding:8px 12px; border:1px solid #d6dee9; border-radius:8px; background:#fff; color:var(--fr-ink); font-size:.875rem; font-weight:400; }
+.fr .fr-bag-count { margin: 10px 0 6px; color: var(--fr-muted); font-size: 0.8125rem; }
+.fr .fr-selected-bags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.fr .fr-selected-bags li { display: inline-flex; align-items: center; gap: 8px; padding: 5px 9px; border-radius: 8px; background: #faedf0; color: #842338; font-size: 0.8125rem; }
+.fr .fr-selected-bags button { padding: 2px 3px; border: 0; background: transparent; color: inherit; font-size: 0.75rem; text-decoration: underline; }
+.fr .fr-bag-results { max-height:15rem; margin-top:12px; overflow:auto; border:1px solid var(--fr-line); border-radius:10px; }
+.fr .fr-bag-results ul { margin: 0; padding: 0; list-style: none; }
+.fr .fr-bag-row { display: grid; grid-template-columns: 1rem minmax(0, 1fr) minmax(5.75rem, auto); align-items: center; gap: 0.625rem; padding: 0.625rem 0.75rem; font-size: 0.875rem; text-align: left; }
+.fr .fr-bag-heading { position:sticky; top:0; z-index:1; background:#f3f6fa; color:var(--fr-muted); font-size:.75rem; font-weight:700; }
+.fr .fr-bag-row > :last-child { text-align:right; }
+.fr .fr-bag-results li { border-top: 1px solid var(--fr-line); }
+.fr .fr-bag-row:has(input:checked) { background: #fff3f5; }
+.fr .fr-bag-row input { margin: 0; accent-color: var(--fr-red); }
+.fr .fr-bag-row strong, .fr .fr-bag-row small { display: block; overflow-wrap: anywhere; }
+.fr .fr-bag-row small, .fr .fr-bag-expiry { color: var(--fr-muted); }
 .fr .fr-dialog-actions .fr-button { min-height:42px; }
+.fr .fr-view-details { display: inline-grid; place-items: center; width: 40px; height: 40px; border: 1px solid #f0d6dd; border-radius: 9px; background: #fff3f5; color: var(--fr-red); }
+.fr .fr-view-details:hover { background: #fae5eb; }
+.fr .fr-detail-progress { display:grid; gap:10px; margin:0; padding:12px; border:1px solid var(--fr-line); border-radius:10px; background:#f8fafc; }
+.fr .fr-detail-progress progress { width: 100%; height: 8px; accent-color: var(--fr-red); }
+.fr .fr-request-dialog { width: min(600px, calc(100vw - 32px)); }
+.fr .fr-request-section { margin:0 0 14px; padding:12px; border:1px solid var(--fr-line); border-radius:10px; }
+.fr .fr-request-section h3 { margin:0 0 8px; }
+.fr .fr-released-bags { margin:14px 0 0; }
+.fr .fr-released-bags p { margin:8px 0 0; color:var(--fr-muted); font-size:.8125rem; }
+.fr .fr-released-bags li { min-width:0; overflow-wrap:anywhere; }
+.fr .fr-progress-counts { display: grid; gap: 10px 14px; margin: 0; text-align: left; }
+.fr .fr-progress-counts { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fr .fr-progress-counts dt { color: var(--fr-muted); font-size: 0.75rem; }
+.fr .fr-progress-counts dd { margin: 2px 0 0; font-size: 0.875rem; font-weight: 600; overflow-wrap: anywhere; }
+.fr .fr-request-dialog .fr-details { margin:0; padding:0; border:0; }
+.fr .fr-row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.fr .fr-confirm-quantity { display:inline-flex; align-items:center; gap:8px; color:var(--fr-ink); font-size:.8125rem; font-weight:600; }
+.fr .fr-confirm-quantity input { width:4rem; min-height:36px; padding:4px 6px; border:1px solid #d6dee9; border-radius:7px; background:#fff; color:var(--fr-ink); text-align:center; }
+.fr .fr-confirm-quantity input[aria-invalid="true"] { border-color:var(--fr-red); }
+.fr .fr-confirm-dialog .fr-confirm-quantity-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:14px; }
+.fr .fr-confirm-quantity-row small { color:var(--fr-muted); font-size:.75rem; }
 @keyframes fr-rotate { to { transform:rotate(360deg); } }
 .fr .fr-spin { animation:fr-rotate 1.2s linear infinite; }
-@media (prefers-reduced-motion:reduce) { .fr .fr-spin { animation:none; } .fr * { transition:none !important; } }
-@media (max-width:900px) { .fr .fr-stat { padding:16px; } .fr .fr-stat-icon { display:none; } .fr .fr-title-icon { display:none; } }
+@media (prefers-reduced-motion:reduce) {
+    .fr .fr-spin { animation:none; }
+    .fr * { transition:none !important; }
+}
+@media (max-width:900px) {
+    .fr .fr-stat { padding:16px; }
+    .fr .fr-stat-icon { display:none; }
+    .fr .fr-title-icon { display:none; }
+}
 @media (max-width:640px) {
     .fr .fr-header { align-items:flex-start; gap:15px; flex-direction:column; margin-bottom:20px; }
     .fr h2 { font-size:23px; }
@@ -306,9 +715,8 @@ const STYLES = `
     .fr .fr-stat-label { font-size:10px; min-height:28px; line-height:1.4; }
     .fr .fr-stat strong { font-size:26px; margin:6px 0 0; }
     .fr .fr-stat small { display:none; }
-    .fr .fr-toolbar { padding:18px 15px; align-items:flex-start; gap:12px; }
+    .fr .fr-toolbar { padding:18px 15px; align-items:flex-start; flex-wrap:wrap; gap:12px; }
     .fr .fr-queue-heading p { font-size:10px; }
-    .fr .fr-toggle { font-size:10px; gap:6px; padding-top:2px; }
     .fr .fr-table { display:block; min-width:0; }
     .fr .fr-table thead { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); }
     .fr .fr-table tbody { display:block; }
@@ -318,12 +726,7 @@ const STYLES = `
     .fr .fr-table td:first-child { grid-column:1 / -1; }
     .fr .fr-table td:first-child::before { display:none; }
     .fr .fr-table td:last-child { grid-column:1 / -1; border-top:1px solid #f1f3f6; padding-top:13px; }
-    .fr .fr-release-controls { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-    .fr .fr-release-controls > small { margin:0; text-align:right; }
-    .fr .fr-patient strong { max-width:none; }
-    .fr .fr-hospital { max-width:none; }
     .fr .fr-footer { padding:14px 15px; align-items:flex-start; }
     .fr .fr-fifo { display:none; }
-    .fr .fr-dialog { padding:23px; }
 }
 `;
