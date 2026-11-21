@@ -82,6 +82,7 @@ export default function BloodRequestForm() {
   const [facilityError, setFacilityError] = useState("");
   const [hospitalError, setHospitalError] = useState("");
   const [facilityRefresh, setFacilityRefresh] = useState(0);
+  
   useEffect(() => {
     let active = true;
     fetch(`${API_URL}/api/blood-requests/context`, { credentials: 'include' })
