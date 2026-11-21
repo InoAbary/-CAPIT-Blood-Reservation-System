@@ -28,7 +28,7 @@ router.get('/dashboard', async (req, res) => {
 
     const [pendingBloodRequests, totalBloodRequests] = isProvider
       ? await Promise.all([
-          BloodRequest.countDocuments({ receivingFacilityID: facility._id, requestStatus: 'Pending' }),
+          BloodRequest.countDocuments({ receivingFacilityID: facility._id, requestStatus: { $in: ['Pending', 'Allocated', 'Partially Fulfilled'] } }),
           BloodRequest.countDocuments({ receivingFacilityID: facility._id }),
         ])
       : [0, 0];
@@ -39,7 +39,7 @@ router.get('/dashboard', async (req, res) => {
 
       const [openRequests, totalRequests] = isHospital
       ? await Promise.all([
-          BloodRequest.countDocuments({ hospitalFacilityID: facility._id, requestStatus: { $in: ['Pending', 'Approved', 'Partially Fulfilled'] } }),
+          BloodRequest.countDocuments({ hospitalFacilityID: facility._id, requestStatus: { $in: ['Pending', 'Allocated','Approved', 'Partially Fulfilled'] } }),
           BloodRequest.countDocuments({ hospitalFacilityID: facility._id }),
         ])
       : [0, 0];
@@ -115,7 +115,7 @@ router.get('/pending-counts', async (req, res) => {
     const [bloodRequests, appointments] = await Promise.all([
       BloodRequest.countDocuments({
         receivingFacilityID: facility._id,
-        requestStatus: 'Pending',
+        requestStatus: { $in: ['Pending', 'Allocated', 'Partially Fulfilled'] },
       }),
       Appointment.countDocuments({
         venue: facility._id,

@@ -1,6 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import '../../styles/BranchAdmin.css';
 import '../../styles/BloodRequestStatus.css';
+
+const FULFILLMENT_STATUSES = ['Allocated', 'Approved', 'Partially Fulfilled', 'Fulfilled'];
 
 async function request(path) {
   const response = await fetch(path, { credentials: 'include' });
@@ -51,6 +53,7 @@ export default function BranchRequests() {
   const [savingProgress, setSavingProgress] = useState(false);
   const [fulfillmentDetails, setFulfillmentDetails] = useState({ pickupLocation: '', staffContactName: '' });
   const [savingDetails, setSavingDetails] = useState(false);
+  const pickupNoticeRef = useRef(null);
 
   const loadRequests = useCallback(async () => {
     try {
@@ -72,6 +75,7 @@ export default function BranchRequests() {
     const query = search.trim().toLowerCase();
     return requests.filter((item) => {
       const matchesSearch = !query || [
+        item.requestID,
         item.id,
         item.hospitalName,
         item.requesterName,
@@ -98,15 +102,19 @@ export default function BranchRequests() {
     });
   }, [requests, search, statusFilter, sortBy]);
 
-  const selected = requests.find((item) => item.id === selectedId)
+  const selected = filteredRequests.find((item) => item.id === selectedId)
     || filteredRequests[0]
     || null;
   useEffect(() => {
     setApprovalMethod(selected?.fulfillmentMethod || 'Pickup');
     setMethodNote('');
   }, [selected?.id, selected?.fulfillmentMethod]);
-  const pendingCount = requests.filter((item) => item.requestStatus === 'Pending').length;
-  const urgentCount = requests.filter((item) => item.urgency?.toLowerCase() === 'stat' && item.requestStatus === 'Pending').length;
+  const requestsNeedingAction = requests.filter(({ requestStatus }) =>
+    ['Allocated', 'Partially Fulfilled',].includes(requestStatus)
+  );
+  const urgentCount = requestsNeedingAction.filter(
+    ({ urgency }) => urgency?.toLowerCase() === 'stat'
+  ).length;
   const fulfilledCount = requests.filter((item) => item.requestStatus === 'Fulfilled').length;
 
   async function decide(decision) {
@@ -166,6 +174,10 @@ export default function BranchRequests() {
   }
 
   async function saveFulfillmentDetails() {
+    if (selected.requestStatus === 'Allocated') {
+      pickupNoticeRef.current?.showModal();
+      return;
+    }
     setSavingDetails(true);
     setError('');
     try {
@@ -190,6 +202,21 @@ export default function BranchRequests() {
         <p className="card-subtitle">Requests submitted by hospitals that selected this branch.</p>
       </section>
 
+      <dialog
+        ref={pickupNoticeRef}
+        className="branch-pickup-dialog"
+        aria-labelledby="pickup-notice-title"
+        aria-describedby="pickup-notice-text"
+      >
+        <h3 className="card-title" id="pickup-notice-title">Pickup details can’t be saved yet</h3>
+        <p id="pickup-notice-text">
+          You can save pickup details once the request is Partially Fulfilled or Fulfilled.
+        </p>
+        <form method="dialog" className="modal-actions">
+          <button type="submit" className="btn-action">Got it</button>
+        </form>
+      </dialog>
+
       {error && <p className="form-message error-message" role="alert">{error}</p>}
 
       <div className="metrics-grid branch-metrics">
@@ -199,8 +226,8 @@ export default function BranchRequests() {
           <div className="metric-subtext">Addressed to this branch</div>
         </article>
         <article className="metric-card">
-          <div className="metric-header"><span className="metric-label">Pending review</span><span className="metric-icon orange">◷</span></div>
-          <div className="metric-value">{pendingCount}</div>
+          <div className="metric-header"><span className="metric-label">Requests needing action</span><span className="metric-icon orange">◷</span></div>
+          <div className="metric-value">{requestsNeedingAction.length}</div>
           <div className="metric-subtext">{urgentCount} urgent request{urgentCount === 1 ? '' : 's'}</div>
         </article>
         <article className="metric-card">
@@ -220,19 +247,16 @@ export default function BranchRequests() {
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Hospital, patient, or blood type"
+              placeholder="Request ID, hospital, or patient"
             />
           </div>
           <div className="form-group">
             <label htmlFor="branch-request-status">Filter by status</label>
             <select id="branch-request-status" className="form-control" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-              <option value="all">All statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Awaiting Hospital Confirmation">Awaiting hospital confirmation</option>
-              <option value="Approved">Approved</option>
-              <option value="Partially Fulfilled">Partially fulfilled</option>
-              <option value="Fulfilled">Fulfilled</option>
-              <option value="Rejected">Rejected</option>
+            <option value="all">All statuses</option>
+            <option value="Allocated">Allocated</option>
+            <option value="Partially Fulfilled">Partially fulfilled</option>
+            <option value="Fulfilled">Fulfilled</option>
               <option value="Cancelled">Cancelled</option>
             </select>
           </div>
@@ -255,20 +279,20 @@ export default function BranchRequests() {
           <div className="table-scroll">
             <table className="custom-table branch-request-table">
               <thead>
-                <tr><th>Request</th><th>Creation Date</th><th>Creation Time</th><th>Hospital</th><th>Patient</th><th>Blood requested</th><th>Urgency</th><th>Status</th></tr>
+                <tr><th>Request ID</th><th>Creation Date</th><th>Hospital</th><th>Blood<br />Type</th><th>Blood<br />Component</th> <th> Units</th><th>Urgency</th><th>Status</th></tr>
               </thead>
               <tbody>
                 {filteredRequests.length ? filteredRequests.map((item) => (
-                  <tr key={item.id} className={`${selected?.id === item.id ? 'branch-request-selected' : ''} branch-request-row`} onClick={() => setSelectedId(item.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedId(item.id); } }} tabIndex={0} aria-label={`View request ${item.id.slice(-8).toUpperCase()} from ${item.hospitalName}`}>
+                  <tr key={item.id} className={`${selected?.id === item.id ? 'branch-request-selected' : ''} branch-request-row`} onClick={() => setSelectedId(item.id)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedId(item.id); } }} tabIndex={0} aria-label={`View request ${item.requestID || item.id.slice(-8).toUpperCase()} from ${item.hospitalName}`}>
                     <td>
-                      <span className="branch-request-select">{item.id.slice(-8).toUpperCase()}</span>
+                      <span className="branch-request-select">{item.requestID || item.id.slice(-8).toUpperCase()}</span>
                      
                     </td>
                     <td> {formatDate(item.createdAt)}</td>
-                    <td> {formatTime(item.createdAt)}</td>
                     <td>{item.hospitalName}</td>
-                    <td>{item.lastName}, {item.firstName}</td>
-                    <td><strong>{item.bloodType} · {item.units} unit{item.units === 1 ? '' : 's'}</strong><div className="subtext">{item.component}</div></td>
+                    <td>{item.bloodType}</td>
+                    <td>{item.component}</td>
+                    <td>{item.units ?? '—'}</td>
                     <td><span className={`branch-urgency ${item.urgency?.toLowerCase() === 'stat' ? 'urgent' : ''}`}>{item.urgency?.toLowerCase() === 'stat' ? 'STAT' : 'Routine'}</span></td>
                     <td>
                         <span
@@ -280,7 +304,7 @@ export default function BranchRequests() {
                     </td>
                   </tr>
                 )) : (
-                  <tr><td colSpan="6" className="empty-table">{requests.length ? 'No requests match these filters.' : 'No hospitals have sent a request to this branch yet.'}</td></tr>
+                  <tr><td colSpan="8" className="empty-table">{requests.length ? 'No requests match these filters.' : 'No hospitals have sent a request to this branch yet.'}</td></tr>
                 )}
               </tbody>
             </table>
@@ -299,12 +323,13 @@ export default function BranchRequests() {
                 <dt>Previous transfusion</dt><dd>{selected.priorTransfusion || '—'}</dd>
                 {selected.priorTransfusionNotes && <><dt>Transfusion notes</dt><dd>{selected.priorTransfusionNotes}</dd></>}
                 <dt>Requested by</dt><dd>{selected.requesterName || 'Hospital staff'}</dd>
-                <dt>Submitted</dt><dd>{formatDate(selected.createdAt)}</dd>
+                <dt>Submitted date</dt><dd>{formatDate(selected.createdAt)}</dd>
+                <dt>Submitted time</dt><dd>{formatTime(selected.createdAt)}</dd>
                 <dt>Requested method</dt><dd>{selected.fulfillmentMethod || 'Not specified'}</dd>
                 {selected.confirmedFulfillmentMethod && <><dt>Branch method</dt><dd>{selected.confirmedFulfillmentMethod}</dd></>}
                 {selected.requestStatus === 'Awaiting Hospital Confirmation' && <><dt>Method offer</dt><dd>Waiting for hospital to accept or decline</dd></>}
                 {selected.confirmedFulfillmentMethod && selected.confirmedFulfillmentMethod !== selected.fulfillmentMethod && selected.fulfillmentMethodNote && <><dt>Method change note</dt><dd>{selected.fulfillmentMethodNote}</dd></>}
-                {(selected.requestStatus === 'Approved' || selected.requestStatus === 'Partially Fulfilled' || selected.requestStatus === 'Fulfilled') && <><dt>Units provided</dt><dd>{selected.fulfilledUnits || 0} of {selected.units}</dd></>}
+                {FULFILLMENT_STATUSES.includes(selected.requestStatus)}
                 {selected.fulfillmentStatus && <><dt>Fulfillment progress</dt><dd>{selected.fulfillmentStatus}</dd></>}
                 {selected.reviewedAt && <><dt>Reviewed</dt><dd>{formatDate(selected.reviewedAt)}</dd></>}
                 {selected.reviewedBy && <><dt>Reviewed by</dt><dd>{`${selected.reviewedBy.firstName || ''} ${selected.reviewedBy.lastName || ''}`.trim()}</dd></>}
@@ -335,7 +360,7 @@ export default function BranchRequests() {
                 </div>
               )}
               {selected.requestStatus === 'Awaiting Hospital Confirmation' && <p className="form-message" role="status">Alternative offered. Waiting for the hospital to respond.</p>}
-              {['Approved', 'Partially Fulfilled', 'Fulfilled'].includes(selected.requestStatus) && availableProgress && (
+              {FULFILLMENT_STATUSES.includes(selected.requestStatus) && availableProgress && (
                 <div className="branch-request-decision">
                   <strong>Update {selected.confirmedFulfillmentMethod?.toLowerCase()} progress</strong>
                   <label htmlFor="branch-progress-next">Next step</label>
@@ -345,9 +370,11 @@ export default function BranchRequests() {
                   <button className="btn-action" type="button" disabled={savingProgress} onClick={updateProgress}>{savingProgress ? 'Saving…' : 'Post progress update'}</button>
                 </div>
               )}
-              {['Approved', 'Partially Fulfilled', 'Fulfilled'].includes(selected.requestStatus) && selected.confirmedFulfillmentMethod === 'Pickup' && (
+              {FULFILLMENT_STATUSES.includes(selected.requestStatus) && selected.confirmedFulfillmentMethod === 'Pickup' && (
                 <div className="branch-request-decision">
                   <strong>Pickup details</strong>
+
+                  
                   <label htmlFor="branch-pickup-location">Where to pick up</label><input id="branch-pickup-location" className="form-control" maxLength={300} value={fulfillmentDetails.pickupLocation} onChange={(event) => setFulfillmentDetails((current) => ({ ...current, pickupLocation: event.target.value }))} placeholder="Address, entrance, or desk" />
                   <label htmlFor="branch-staff-contact">Who to find</label>
                   <input id="branch-staff-contact" className="form-control" maxLength={150} value={fulfillmentDetails.staffContactName} onChange={(event) => setFulfillmentDetails((current) => ({ ...current, staffContactName: event.target.value }))} placeholder="Branch staff member" />

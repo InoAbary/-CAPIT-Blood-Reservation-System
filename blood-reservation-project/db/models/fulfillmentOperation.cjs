@@ -6,6 +6,10 @@ const schema = new mongoose.Schema({
     receivingHospitalID: { type: mongoose.Schema.Types.ObjectId, ref: 'Facilities', default: null },
     bloodType: { type: String, required: true }, component: { type: String, required: true },
     units: { type: Number, required: true, min: 1 },
+    bloodUnitIDs: {
+        type: [String],
+        default: undefined,
+    },
     expectedFulfilledUnits: { type: Number, required: true, min: 0 },
     active: { type: Boolean, default: true },
     state: { type: String, enum: ['Processing', 'Needs Recovery', 'Completed'], default: 'Processing' },

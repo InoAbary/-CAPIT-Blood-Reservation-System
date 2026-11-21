@@ -1035,3 +1035,10 @@
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
+
+.branch-request-table { min-width: 680px; }
+.custom-table.branch-request-table th, .custom-table.branch-request-table td { text-align: center; vertical-align: middle; padding-inline: 8px; }
+
+.branch-pickup-dialog { position: fixed; inset: 0; margin: auto; width: min(420px, calc(100vw - 32px)); box-sizing: border-box; padding: 20px 24px; border: 0; border-radius: 12px; background: #fff; color: #1e293b; box-shadow: 0 16px 48px #0f172a40; text-align: left; }
+.branch-pickup-dialog::backdrop { background: rgba(15, 23, 42, .45); }
+.branch-pickup-dialog p { margin: 8px 0 16px; line-height: 1.5; }

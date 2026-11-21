@@ -1,6 +1,8 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
+const Counter = require('../../db/models/counters.cjs');
+const { getStockBalances, stockKey } = require('../services/requestStock.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const requireRequestStaff = require('../middleware/requireRequestAdmin.cjs');
 const router = express.Router();
@@ -78,6 +80,87 @@ router.get('/receiving-facilities', async (req, res) => {
     }
 });
 
+async function getRequestAvailability(facilities, bloodType, requestedByComponent) {
+    const facilityIDs = facilities.map(facility => facility._id);
+    const components = [...requestedByComponent.keys()];
+
+    const balances = await getStockBalances(facilityIDs, { bloodType, components });
+
+    return facilities.map(({ facilityID, ...facility }) => {
+        const coverage = [...requestedByComponent].map(([component, requested]) => ({
+            component,
+            requested,
+            available: balances.get(stockKey(facility._id, bloodType, component))?.availableUnits ?? 0,
+        }));
+
+        return {
+            ...facility,
+            components: coverage,
+            canFillAll: coverage.every(item => item.available >= item.requested),
+        };
+    });
+}
+
+router.post('/receiving-facilities/availability', async (req, res) => {
+    const { bloodType, products } = req.body || {};
+
+    if (!BLOOD_TYPES.includes(bloodType)) {
+        return fail(res, 400, 'Select a valid blood type.');
+    }
+
+    if (!Array.isArray(products) || products.length < 1 || products.length > COMPONENTS.length) {
+        return fail(res, 400, 'Select between one and four components.');
+    }
+
+    const requestedByComponent = new Map();
+
+    for (const product of products) {
+        const component = product?.component;
+        const units = Number(product?.units);
+
+        if (!COMPONENTS.includes(component) || !Number.isSafeInteger(units) || units < 1) {
+            return fail(res, 400, 'Select a valid component and quantity for each row.');
+        }
+
+        if (requestedByComponent.has(product.component)) {
+            return fail(res, 400, 'Choose each component once. Increase its quantity if you need more units.');
+        }
+        
+        requestedByComponent.set(product.component, units);
+    }
+
+    try {
+        const hospital = await assignedFacility(req);
+        if (!canSubmitRequest(req.requestStaff, hospital)) {
+            return fail(res, 403, 'Your account needs an active hospital facility assignment.');
+        }
+
+        const facilities = await Facility.find({
+            isActive: true,
+            facilityType: { $in: RECEIVER_TYPES },
+        })
+            .select('_id facilityID facilityName facilityType address')
+            .sort({ facilityName: 1 })
+            .lean();
+
+        const results = await getRequestAvailability(
+                facilities,
+                bloodType,
+                requestedByComponent
+        );
+
+        return res.json({
+            success: true,
+            facilities: results
+                .filter(facility => facility.components.some(item => item.available > 0))
+                .sort((a, b) => Number(b.canFillAll) - Number(a.canFillAll)),
+        });
+    } catch (error) {
+        console.error('Request availability lookup failed:', error.name);
+        return fail(res, 500, 'Could not check facility stock.');
+    }
+});
+
 // One request document per component/unit row. Shared fields are supplied again
 // by the multi-product form. Identity and source hospital come from the session.
 router.post('/', async (req, res) => {
@@ -89,8 +172,34 @@ router.post('/', async (req, res) => {
     if (!body || typeof body !== 'object' || Array.isArray(body)) return fail(res, 400, 'Invalid request body.');
     if (!mongoose.isObjectIdOrHexString(body.receivingFacilityID)) return fail(res, 400, 'Select a valid receiving facility.');
     if (!['Pickup', 'Delivery'].includes(body.fulfillmentMethod)) return fail(res, 400, 'Choose pickup or delivery.');
-    if (!COMPONENTS.includes(body.component) || !BLOOD_TYPES.includes(body.bloodType)) return fail(res, 400, 'Select a valid blood type and component.');
-    if (typeof body.units !== 'number' || !Number.isSafeInteger(body.units) || body.units < 1) return fail(res, 400, 'Units must be a positive whole number.');
+    
+    if (!BLOOD_TYPES.includes(body.bloodType)) {
+        return fail(res, 400, 'Select a valid blood type.');
+    }
+    
+    const isBatch = body.products !== undefined;
+    const products = isBatch ? body.products : [body];
+    
+    if (!Array.isArray(products) || products.length < 1 || products.length > COMPONENTS.length) {
+        return fail(res, 400, 'Select between one and four components.');
+    }
+    
+    const requestedByComponent = new Map();
+    
+    for (const product of products) {
+        if (!COMPONENTS.includes(product?.component) ||
+            !Number.isSafeInteger(product.units) || product.units < 1) {
+            return fail(res, 400, 'Select a valid component and enter a positive whole number of units.');
+        }
+    
+        if (requestedByComponent.has(product.component)) {
+            return fail(res, 400, 'Choose each component once. Increase its quantity if you need more units.');
+        }
+        
+        requestedByComponent.set(product.component, product.units);
+    }
+
+
     if (['firstName', 'lastName', 'diagnosis'].some(field => typeof body[field] !== 'string' || !body[field].trim())) return fail(res, 400, 'Patient name and diagnosis are required.');
     if (!['Male', 'Female'].includes(body.sex)) return fail(res, 400, 'Select a valid sex.');
     const age = Number(body.age);
@@ -118,10 +227,50 @@ router.post('/', async (req, res) => {
         data.hospitalFacilityID = hospital._id;
         data.requestedBy = req.requestStaff._id;
         data.receivingFacilityID = receiver._id;
-        data.requestStatus = 'Pending';
+       
+        data.requestStatus = 'Allocated';
+        data.usesStockAllocation = true;
+        data.confirmedFulfillmentMethod = body.fulfillmentMethod;
+        data.fulfillmentStatus = 'Preparing';
         data.fulfilledAt = null;
-        const created = await BloodRequest.create(data);
-        return res.status(201).json({ success: true, request: created, bloodRequest: created });
+
+        const [availability] = await getRequestAvailability(
+            [receiver],
+            body.bloodType,
+            requestedByComponent
+        );
+
+        const short = availability.components.find(item => item.available < item.requested);
+
+        if (short) {
+            return fail(
+                res,
+                409,
+                `Only ${short.available} of ${short.requested} ${short.component} units are available. Review your quantities and choose a facility again.`
+            );
+        }
+
+        const counter = await Counter.findOneAndUpdate(
+            { _id: 'bloodRequestID' },
+            { $inc: { sequence: products.length } },
+            { upsert: true, returnDocument: 'after' }
+        );
+        
+        const firstSequence = counter.sequence - products.length + 1;
+        const requests = await BloodRequest.insertMany(
+            products.map(({ component, units }, index) => ({
+                ...data,
+                component,
+                units,
+                requestID: `BR${String(firstSequence + index).padStart(6, '0')}`,
+            }))
+        );
+        
+        return res.status(201).json(isBatch
+            ? { success: true, requests }
+            : { success: true, request: requests[0], bloodRequest: requests[0] }
+        );
+
     } catch (error) {
         console.error('Blood request creation error:', error.name);
         return fail(res, ['ValidationError', 'CastError'].includes(error.name) ? 400 : 500,
