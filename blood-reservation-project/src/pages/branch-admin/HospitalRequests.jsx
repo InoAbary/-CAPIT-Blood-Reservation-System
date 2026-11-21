@@ -256,10 +256,21 @@ function RequestDetails({ item, busy, onUpdate }) {
           </div>
         </div>
       )}
-      {item.requestStatus === 'Pending' && (
+      {['Pending', 'Allocated'].includes(item.requestStatus) && (
         <div className="hospital-request-action">
-          <p>Waiting for the branch to review your request.</p>
-          <button className="btn-action" type="button" disabled={busy} onClick={() => onUpdate('cancel')}>Cancel request</button>
+          <p>
+            {item.requestStatus === 'Pending'
+              ? 'Waiting for the branch to review your request.'
+              : 'You can cancel before the branch starts releasing blood bags.'}
+          </p>
+          <button
+            className="btn-action"
+            type="button"
+            disabled={busy}
+            onClick={() => onUpdate('cancel')}
+          >
+            Cancel request
+          </button>
         </div>
       )}
     </>

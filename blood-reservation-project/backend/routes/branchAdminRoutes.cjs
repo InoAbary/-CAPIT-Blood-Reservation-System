@@ -7,6 +7,8 @@ const Facility = require('../../db/models/facilities.cjs');
 const Staff = require('../../db/models/staff.cjs');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
+const FulfillmentOperation = require('../../db/models/fulfillmentOperation.cjs');
+const { ensureIndexes } = require('../services/fulfillRequest.cjs');
 const BloodReport = require('../../db/models/bloodReports.cjs');
 const Counter = require('../../db/models/counters.cjs');
 
@@ -406,19 +408,69 @@ router.patch('/requests/:id/fulfillment-details', async (req, res) => {
 });
 
 router.patch('/my-requests/:id/cancel', async (req, res) => {
-  if (!isValidUserId(req.params.id)) return res.status(400).json({ error: 'Invalid request id.' });
+  if (!isValidUserId(req.params.id)) {
+    return res.status(400).json({ error: 'Invalid request id.' });
+  }
+
+  const unavailable = 'Only pending or allocated requests with no released units can be cancelled.';
+
   try {
     const context = await getBranchContext(req, res);
     if (!context) return;
-    if (!canManageHospitalRequests(context)) return res.status(403).json({ error: 'Only hospital branches can cancel their requests.' });
-    const updated = await BloodRequest.findOneAndUpdate(
-      { _id: req.params.id, hospitalFacilityID: context.facility._id, requestStatus: 'Pending' },
-      { $set: { requestStatus: 'Cancelled' } },
-      { new: true, runValidators: true },
-    );
-    if (!updated) return res.status(409).json({ error: 'Only pending requests can be cancelled.' });
+    if (!canManageHospitalRequests(context)) {
+      return res.status(403).json({ error: 'Only hospital branches can cancel their requests.' });
+    }
+
+    const scope = { _id: req.params.id, hospitalFacilityID: context.facility._id };
+    const request = await BloodRequest.findOne({
+      ...scope,
+      requestStatus: { $in: ['Pending', 'Allocated'] },
+    }).lean();
+
+    if (!request) return res.status(409).json({ error: unavailable });
+
+    let lock;
+    if (request.requestStatus === 'Allocated') {
+      await ensureIndexes();
+      // Use the same per-request lock that BSF staff acquire before releasing bags.
+      lock = await FulfillmentOperation.create({
+        requestID: request._id,
+        facilityID: request.receivingFacilityID,
+        actorID: context.staff._id,
+        receivingHospitalID: context.facility._id,
+        bloodType: request.bloodType,
+        component: request.component,
+        units: request.units,
+        expectedFulfilledUnits: 0,
+      });
+    }
+
+    let updated;
+    try {
+      const hasReleasedUnits = lock && await BloodUnits.exists({
+        requestID: request._id,
+        status: 'Released',
+      });
+
+      if (!hasReleasedUnits) {
+        updated = await BloodRequest.findOneAndUpdate(
+          { ...scope, requestStatus: request.requestStatus },
+          { $set: { requestStatus: 'Cancelled', fulfillmentStatus: null } },
+          { returnDocument: 'after', runValidators: true },
+        );
+      }
+    } finally {
+      if (lock) await FulfillmentOperation.deleteOne({ _id: lock._id });
+    }
+
+    if (!updated) return res.status(409).json({ error: unavailable });
     return res.json({ success: true, request: updated });
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        error: 'The branch has started processing the release. Refresh to see the current request status.',
+      });
+    }
     console.error('Hospital request cancellation failed:', error);
     return res.status(500).json({ error: 'Failed to cancel the request.' });
   }
