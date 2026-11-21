@@ -57,12 +57,13 @@ function App() {
     <AuthProvider>
     <Routes>
     {/* ---- Public ---- */}
-    <Route path="/" element={<LandingPage />} />
+    <Route path="/" element={<LandingPage />}>
+      <Route path="Register" element={<Register />} />
+      <Route path="Login" element={<Login />} />
+    </Route>
     <Route path="/donor/change-number/confirm" element={<ConfirmMobileNumber />} />
-    <Route path="/Register" element={<Register />} />
     <Route path="/Register/Success" element={<RegisterSuccess />} />
     <Route path="/Register/Staff" element={<RegisterStaff />} />
-    <Route path="/Login" element={<Login />} />
     <Route path="/ForgotPassword" element={<ForgotPassword />} />
     <Route path="/resetPassword" element={<ResetPassword />} />
     <Route path="/Login/Staff" element={<LoginStaff />} />

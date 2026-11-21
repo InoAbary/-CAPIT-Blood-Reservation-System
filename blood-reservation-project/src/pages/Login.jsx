@@ -124,7 +124,7 @@ export default function Login() {
 
     {!user && (
       <p className="login-note">
-      No account? <a href="/Register">Register</a>
+      No account? <Link to="/Register">Register</Link>
       </p>
     )}
 

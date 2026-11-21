@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useRef, useState } from 'react';
+import { Outlet, useMatch, useNavigate } from 'react-router-dom';
 import BloodBankMap from './BloodBankMap';
 import donationHeart from '../assets/donation-heart-illustration.png';
 import {
@@ -10,10 +10,10 @@ import {
 import '../styles/LandingPage.css';
 
 const TABS = [
-  { id: 'login',    label: 'Login',           icon: null,                  external: '/Login' },
-  { id: 'register', label: 'Register',        icon: null,                  external: '/Register' },
-  { id: 'map',      label: 'Blood Bank Map',  icon: <PinIcon size={14} />, external: null },
-  { id: 'about',    label: 'About Us',        icon: null,                  external: null },
+  { id: 'login',    label: 'Login',           icon: null,                  path: '/Login' },
+  { id: 'register', label: 'Register',        icon: null,                  path: '/Register' },
+  { id: 'map',      label: 'Blood Bank Map',  icon: <PinIcon size={14} /> },
+  { id: 'about',    label: 'About Us',        icon: null },
 ];
 
 const ELIGIBILITY = [
@@ -67,14 +67,23 @@ const FAQS = [
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('map');
+  const [infoTab, setInfoTab] = useState('about');
+  const loginMatch = useMatch('/Login');
+  const registerMatch = useMatch('/Register');
+  const panelRef = useRef(null);
+  const authTab = loginMatch ? 'login' : registerMatch ? 'register' : null;
+  const activeTab = authTab || infoTab;
+
+  function selectInfoTab(tab) {
+    setInfoTab(tab);
+    if (authTab) navigate('/');
+  }
 
   return (
     <div className="landing-page">
-     <section className="landing-hero">
-        <div className="landing-hero-inner">
-          {/* Tabs bar — now above the brand logo */}
-          <div className="landing-tabs-bar landing-tabs-bar-hero" role="tablist">
+      <header className="landing-header">
+        <div className="landing-header-inner">
+          <div className="landing-tabs-bar landing-tabs-bar-header" role="tablist">
             {TABS.map((tab) => (
               <button
                 key={tab.id}
@@ -83,10 +92,10 @@ export default function LandingPage() {
                 aria-selected={activeTab === tab.id}
                 className={`landing-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => {
-                  if (tab.external) {
-                    navigate(tab.external);
+                  if (tab.path) {
+                    if (activeTab !== tab.id) navigate(tab.path);
                   } else {
-                    setActiveTab(tab.id);
+                    selectInfoTab(tab.id);
                   }
                 }}
               >
@@ -101,52 +110,59 @@ export default function LandingPage() {
             <span className="landing-brand-dot">•</span>
             <span className="landing-brand-sub">BLOOD DONATION NETWORK</span>
           </div>
+        </div>
+      </header>
 
-          <div className="landing-hero-layout">
-            <div className="landing-hero-copy">
-              <h1 className="landing-headline">
-                Every drop counts.<br />
-                <span className="landing-headline-accent">Be someone's lifeline.</span>
-              </h1>
+      {activeTab === 'about' && (
+        <section className="landing-hero">
+          <div className="landing-hero-inner">
+            <div className="landing-hero-layout">
+              <div className="landing-hero-copy">
+                <h1 className="landing-headline">
+                  Every drop counts.<br />
+                  <span className="landing-headline-accent">Be someone's lifeline.</span>
+                </h1>
 
-              <p className="landing-subtext">
-                Sandugo connects voluntary blood donors with verified Philippine Red
-                Cross chapters and hospital Blood Service Facilities. Find available
-                blood near you, book a donation slot, and help keep the national
-                supply steady.
-              </p>
+                <p className="landing-subtext">
+                  Sandugo connects voluntary blood donors with verified Philippine Red
+                  Cross chapters and hospital Blood Service Facilities. Find available
+                  blood near you, book a donation slot, and help keep the national
+                  supply steady.
+                </p>
 
-              <div className="landing-hero-stats">
-                <div className="landing-stat">
-                  <span className="landing-stat-value">1</span>
-                  <span className="landing-stat-label">Donation saves up to 3 lives</span>
-                </div>
-                <div className="landing-stat">
-                  <span className="landing-stat-value">~10</span>
-                  <span className="landing-stat-label">Minutes per donation</span>
-                </div>
-                <div className="landing-stat">
-                  <span className="landing-stat-value">3 mo.</span>
-                  <span className="landing-stat-label">Safe donation interval</span>
+                <div className="landing-hero-stats">
+                  <div className="landing-stat">
+                    <span className="landing-stat-value">1</span>
+                    <span className="landing-stat-label">Donation saves up to 3 lives</span>
+                  </div>
+                  <div className="landing-stat">
+                    <span className="landing-stat-value">~10</span>
+                    <span className="landing-stat-label">Minutes per donation</span>
+                  </div>
+                  <div className="landing-stat">
+                    <span className="landing-stat-value">3 mo.</span>
+                    <span className="landing-stat-label">Safe donation interval</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <figure className="landing-hero-artwork">
-              <img
-                src={donationHeart}
-                alt="Red heart and blood drop illustration for blood donation"
-              />
-              <figcaption>Blood donation saves lives</figcaption>
-            </figure>
+              <figure className="landing-hero-artwork">
+                <img
+                  src={donationHeart}
+                  alt="Red heart and blood drop illustration for blood donation"
+                />
+                <figcaption>Blood donation saves lives</figcaption>
+              </figure>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* ---------- TABS ---------- */}
       <section className="landing-tabs-section">
         <div className="landing-tabs-container">
-          <div className="landing-tab-panel">
+          <div className="landing-tab-panel" ref={panelRef}>
+            {authTab && <Outlet />}
             {activeTab === 'map' && (
               <div className="landing-panel landing-panel-map">
                 <BloodBankMap />
@@ -259,14 +275,17 @@ export default function LandingPage() {
             <button
               type="button"
               className="landing-cta-primary"
-              onClick={() => navigate('/Register')}
+              onClick={() => {
+                if (activeTab !== 'register') navigate('/Register');
+                panelRef.current?.scrollIntoView();
+              }}
             >
               Register as a Donor
             </button>
             <button
               type="button"
               className="landing-cta-secondary"
-              onClick={() => setActiveTab('map')}
+              onClick={() => selectInfoTab('map')}
             >
               <SearchIcon size={14} /> Find Blood Near Me
             </button>

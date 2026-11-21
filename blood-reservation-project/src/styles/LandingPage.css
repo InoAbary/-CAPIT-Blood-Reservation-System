@@ -8,6 +8,12 @@
   min-height: 100vh;
 }
 
+.landing-header {
+  background: #7f1d1d;
+  color: #fff;
+  padding: 0.75rem clamp(1rem, 4vw, 2rem) 1rem;
+}
+
 /* ---------- HERO ---------- */
 .landing-hero {
   background:
@@ -16,6 +22,7 @@
   color: #fff;
   padding: clamp(2rem, 5vw, 4rem) clamp(1rem, 4vw, 2rem);
 }
+.landing-header-inner,
 .landing-hero-inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -39,7 +46,6 @@
   grid-template-columns: minmax(0, 1fr) minmax(400px, 1fr);
   align-items: center;
   gap: clamp(2rem, 4vw, 3.5rem);
-  margin-top: clamp(1.5rem, 4vw, 3rem);
 }
 .landing-hero-copy { min-width: 0; }
 .landing-hero-artwork {
@@ -153,6 +159,7 @@
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
   overflow: hidden;
 }
+.landing-tab-panel > .login-page { min-height: 0; }
 .landing-panel { padding: 2rem; }
 .landing-panel-form {
   max-width: 480px;
@@ -412,7 +419,7 @@
   .landing-about-values { grid-template-columns: 1fr; }
   .landing-about-footer { align-items: stretch; flex-direction: column; }
   .landing-about-footer button { width: 100%; }
-  .landing-hero-layout { margin-top: 1.6rem; gap: 1.5rem; }
+  .landing-hero-layout { gap: 1.5rem; }
   .landing-headline { font-size: clamp(2rem, 9vw, 2.7rem); }
   .landing-subtext { font-size: 0.95rem; line-height: 1.6; }
   .landing-hero-stats { grid-template-columns: 1fr; gap: 0.55rem; }
@@ -424,18 +431,17 @@
   .landing-tab-btn { padding: 0.65rem 0.9rem; font-size: 0.875rem; }
 }
 
-/* Tabs bar variant used inside the hero (above the brand logo) */
-.landing-tabs-bar-hero {
+.landing-tabs-bar-header {
   border-bottom-color: rgba(255, 255, 255, 0.28);
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
 }
-.landing-tabs-bar-hero .landing-tab-btn {
+.landing-tabs-bar-header .landing-tab-btn {
   color: rgba(255, 255, 255, 0.72);
 }
-.landing-tabs-bar-hero .landing-tab-btn:hover {
+.landing-tabs-bar-header .landing-tab-btn:hover {
   color: #fff;
 }
-.landing-tabs-bar-hero .landing-tab-btn.active {
+.landing-tabs-bar-header .landing-tab-btn.active {
   color: #fff;
   border-bottom-color: #fecaca;
 }
