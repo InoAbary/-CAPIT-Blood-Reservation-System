@@ -125,6 +125,7 @@ function StaffDashboard() {
     hospital: 'Hospital',
     bsf: 'Blood Service Facility (BSF)',
     prc_chapter: 'PRC Chapter',
+    hospital_bsf: 'Hospital Blood Service Facility'
   }[facilityType] || facilityType || 'Facility type unavailable';
 
   return (
