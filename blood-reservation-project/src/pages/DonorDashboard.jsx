@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import DonorSidebar from '../components/DonorSidebar';
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
-import { BellIcon, HeartIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { HeartIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import {
   Squares2X2Icon,
   ClipboardDocumentListIcon,
@@ -159,18 +159,6 @@ function DonorDashboard() {
               : 'See your donation history and when you can book again.'}
           </p>
           </div>
-
-          {role === 'donor' && (
-            <button
-              type="button"
-              disabled
-              aria-label="Notifications unavailable"
-              title="Notifications coming soon"
-              className="grid size-10 shrink-0 place-items-center rounded-lg border border-blue-100 bg-blue-50 text-[#063b82]"
-            >
-              <BellIcon className="size-5" aria-hidden="true" />
-            </button>
-          )}
         </header>
 
           {role === 'donor' ? (

@@ -3,7 +3,7 @@ const PDFDocument = require('pdfkit');
 
 const REPORT_OUTCOMES = ['Used', 'Wasted', 'Expired', 'Unused'];
 const WASTAGE_OUTCOMES = ['Wasted', 'Expired'];
-const COVERAGE_OUTCOMES = ['Awaiting report', 'Assumed used'];
+const COVERAGE_OUTCOMES = ['Awaiting report', 'System generated'];
 const EXPORT_VIEWS = {
   reports: { title: 'Blood utilization report', name: 'blood-utilization', outcomes: REPORT_OUTCOMES },
   wastage: { title: 'Blood wastage report', name: 'blood-wastage', outcomes: WASTAGE_OUTCOMES },
@@ -19,13 +19,16 @@ const timeFormatter = new Intl.DateTimeFormat('en-PH', {
 
 function utilizationOutcome(report) {
   if (!report) return 'Awaiting report';
-  if (report.isAssumed) return 'Assumed used';
-  if (report.source === 'System') return report.status === 'Used' ? 'Assumed used' : 'Awaiting report';
+  if (report.isAssumed) return 'Used';
+  if (report.source === 'System') return report.status === 'Used' ? 'Used' : 'Awaiting report';
   return report.status;
 }
 
 function matchesExportView(unit, view) {
-  return EXPORT_VIEWS[view].outcomes.includes(utilizationOutcome(unit.report));
+  const { report } = unit;
+  const outcome = utilizationOutcome(report);
+  const isSystemUsed = outcome === 'Used' && (report.isAssumed || report.source === 'System');
+  return EXPORT_VIEWS[view].outcomes.includes(view === 'coverage' && isSystemUsed ? 'System generated' : outcome);
 }
 
 function formatTimestamp(value, formatter) {

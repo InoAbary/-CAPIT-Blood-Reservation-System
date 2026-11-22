@@ -1,4 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useSidebarBadges } from '../hooks/useSidebarBadges';
 import {
   Squares2X2Icon,
   ClipboardDocumentListIcon,
@@ -13,7 +15,7 @@ const NAV_ITEMS = {
   donor: [
     { label: 'Overview', path: '/DonorDashboard', icon: Squares2X2Icon },
     { label: 'Donor Application Form', path: '/BloodDonorForm', icon: ClipboardDocumentListIcon },
-    { label: 'Book Appointment', path: '/BookAppointment', icon: CalendarDaysIcon },
+    { label: 'Book Appointment', path: '/BookAppointment', icon: CalendarDaysIcon, badgeKey: 'appointments' },
     { label: 'Profile Settings', path: '/donor/profile', icon: Cog6ToothIcon },
   ],
   recipient: [
@@ -30,6 +32,10 @@ export default function DonorSidebar({
   onLogout,
 }) {
   const navItems = NAV_ITEMS[role] ?? [];
+  const { donor } = useAuth();
+  const { pathname } = useLocation();
+  const counts = useSidebarBadges(donor?._id || donor?.id, role === 'donor' ? 'donor' : null,
+    pathname === '/BookAppointment' ? 'appointments' : null);
 
   return (
     <header className="dashboard-menu">
@@ -42,17 +48,22 @@ export default function DonorSidebar({
       </div>
 
       <nav className="nav-links" aria-label="Hub navigation">
-        {navItems.map(({ path, label, icon: Icon }) => (
+        {navItems.map(({ path, label, icon: Icon, badgeKey }) => (
           <NavLink
             key={path}
             to={path}
             end
-            className="nav-link"
-            aria-label={label}
+            className={counts?.[badgeKey] > 0 ? "nav-link donor-nav-link--badged" : "nav-link"}
+            aria-label={counts?.[badgeKey] ? `${label}, ${counts[badgeKey]} unread updates` : label}
             title={label}
           >
             <Icon className="size-5 shrink-0" aria-hidden="true" />
             <span className="nav-label">{label}</span>
+            {counts?.[badgeKey] > 0 && (
+              <span aria-hidden="true" className="donor-nav-badge">
+                {counts[badgeKey] > 99 ? '99+' : counts[badgeKey]}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

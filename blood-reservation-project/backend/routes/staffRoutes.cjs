@@ -4,6 +4,7 @@ const Facility = require('../../db/models/facilities.cjs');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const Appointment = require('../../db/models/appointmentSchedules.cjs');
+const { OPEN_BLOOD_REQUEST_STATUSES } = require('../utils/openBloodRequestStatuses.cjs');
 const { BLOOD_SERVICE_FACILITY_TYPES } = require('../utils/facilityTypes.cjs');
 
 const router = express.Router();
@@ -28,7 +29,7 @@ router.get('/dashboard', async (req, res) => {
 
     const [pendingBloodRequests, totalBloodRequests] = isProvider
       ? await Promise.all([
-          BloodRequest.countDocuments({ receivingFacilityID: facility._id, requestStatus: 'Pending' }),
+          BloodRequest.countDocuments({ receivingFacilityID: facility._id, requestStatus: { $in: OPEN_BLOOD_REQUEST_STATUSES } }),
           BloodRequest.countDocuments({ receivingFacilityID: facility._id }),
         ])
       : [0, 0];
@@ -37,9 +38,9 @@ router.get('/dashboard', async (req, res) => {
       ? await BloodRequest.find({ hospitalFacilityID: facility._id }).select('_id').lean()
       : [];
 
-    const [openRequests, totalRequests] = facility.facilityType === 'hospital'
+    const [openRequests, totalRequests] = ['hospital', 'hospital_bsf'].includes(facility.facilityType)
       ? await Promise.all([
-          BloodRequest.countDocuments({ hospitalFacilityID: facility._id, requestStatus: { $in: ['Pending', 'Approved', 'Partially Fulfilled'] } }),
+          BloodRequest.countDocuments({ hospitalFacilityID: facility._id, requestStatus: { $in: OPEN_BLOOD_REQUEST_STATUSES } }),
           BloodRequest.countDocuments({ hospitalFacilityID: facility._id }),
         ])
       : [0, 0];
@@ -103,7 +104,7 @@ router.get('/pending-counts', async (req, res) => {
     const [bloodRequests, appointments] = await Promise.all([
       BloodRequest.countDocuments({
         receivingFacilityID: facility._id,
-        requestStatus: 'Pending',
+        requestStatus: { $in: OPEN_BLOOD_REQUEST_STATUSES },
       }),
       Appointment.countDocuments({
         venue: facility._id,

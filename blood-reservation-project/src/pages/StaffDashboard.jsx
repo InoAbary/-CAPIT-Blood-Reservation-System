@@ -11,7 +11,7 @@ import StaffDonations from './StaffDonations'
 import StaffDonorForms from './StaffDonorForms'
 import { useAuth } from '../context/AuthContext';
 import '../styles/BranchAdmin.css';
-import { usePendingCounts } from '../hooks/usePendingCounts';
+import { useSidebarBadges } from '../hooks/useSidebarBadges';
 import {
   ArchiveBoxIcon,
   ArrowDownTrayIcon,
@@ -100,9 +100,10 @@ function StaffDashboard() {
     ? (workspace ?? defaultWorkspace)
     : assignedFacilityType;
 
-  const pendingCounts = usePendingCounts(
+  const pendingCounts = useSidebarBadges(
     staff?._id || staff?.id,
-    ['bsf', 'prc_chapter'].includes(facilityType)
+    facilityType === 'hospital' ? 'hospital' : ['bsf', 'prc_chapter'].includes(facilityType) ? 'bsf' : null,
+    activeTab
   );
   // Only expose tabs valid for the staff member's facility type.
   const visibleTabs = useMemo(
@@ -158,7 +159,7 @@ function StaffDashboard() {
                 {pendingCounts?.[tab.key] > 0 && (
                   <span
                     className="workspace-pending-badge"
-                    aria-label={`${pendingCounts[tab.key]} pending`}
+                    aria-label={`${pendingCounts[tab.key]} items needing attention`}
                   >
                     {pendingCounts[tab.key] > 99 ? '99+' : pendingCounts[tab.key]}
                   </span>

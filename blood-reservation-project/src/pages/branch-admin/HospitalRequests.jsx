@@ -384,7 +384,9 @@ export default function HospitalRequests() {
   const ongoing = requests.filter(item => !isInHistory(item));
   const history = requests.filter(isInHistory);
   const visible = view === 'ongoing' ? ongoing : history;
-  const pending = requests.filter(item => item.requestStatus === 'Pending').length;
+  const openRequests = requests.filter(item =>
+    ['Allocated', 'Partially Fulfilled'].includes(item.requestStatus)
+  ).length;
 
   return (
     <section id="branch-panel-my-requests" className="branch-dashboard branch-tab-panel hospital-my-requests" role="tabpanel" aria-labelledby="branch-tab-my-requests" tabIndex="0">
@@ -412,8 +414,8 @@ export default function HospitalRequests() {
             <div className="metric-value">{loading ? '—' : requests.length}</div>
           </article>
           <article className="metric-card">
-            <div className="metric-header"><span className="metric-label">Pending review</span></div>
-            <div className="metric-value">{loading ? '—' : pending}</div>
+            <div className="metric-header"><span className="metric-label">Open requests</span></div>
+            <div className="metric-value">{loading ? '—' : openRequests}</div>
           </article>
         </div>
 

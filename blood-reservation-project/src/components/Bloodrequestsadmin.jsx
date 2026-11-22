@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 // Uses the existing credentialed API helper and staffToken cookie.
 import { apiFetch } from "../utils/api";
-const REQUEST_STATUSES = ["Pending", "Approved", "Partially Fulfilled", "Fulfilled", "Rejected", "Cancelled"];
+const REQUEST_STATUSES = ["Allocated", "Partially Fulfilled", "Fulfilled", "Cancelled"];
 const REQUEST_API = "/api/blood-requests";
 
 const styles = {
@@ -98,6 +98,7 @@ function Info({ label, children }) {
 }
 function StatusPill({ status }) {
   const colors = {
+    Allocated: ["#eff8ff", "#175cd3"],
     Pending: ["#fff4df", "#98661b"], Approved: ["#e9f6ef", "#287d5a"],
     "Partially Fulfilled": ["#edf0ff", "#5559a6"], Fulfilled: ["#e6f5f5", "#226f73"],
     Rejected: ["#fae9eb", "#a82032"], Cancelled: ["#f1f1f4", "#666772"],
@@ -153,7 +154,10 @@ export default function BloodRequestsAdmin() {
     (urgencyFilter === "All urgency" || record.urgency === urgencyFilter);
   }), [requests, search, statusFilter, urgencyFilter]);
   const selected = filtered.find(record => record._id === selectedId) || filtered[0] || null;
-  const pendingCount = requests.filter(record => record.requestStatus === "Pending").length;
+  const allocatedCount = requests.filter(record => record.requestStatus === "Allocated").length;
+  const openCount = requests.filter(record =>
+    ['Allocated', 'Partially Fulfilled'].includes(record.requestStatus)
+  ).length;
   async function confirmDecision() {
     if (!modal || saving) return;
     setSaving(true);
@@ -225,7 +229,7 @@ export default function BloodRequestsAdmin() {
       <div style={styles.brandMark}>✚</div>
       <div><div style={styles.brandTitle}>Blood Services</div><div style={styles.brandSub}>Request review</div></div>
       </div>
-      <div style={{ ...styles.navItem, ...styles.navActive }}>Blood Requests <span style={{ marginLeft: "auto" }}>{pendingCount}</span></div>
+      <div style={{ ...styles.navItem, ...styles.navActive }}>Blood Requests <span style={{ marginLeft: "auto" }}>{openCount}</span></div>
       <div className="br-side-foot" style={styles.sideFoot}>Facility staff access<br />Requests sent to your facility</div>
       </aside>
       <main className="br-main" style={styles.main}>
@@ -242,7 +246,7 @@ export default function BloodRequestsAdmin() {
       <section className="br-stats" style={styles.stats} aria-label="Request summary">
       {[
         ["Total requests", requests.length, "Forwarded to your facility"],
-        ["Pending review", pendingCount, "Awaiting a decision"],
+        ["Allocated", allocatedCount, "Reserved for fulfillment"],
         ["Partially fulfilled", requests.filter(r => r.requestStatus === "Partially Fulfilled").length, "Remaining units needed"],
           ["Fulfilled", requests.filter(r => r.requestStatus === "Fulfilled").length, "Completed requests"],
       ].map(([label, count, hint]) => <div key={label} className="br-stat-card" style={styles.statCard}><div style={styles.statTop}>{label}</div><div className="br-stat-number" style={styles.statNumber}>{count}</div><div style={styles.statFoot}>{hint}</div></div>)}

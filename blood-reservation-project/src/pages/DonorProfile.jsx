@@ -5,7 +5,7 @@ import DonorNotificationSettings from '../components/DonorNotificationSettings';
 import DonorProfileForm from '../components/DonorProfileForm';
 import '../styles/Dashboard.css';
 import '../styles/UI.css';
-import { BellIcon } from '@heroicons/react/24/outline';
+
 
 export default function DonorProfile() {
   const { donor, logoutDonor } = useAuth();
@@ -40,15 +40,6 @@ export default function DonorProfile() {
             <h1>Profile Settings</h1>
           </div>
 
-          <button
-            type="button"
-            disabled
-            aria-label="Notifications unavailable"
-            title="Notifications coming soon"
-            className="grid size-10 shrink-0 place-items-center rounded-lg border border-blue-100 bg-blue-50 text-[#063b82] disabled:cursor-default"
-          >
-            <BellIcon className="size-5" aria-hidden="true" />
-          </button>
         </header>
           <section className="donor-profile-card" aria-labelledby="mobile-number-heading">
           <h2 id="mobile-number-heading" className="ui-section-title">

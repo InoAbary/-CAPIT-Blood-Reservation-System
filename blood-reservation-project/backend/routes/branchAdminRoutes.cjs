@@ -6,6 +6,7 @@ const Donor = require('../../db/models/donor.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const Staff = require('../../db/models/staff.cjs');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
+const { OPEN_BLOOD_REQUEST_STATUSES } = require('../utils/openBloodRequestStatuses.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const FulfillmentOperation = require('../../db/models/fulfillmentOperation.cjs');
 const { ensureIndexes } = require('../services/fulfillRequest.cjs');
@@ -108,7 +109,7 @@ router.get('/dashboard', requireRole('branch-admin'), async (req, res) => {
     }).select('firstName lastName email staffId role isActive createdAt').sort({ firstName: 1, lastName: 1 }).lean();
     
     const pendingBloodRequests = canReceiveBranchRequests(context)
-      ? await BloodRequest.countDocuments({ receivingFacilityID: context.facility._id, requestStatus: 'Pending' })
+      ? await BloodRequest.countDocuments({ receivingFacilityID: context.facility._id, requestStatus: { $in: OPEN_BLOOD_REQUEST_STATUSES } })
       : 0;
     const totalBloodRequests = canReceiveBranchRequests(context)
       ? await BloodRequest.countDocuments({ receivingFacilityID: context.facility._id })
@@ -118,7 +119,7 @@ router.get('/dashboard', requireRole('branch-admin'), async (req, res) => {
       ? await Promise.all([
           BloodRequest.countDocuments({
             hospitalFacilityID: context.facility._id,
-            requestStatus: { $in: ['Pending', 'Approved', 'Partially Fulfilled'] },
+            requestStatus: { $in: OPEN_BLOOD_REQUEST_STATUSES },
           }),
           BloodRequest.countDocuments({
             hospitalFacilityID: context.facility._id,

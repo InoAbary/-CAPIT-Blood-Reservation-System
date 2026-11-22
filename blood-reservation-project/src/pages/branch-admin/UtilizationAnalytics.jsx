@@ -8,7 +8,7 @@ Chart.register(BarController, BarElement, CategoryScale, LinearScale, Legend, Li
 
 export const REPORT_OUTCOMES = ['Used', 'Wasted', 'Expired', 'Unused'];
 export const WASTAGE_OUTCOMES = ['Wasted', 'Expired'];
-export const COVERAGE_OUTCOMES = ['Awaiting report', 'Assumed used'];
+export const COVERAGE_OUTCOMES = ['Awaiting report', 'System generated'];
 const UTILIZATION_OUTCOMES = [...REPORT_OUTCOMES, ...COVERAGE_OUTCOMES];
 const OUTCOME_COLORS = ['#047857', '#be123c', '#a44b16', '#2563eb'];
 const CHART_GROUP_LIMIT = 12;
@@ -28,11 +28,16 @@ function formatTimestamp(value, formatter) {
 
 export function utilizationOutcome(unit) {
   if (!unit.report) return 'Awaiting report';
-  if (unit.report.isAssumed) return 'Assumed used';
+  if (unit.report.isAssumed) return 'Used';
   if (unit.report.source === 'System') {
-    return unit.report.status === 'Used' ? 'Assumed used' : 'Awaiting report';
+    return unit.report.status === 'Used' ? 'Used' : 'Awaiting report';
   }
   return unit.report.status;
+}
+
+export function utilizationCoverageOutcome(unit) {
+  const outcome = utilizationOutcome(unit);
+  return outcome === 'Used' && reportSourceLabel(unit.report) === 'System generated' ? 'System generated' : outcome;
 }
 
 export function reportWastageReason(unit) {
@@ -377,7 +382,8 @@ export default function UtilizationAnalytics({ units, coverage, reasons, onShowR
     }
     const row = groups.get(label);
     row.total += 1;
-    row.counts[utilizationOutcome(unit)] += 1;
+    const outcome = coverage ? utilizationCoverageOutcome(unit) : utilizationOutcome(unit);
+    row.counts[outcome] += 1;
   }
 
   const rows = [...groups]
@@ -398,7 +404,7 @@ export default function UtilizationAnalytics({ units, coverage, reasons, onShowR
                 ? 'Choose a reason to see the matching wastage records.'
                 : rankByWastage
                   ? 'Sorted by Wasted + Expired bags, highest first.'
-                  : 'Wastage rate counts Wasted and Expired bags out of all hospital-confirmed reports.'}
+                  : 'Wastage rate counts Wasted and Expired bags out of all reports. Used includes system-assumed reports.'}
           </p>
         </div>
         <div className="utilization-analytics-controls">
@@ -434,9 +440,9 @@ export default function UtilizationAnalytics({ units, coverage, reasons, onShowR
             <tr>
               <th scope="col">{activeGroup.label}</th>
               {coverage && <th scope="col">Released</th>}
-              <th scope="col">Hospital submitted</th>
+              <th scope="col">{coverage ? 'Hospital submitted' : 'Total reports'}</th>
               {(coverage ? COVERAGE_OUTCOMES : REPORT_OUTCOMES).map(outcome => (
-                <th key={outcome} scope="col">{outcome === 'Assumed used' ? 'System assumed' : outcome}</th>
+                <th key={outcome} scope="col">{outcome}</th>
               ))}
               {rankByWastage && <th scope="col" aria-sort="descending">Total wastage</th>}
               <th scope="col">{coverage ? 'Reporting rate' : 'Wastage rate'}</th>
@@ -445,7 +451,7 @@ export default function UtilizationAnalytics({ units, coverage, reasons, onShowR
           <tbody>
             {rows.map(({ label, counts, total, wastage }) => {
               const hospitalReports = REPORT_OUTCOMES.reduce((sum, outcome) => sum + counts[outcome], 0);
-              const rate = coverage ? hospitalReports / total : wastage / hospitalReports;
+              const rate = coverage ? hospitalReports / total : wastage / total;
               return (
                 <tr key={label}>
                   <th scope="row">
@@ -457,7 +463,7 @@ export default function UtilizationAnalytics({ units, coverage, reasons, onShowR
                     ) : label}
                   </th>
                   {coverage && <td>{total}</td>}
-                  <td>{hospitalReports}</td>
+                  <td>{coverage ? hospitalReports : total}</td>
                   {(coverage ? COVERAGE_OUTCOMES : REPORT_OUTCOMES).map(outcome => (
                     <td key={outcome}>{counts[outcome]}</td>
                   ))}
@@ -469,7 +475,7 @@ export default function UtilizationAnalytics({ units, coverage, reasons, onShowR
             {!rows.length && (
               <tr>
                 <td colSpan={coverage ? 6 : rankByWastage ? 8 : 7} className="empty-table">
-                  {coverage ? 'No released units match these filters.' : 'No hospital reports match these filters.'}
+                  {coverage ? 'No released units match these filters.' : 'No utilization reports match these filters.'}
                 </td>
               </tr>
             )}

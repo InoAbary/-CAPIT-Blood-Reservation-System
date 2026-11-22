@@ -575,16 +575,9 @@
     width: 100%;
   }
   
-  .utilization-row-actions {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    min-width: 116px;
-    white-space: nowrap;
-  }
-  
-  .utilization-row-actions .utilization-view-button {
-    padding-inline: 7px;
+  .branch-utilization-table .utilization-details-button {
+    min-width: 36px;
+    padding: 6px;
   }
   
   .utilization-reason-dialog .utilization-reason-form {
