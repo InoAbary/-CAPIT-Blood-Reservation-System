@@ -3,78 +3,113 @@ import { useState } from 'react';
 
 const BADGES_PER_PAGE = 6;
 
+async function createBadgeBlob(badge, donorName) {
+  const image = new Image();
+  image.src = `/donor-badges/${badge.image}`;
+  await image.decode();
+
+  const footerHeight = badge.dateLabel ? 380 : 300;
+  const canvas = document.createElement('canvas');
+
+  canvas.width = image.naturalWidth;
+  canvas.height = image.naturalHeight + footerHeight;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not create badge image.');
+
+  // White background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Badge image
+  ctx.drawImage(image, 0, 0);
+
+  // Award section
+  ctx.fillStyle = '#881337';
+  ctx.fillRect(
+      0,
+      image.naturalHeight,
+      canvas.width,
+      footerHeight
+  );
+
+  ctx.textAlign = 'center';
+
+  ctx.fillStyle = '#fda4af';
+  ctx.font = '500 45px Arial';
+  ctx.fillText(
+      'AWARDED TO',
+      canvas.width / 2,
+      image.naturalHeight + 95
+  );
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 90px Arial';
+  ctx.fillText(
+      donorName || 'Sandugo Donor',
+      canvas.width / 2,
+      image.naturalHeight + 205,
+      canvas.width - 160
+  );
+
+  if (badge.dateLabel) {
+      ctx.fillStyle = '#fda4af';
+      ctx.font = '500 45px Arial';
+      ctx.fillText(
+          badge.dateLabel,
+          canvas.width / 2,
+          image.naturalHeight + 305,
+          canvas.width - 160
+      );
+  }
+
+  return new Promise((resolve, reject) => {
+      canvas.toBlob(blob => {
+          if (blob) {
+              resolve(blob);
+          } else {
+              reject(new Error('Could not create badge image.'));
+          }
+      }, 'image/png');
+  });
+}
+
+
 async function downloadBadge(badge, donorName) {
-    try {
-        const image = new Image();
-        image.src = `/donor-badges/${badge.image}`;
-        await image.decode();
+  try {
+      const blob = await createBadgeBlob(badge, donorName);
+      const url = URL.createObjectURL(blob);
 
-        const footerHeight = badge.dateLabel ? 380 : 300;
-        const canvas = document.createElement('canvas');
+      const link = document.createElement('a');
+      link.download = `Sandugo-${badge.id}-badge.png`;
+      link.href = url;
 
-        canvas.width = image.naturalWidth;
-        canvas.height = image.naturalHeight + footerHeight;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
 
-        const ctx = canvas.getContext('2d');
-        if (!ctx) throw new Error('Could not create badge image.');
+      URL.revokeObjectURL(url);
+  } catch (error) {
+      console.error('Badge download failed:', error);
+      alert('Unable to download badge. Please try again.');
+  }
+}
 
-        // Original badge
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(image, 0, 0);
 
-        // Name section
-        ctx.fillStyle = '#881337';
-        ctx.fillRect(
-            0,
-            image.naturalHeight,
-            canvas.width,
-            footerHeight
-        );
 
-        ctx.textAlign = 'center';
+function shareToFacebook() {
+  window.open(
+    'https://www.facebook.com/',
+    '_blank'
+  );
+}
 
-        ctx.fillStyle = '#fda4af';
-        ctx.font = '500 45px Arial';
-        ctx.fillText(
-            'AWARDED TO',
-            canvas.width / 2,
-            image.naturalHeight + 95
-        );
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 90px Arial';
-        ctx.fillText(
-            donorName || 'Sandugo Donor',
-            canvas.width / 2,
-            image.naturalHeight + 205,
-            canvas.width - 160
-        );
-
-        if (badge.dateLabel) {
-          ctx.fillStyle = '#fda4af';
-          ctx.font = '500 45px Arial';
-          ctx.fillText(
-            badge.dateLabel,
-            canvas.width / 2,
-            image.naturalHeight + 305,
-            canvas.width - 160
-          );
-        }
-
-        // Download PNG
-        const link = document.createElement('a');
-        link.download = `Sandugo-${badge.id}-badge.png`;
-        link.href = canvas.toDataURL('image/png');
-
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-    } catch (error) {
-        console.error('Badge download failed:', error);
-        alert('Unable to download badge. Please try again.');
-    }
+function shareToX() {
+  window.open(
+    'https://x.com/',
+    '_blank',
+    'width=650,height=600'
+  );
 }
 
 const BADGES = [
@@ -163,6 +198,7 @@ export default function DonorBadges({
   ];
 
 const [visibleCount, setVisibleCount] = useState(BADGES_PER_PAGE);
+const [shareBadgeId, setShareBadgeId] = useState(null);
 const visibleBadges = displayedBadges.slice(0, visibleCount);
 const remainingCount = displayedBadges.length - visibleBadges.length;
 
@@ -211,10 +247,75 @@ const remainingCount = displayedBadges.length - visibleBadges.length;
 
               <div className="donor-badge-footer">
             <span className="donor-badge-status">
-                {unlocked ? '✓ Unlocked' : 'Locked'}
+                {unlocked ? 'Unlocked' : 'Locked'}
             </span>
 
-    {unlocked && (
+            {unlocked && (
+    <>
+       <div className="donor-badge-share-wrapper">
+  <button
+    type="button"
+    className="donor-badge-share"
+    onClick={() =>
+      setShareBadgeId(current =>
+        current === badge.id ? null : badge.id
+      )
+    }
+    title="Share badge"
+    aria-label={`Share ${badge.name} badge`}
+  >
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="18" cy="5" r="3" />
+      <circle cx="6" cy="12" r="3" />
+      <circle cx="18" cy="19" r="3" />
+      <path d="m8.6 10.7 6.8-4" />
+      <path d="m8.6 13.3 6.8 4" />
+    </svg>
+  </button>
+
+  {shareBadgeId === badge.id && (
+    <div className="donor-badge-share-menu">
+      <p className="donor-badge-share-title">
+        Share badge
+      </p>
+
+      <button
+            type="button"
+            className="donor-badge-social-option facebook"
+            onClick={() => {
+              shareToFacebook(badge);
+              setShareBadgeId(null);
+            }}
+          >
+            <span className="social-icon facebook-icon">f</span>
+            Facebook
+          </button>
+
+          <button
+            type="button"
+            className="donor-badge-social-option x"
+            onClick={() => {
+              shareToX(badge);
+              setShareBadgeId(null);
+            }}
+          >
+            <span className="social-icon x-icon">𝕏</span>
+            X
+          </button>
+        </div>
+      )}
+    </div>
+
         <button
             type="button"
             className="donor-badge-download"
@@ -238,7 +339,8 @@ const remainingCount = displayedBadges.length - visibleBadges.length;
                 <path d="M5 17v4h14v-4" />
             </svg>
         </button>
-    )}
+    </>
+)}
     </div>
             </article>
           );
