@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { isObjectIdOrHexString } = require('mongoose');
 const BloodDrive = require('../../db/models/bloodDrive.cjs');
 const Staff = require('../../db/models/staff.cjs');
+const Facility = require('../../db/models/facilities.cjs');
 const requireStaff = require('../middleware/requireStaff.cjs');
 const { BLOOD_SERVICE_FACILITY_TYPES } = require('../utils/facilityTypes.cjs');
 
