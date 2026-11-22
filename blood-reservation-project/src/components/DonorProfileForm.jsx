@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { RELIGION_OPTIONS } from '../utils/donorFieldOptions';
 import '../styles/DonorProfile.css';
 
 const SECTIONS = [
@@ -25,7 +26,7 @@ const SECTIONS = [
   ] },
   { title: 'Background and work', fields: [
     ['nationality', 'Nationality', 'text', true],
-    ['religion', 'Religion', 'text'],
+    ['religion', 'Religion', RELIGION_OPTIONS],
     ['education', 'Education', 'text', true],
     ['occupation', 'Occupation', 'text', false, 'organization-title'],
     ['officeAddress', 'Office address', 'text']
@@ -104,6 +105,9 @@ export default function DonorProfileForm() {
               <div className="donor-profile-grid">
                 {section.fields.map(([field, label, type, required = false, autoComplete]) => {
                   const id = `profile-${field}`;
+                  const options = Array.isArray(type)
+                    ? [...new Set([...type, ...(value[field] ? [value[field]] : [])])]
+                    : [];
                   const shared = { id, name: field, value: value[field], required,
                     onChange: event => change(field, event.target.value),
                     'aria-invalid': errors[field] ? true : undefined,
@@ -112,7 +116,7 @@ export default function DonorProfileForm() {
                     <div className="donor-profile-field" key={field}>
                       <label htmlFor={id}>{label}{required && <span aria-hidden="true"> *</span>}</label>
                       {Array.isArray(type) ? (
-                        <select {...shared}><option value="">Select {label.toLowerCase()}</option>{type.map(option => <option key={option} value={option}>{option}</option>)}</select>
+                        <select {...shared}><option value="">Select {label.toLowerCase()}</option>{options.map(option => <option key={option} value={option}>{option}</option>)}</select>
                       ) : <input {...shared} type={type} maxLength={300} autoComplete={autoComplete} />}
                       {field === 'birthDate' && <small>Age on record: {donor?.age ?? '—'}. Calculated automatically when your birth date is saved.</small>}
                       {errors[field] && <small id={`${id}-error`} className="donor-profile-field-error">{errors[field]}</small>}

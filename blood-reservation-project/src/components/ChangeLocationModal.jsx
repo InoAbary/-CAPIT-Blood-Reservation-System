@@ -46,6 +46,10 @@ export default function ChangeLocationModal({
   onClose,
   onUseMyLocation,
   isLocating = false,
+  locationError = '',
+  tag = 'Geographical Reference Origin',
+  title = 'Change Location Reference',
+  description = 'Search for a place or address to center the locator.',
 }) {
   const places = useMapsLibrary('places');
   const sessionTokenRef = useRef(null);
@@ -169,10 +173,10 @@ export default function ChangeLocationModal({
       <div className="modal-content location-modal-content" onClick={(event) => event.stopPropagation()}>
         <div className="request-modal-header location-modal-header">
           <div>
-            <span className="request-module-tag">Geographical Reference Origin</span>
-            <h3 id="location-modal-title">Change Location Reference</h3>
+            <span className="request-module-tag">{tag}</span>
+            <h3 id="location-modal-title">{title}</h3>
             <p className="request-header-sub">
-              Search for a place or address to center the locator.
+              {description}
             </p>
           </div>
           <button className="modal-close-btn" onClick={onClose} aria-label="Close location search">✕</button>
@@ -242,6 +246,7 @@ export default function ChangeLocationModal({
               <span>{isLocating ? 'Locating…' : 'Use my current location'}</span>
             </button>
           )}
+          {locationError && <p className="location-search-error" role="alert">{locationError}</p>}
 
         </div>
 

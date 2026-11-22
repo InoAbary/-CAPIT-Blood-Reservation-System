@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const Donor = require('../../db/models/donor.cjs');
 
-function requireDonor(req, res, next) {
+async function requireDonor(req, res, next) {
     const token = req.cookies?.donorToken;
 
     if (!token) {
@@ -16,6 +17,10 @@ function requireDonor(req, res, next) {
             return res.status(403).json({ message: "Forbidden" });
         }
 
+        const donor = await Donor.findById(decoded.id).select('_id role isActive').lean();
+        if (!donor || donor.role !== 'donor' || donor.isActive === false) {
+            return res.status(401).json({ message: "Invalid or suspended session" });
+        }
         req.user = decoded;
         next();
     } catch (err) {

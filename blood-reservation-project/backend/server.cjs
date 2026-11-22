@@ -1,4 +1,5 @@
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const express = require('express');
 const connectDB = require('./dbconnection.cjs');
@@ -77,5 +78,19 @@ app.use('/api/donor', require('./routes/donorProfileRoutes.cjs'));
 app.use('/api/staff-recovery', staffPasswordRecoveryRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/donations', requireStaff, donationRoutes);
+
+app.use('/api', (req, res) => {
+    res.status(404).json({ error: 'API endpoint not found.' });
+});
+
+app.use('/api', (error, req, res, next) => {
+    if (res.headersSent) return next(error);
+    console.error(`API request failed (${req.method} ${req.originalUrl}):`, error);
+    const status = Number(error.status || error.statusCode);
+    const safeStatus = Number.isInteger(status) && status >= 400 && status < 600 ? status : 500;
+    return res.status(safeStatus).json({
+        error: safeStatus >= 500 ? 'The server could not complete this API request.' : (error.message || 'The API request was rejected.'),
+    });
+});
 
 app.listen(3000, () => console.log('Server running on port 3000'));

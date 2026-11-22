@@ -2,7 +2,9 @@ const mongoose = require('mongoose');
 const { PROFILE_FIELDS, validateProfile } = require('../utils/donorProfile.cjs');
 const router = require('express').Router();
 const Donor = require('../../db/models/donor.cjs');
+const Staff = require('../../db/models/staff.cjs');
 const { createDonor } = require('../services/createDonor.cjs');
+const { recordAdminAudit } = require('../services/adminAudit.cjs');
 
 // Mounted behind staff authentication and the admin role guard.
 router.post('/', createDonor);
@@ -75,12 +77,28 @@ router.patch('/:id', async (req, res) => {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) errors.email = 'Enter a valid email address.';
     }
     if (Object.keys(errors).length) return res.status(400).json({ error: 'Please check the donor details.', errors });
-    if (values.email && await Donor.exists({ email: values.email, _id: { $ne: req.params.id } })) {
+    if (values.email && (
+      await Donor.exists({ email: values.email, _id: { $ne: req.params.id } }) ||
+      await Staff.exists({ email: values.email })
+    )) {
       return res.status(409).json({ error: 'A donor with this email already exists.', errors: { email: 'Email is already in use.' } });
     }
     const donor = await Donor.findByIdAndUpdate(req.params.id, { $set: values }, { new: true, runValidators: true })
       .select(DONOR_PROJECTION).lean();
     if (!donor) return res.status(404).json({ error: 'Donor not found.' });
+    try {
+      const actor = await Staff.findById(req.user.id).select('firstName lastName email').lean();
+      await recordAdminAudit({
+        action: 'Donor Updated',
+        actor: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : 'System Admin',
+        actorRole: 'System Admin',
+        targetName: `${donor.firstName || ''} ${donor.lastName || ''}`.trim(),
+        targetRole: 'Donor',
+        details: `Donor record ${donor.donorID} was updated.`,
+      });
+    } catch (auditError) {
+      console.error('Could not record donor update audit event:', auditError.message);
+    }
     res.json({ donor });
   } catch (err) {
     console.error('admin donor update error:', err);

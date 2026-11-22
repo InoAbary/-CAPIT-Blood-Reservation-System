@@ -7,6 +7,7 @@ const Donor = require('../../db/models/donor.cjs')
 const Staff = require('../../db/models/staff.cjs')
 const Counter = require('../../db/models/counters.cjs')
 const bcrypt = require('bcryptjs');
+const { generateStaffId } = require('../utils/staffId.cjs');
 
 const requireDonor = require("../middleware/requireDonor.cjs");
 const requireStaff = require("../middleware/requireStaff.cjs");
@@ -29,6 +30,13 @@ router.post('/register', async(req,res) => {
     try {
 
         const {password, confirmPassword, ...rest} = req.body
+
+        const mobileNumber = String(rest.mobileNumber || rest.mobile || '').trim();
+        if (!mobileNumber) {
+            return res.status(400).json({ error: 'A mobile number is required.' });
+        }
+        rest.mobileNumber = mobileNumber;
+        delete rest.mobile;
 
         if (rest.notificationPreferences !== undefined && !validNotificationPreferences(rest.notificationPreferences)) {
             return res.status(400).json({ error: 'Provide SMS and email preferences as true or false.' });
@@ -87,7 +95,7 @@ router.post("/login", async (req, res) => {
                 donor.password
             );
 
-        if (!validPassword || donor.role !== "donor") {
+        if (!validPassword || donor.role !== "donor" || donor.isActive === false) {
             return res.status(401).json({ message: "Invalid email or password" });
         }
 
@@ -194,6 +202,7 @@ router.post('/register/staff', async(req,res) => {
 
         const staff = await Staff.create({
             ...rest,
+            staffId: await generateStaffId(Staff),
             password: hashedPassword
         })
         

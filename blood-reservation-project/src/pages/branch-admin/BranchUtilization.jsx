@@ -24,13 +24,15 @@ function formatDate(value) {
   return Number.isNaN(date.getTime()) ? '—' : date.toLocaleDateString();
 }
 
-export default function BranchUtilization({          
+export default function BranchUtilization({
+  basePath,
   facilityType: facilityTypeProp,
 }) {
 
   const outletContext = useOutletContext() || {};
   const facilityType = facilityTypeProp ?? outletContext.facilityType;
-  const workspace = facilityType === 'hospital' ? 'hospital' : 'bsf';
+  const apiBase = basePath ?? '/api/branch-admin';
+
   const [data, setData] = useState(null);
   const [drafts, setDrafts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -39,19 +41,15 @@ export default function BranchUtilization({
   const [notice, setNotice] = useState('');
 
   const loadUtilization = useCallback(async () => {
-    setLoading(true);
-  
     try {
-      const result = await request(`/api/branch-admin/utilization?workspace=${workspace}`);
-      setData(result);
+      setData(await request('/api/branch-admin/utilization'));
       setError('');
     } catch (requestError) {
-      setData(null);
       setError(requestError.message);
     } finally {
       setLoading(false);
     }
-  }, [workspace]);
+  }, []);
 
   useEffect(() => {
     loadUtilization();
@@ -86,7 +84,7 @@ export default function BranchUtilization({
   }
 
   const units = data?.units || [];
-  const isHospital = data?.mode === 'hospital';
+  const isHospital = data?.mode === 'hospital' || facilityType === 'hospital';
   const reportedCount = units.filter((unit) => unit.report).length;
   const usedCount = units.filter((unit) => unit.report?.status === 'Used').length;
   const wastedCount = units.filter((unit) => unit.report?.status === 'Wasted').length;

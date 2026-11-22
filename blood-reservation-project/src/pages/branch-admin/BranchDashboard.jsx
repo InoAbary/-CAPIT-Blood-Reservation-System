@@ -20,7 +20,16 @@ async function request(path, options = {}) {
       ...options.headers,
     },
   });
-  const result = await response.json();
+  const responseText = await response.text();
+  let result;
+  try {
+    result = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    if (responseText.trimStart().startsWith('<')) {
+      throw new Error('The branch admin API returned a webpage instead of data. Check that the backend server is running, then reload.');
+    }
+    throw new Error('The branch admin API returned an invalid response. Please reload and try again.');
+  }
   if (!response.ok) {
     throw new Error(result.error || result.message || 'The request could not be completed.');
   }
@@ -28,12 +37,7 @@ async function request(path, options = {}) {
 }
 
 function BranchDashboard() {
-  const {
-    activeTab,
-    setActiveTab,
-    setFacilityType,
-    facilityType: workspaceFacilityType,
-  } = useOutletContext();
+  const { activeTab, setActiveTab, setFacilityType } = useOutletContext();
   const [pendingBloodUnit, setPendingBloodUnit] = useState(null);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -41,9 +45,11 @@ function BranchDashboard() {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [credentials, setCredentials] = useState(null);
-  const [newUser, setNewUser] = useState({ name: '', email: '', mobile: '', staffId: '' });
+  const [newUser, setNewUser] = useState({ name: '', email: '', mobile: '' });
   const [userSearch, setUserSearch] = useState('');
   const [userStatusFilter, setUserStatusFilter] = useState('all');
+  const [schedule, setSchedule] = useState({ daysOpen: [], is24Hours: false, opensAt: '08:00', closesAt: '17:00' });
+  const [scheduleSaving, setScheduleSaving] = useState(false);
 
   const fetchDashboard = useCallback(() => request('/api/branch-admin/dashboard'), []);
 
@@ -81,6 +87,11 @@ function BranchDashboard() {
     }
   }, [dashboard?.facility?.facilityType, setFacilityType]);
 
+  useEffect(() => {
+    const saved = dashboard?.facility?.operatingHours;
+    if (saved) setSchedule({ daysOpen: saved.daysOpen || [], is24Hours: Boolean(saved.is24Hours), opensAt: saved.opensAt || '08:00', closesAt: saved.closesAt || '17:00' });
+  }, [dashboard?.facility?.operatingHours]);
+
   async function createUser(event) {
     event.preventDefault();
     setError('');
@@ -100,13 +111,37 @@ function BranchDashboard() {
         password: result.temporaryPassword,
       });
       setNotice(result.message);
-      setNewUser({ name: '', email: '', mobile: '', staffId: '' });
+      setNewUser({ name: '', email: '', mobile: '' });
       await loadDashboard();
     } catch (requestError) {
       setError(requestError.message);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function saveSchedule(event) {
+    event.preventDefault();
+    setError('');
+    setNotice('');
+    setScheduleSaving(true);
+    try {
+      const result = await request('/api/branch-admin/facility/operating-hours', {
+        method: 'PATCH',
+        body: JSON.stringify(schedule),
+      });
+      setSchedule(result.operatingHours);
+      setDashboard((current) => current ? { ...current, facility: { ...current.facility, hours: result.hours, operatingHours: result.operatingHours } } : current);
+      setNotice(result.message);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setScheduleSaving(false);
+    }
+  }
+
+  function toggleOpenDay(day) {
+    setSchedule((current) => ({ ...current, daysOpen: current.daysOpen.includes(day) ? current.daysOpen.filter((item) => item !== day) : [...current.daysOpen, day] }));
   }
 
   async function toggleUserStatus(user) {
@@ -159,9 +194,11 @@ function BranchDashboard() {
 
   const facility = dashboard?.facility;
   const summary = dashboard?.summary;
+  const scheduleConfirmed = facility?.operatingHours?.source === 'branch_admin';
   const facilityTypeName = {
     hospital: 'Hospital',
     bsf: 'Blood Service Facility (BSF)',
+    hospital_bsf: 'Hospital Blood Service Facility',
     prc_chapter: 'PRC Chapter',
   }[facility?.facilityType] || facility?.facilityType || 'Facility type unavailable';
 
@@ -173,7 +210,7 @@ function BranchDashboard() {
       {activeTab === 'dashboard' && (
         <section
           id="branch-panel-dashboard"
-          className="branch-tab-panel"
+          className="branch-tab-panel branch-dashboard-panel"
           role="tabpanel"
           aria-labelledby="branch-tab-dashboard"
           tabIndex="0"
@@ -201,31 +238,12 @@ function BranchDashboard() {
               <div className="metric-value">{summary?.totalUsers ?? 0}</div>
               <div className="metric-subtext">Staff assigned to this facility</div>
             </article>
-            {['bsf', 'prc_chapter'].includes(workspaceFacilityType) && (
+            {['bsf', 'hospital_bsf', 'prc_chapter'].includes(facility?.facilityType) && (
               <article className="metric-card">
-                <div className="metric-header"><span className="metric-label">Requests needing action</span><span className="metric-icon orange">◷</span></div>
+                <div className="metric-header"><span className="metric-label">Pending blood requests</span><span className="metric-icon orange">◷</span></div>
                 <div className="metric-value">{summary?.pendingBloodRequests ?? 0}</div>
                 <div className="metric-subtext">{summary?.totalBloodRequests ?? 0} total requests for this branch</div>
                 <button className="btn-action" type="button" onClick={() => setActiveTab('branch-requests')}>Review requests</button>
-              </article>
-            )}
-            {workspaceFacilityType === 'hospital' && (
-              <article className="metric-card">
-                <div className="metric-header">
-                  <span className="metric-label">Open outgoing requests</span>
-                  <span className="metric-icon orange" aria-hidden="true">◷</span>
-                </div>
-                <div className="metric-value">{summary?.openRequests ?? 0}</div>
-                <div className="metric-subtext">
-                  {summary?.totalRequests ?? 0} total requests submitted
-                </div>
-                <button
-                  className="btn-action"
-                  type="button"
-                  onClick={() => setActiveTab('my-requests')}
-                >
-                  Review submitted requests
-                </button>
               </article>
             )}
             <article className="metric-card">
@@ -239,6 +257,19 @@ function BranchDashboard() {
               <div className="metric-subtext">Accounts currently disabled</div>
             </article>
           </div>
+
+          <aside className={`branch-hours-dashboard-notice${scheduleConfirmed ? ' confirmed' : ''}`}>
+            <div className="branch-hours-notice-copy">
+              <strong>{scheduleConfirmed ? 'Opening schedule is set' : 'Confirm your facility opening hours'}</strong>
+              <span>{scheduleConfirmed
+                ? 'Keep the days and hours current so donors see the right schedule in the locator.'
+                : 'Add your actual open days and hours. This schedule is shown to donors in the blood locator.'}</span>
+            </div>
+            <button type="button" onClick={() => setActiveTab('facility-hours')}>
+              {scheduleConfirmed ? 'Update opening hours' : 'Set opening hours'}
+              <span aria-hidden="true"> →</span>
+            </button>
+          </aside>
         </section>
       )}
 
@@ -294,16 +325,7 @@ function BranchDashboard() {
                 onChange={(event) => setNewUser((current) => ({ ...current, mobile: event.target.value }))}
                 autoComplete="tel"
                 placeholder="+63 917..."
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="branch-user-staff-id">Staff ID</label>
-              <input
-                id="branch-user-staff-id"
-                className="form-control"
-                value={newUser.staffId}
-                onChange={(event) => setNewUser((current) => ({ ...current, staffId: event.target.value }))}
-                placeholder="Leave blank to auto-generate"
+                required
               />
             </div>
             <div className="form-group">
@@ -319,6 +341,7 @@ function BranchDashboard() {
             <button className="btn-action" type="submit" disabled={submitting || !facility?.isActive}>
               {submitting ? 'Creating account…' : 'Create Account'}
             </button>
+            <small className="field-help">A Staff ID in SDYY#### format is generated automatically.</small>
           </form>
           {facility && !facility.isActive && (
             <p className="form-message error-message" role="alert">This facility is inactive. New accounts cannot be created.</p>
@@ -437,7 +460,23 @@ function BranchDashboard() {
         </section>
       )}
 
-      {activeTab === 'inventory' && ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && (
+      {activeTab === 'facility-hours' && (
+        <section id="branch-panel-facility-hours" className="content-card branch-tab-panel branch-hours-panel" role="tabpanel" aria-labelledby="branch-tab-facility-hours" tabIndex="0">
+          <div className="card-header-flex branch-users-header">
+            <div><h2 className="card-title">Opening days and hours</h2><p className="card-subtitle">Set the schedule shown to donors and on the public blood locator.</p></div>
+          </div>
+          {facility?.operatingHours?.source !== 'branch_admin' && facility?.hours && <p className="branch-hours-placeholder"><strong>Current listing:</strong> {facility.hours} <span>This is a placeholder. Confirm the branch’s actual schedule below.</span></p>}
+          <form className="branch-hours-form" onSubmit={saveSchedule}>
+            <fieldset className="branch-hours-days"><legend>Days open</legend><div>{['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => <label key={day}><input type="checkbox" checked={schedule.daysOpen.includes(day)} onChange={() => toggleOpenDay(day)} />{day}</label>)}</div></fieldset>
+            <label className="branch-hours-24"><input type="checkbox" checked={schedule.is24Hours} onChange={(event) => setSchedule((current) => ({ ...current, is24Hours: event.target.checked }))} />Open 24 hours on selected days</label>
+            {!schedule.is24Hours && <div className="branch-hours-times"><label>Opens at<input className="form-control" type="time" value={schedule.opensAt} onChange={(event) => setSchedule((current) => ({ ...current, opensAt: event.target.value }))} required /></label><label>Closes at<input className="form-control" type="time" value={schedule.closesAt} onChange={(event) => setSchedule((current) => ({ ...current, closesAt: event.target.value }))} required /></label></div>}
+            <button className="btn-action" type="submit" disabled={scheduleSaving || !facility?.isActive || !schedule.daysOpen.length}>{scheduleSaving ? 'Saving schedule…' : 'Save opening schedule'}</button>
+            {!schedule.daysOpen.length && <small className="branch-hours-help">Choose at least one day before saving.</small>}
+          </form>
+        </section>
+      )}
+
+      {activeTab === 'inventory' && ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facility?.facilityType) && (
         <section id="branch-panel-inventory" className="branch-tab-panel" role="tabpanel" aria-labelledby="branch-tab-inventory" tabIndex="0">
           <Inventory fixedFacilityId={facility?.id}
                 initialBloodUnit={pendingBloodUnit}
@@ -469,12 +508,10 @@ function BranchDashboard() {
             </section>
           )}
 
-      {activeTab === 'branch-requests' &&
-        ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <BranchRequests />}
-      {activeTab === 'my-requests' &&
-        workspaceFacilityType === 'hospital' && <HospitalRequests />}
-      {activeTab === 'donor-forms' && ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <StaffDonorForms />}
-      {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <StaffDonations onDonationRecorded={unit => {
+      {activeTab === 'branch-requests' && ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facility?.facilityType) && <BranchRequests />}
+      {activeTab === 'my-requests' && facility?.facilityType === 'hospital' && <HospitalRequests />}
+      {activeTab === 'donor-forms' && ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonorForms />}
+      {activeTab === 'donations' && ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facility?.facilityType) && <StaffDonations onDonationRecorded={unit => {
             setPendingBloodUnit(unit);
             setActiveTab('inventory');
           }} />}

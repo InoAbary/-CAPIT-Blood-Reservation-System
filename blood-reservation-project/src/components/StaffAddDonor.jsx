@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { RELIGION_OPTIONS } from '../utils/donorFieldOptions';
 
 const FIELDS = [
   ['firstName', 'First name', 'text', true],
@@ -17,7 +18,7 @@ const FIELDS = [
   ['nationality', 'Nationality', 'text', true],
   ['education', 'Education', 'text', true],
   ['occupation', 'Occupation', 'text'],
-  ['religion', 'Religion', 'text'],
+  ['religion', 'Religion', RELIGION_OPTIONS],
   ['officeAddress', 'Office address', 'text'],
   ['telephoneNumber', 'Telephone number', 'tel'],
   ['schoolID', 'School ID', 'text'],
@@ -70,7 +71,11 @@ export default function StaffAddDonor({ onCreated, onCancel, endpoint = '/api/do
       <p className="card-subtitle">{editing ? 'Update the donor’s details.' : 'Create a donor record for someone who has not registered.'} Fields marked * are required.</p>
       {error && <p className="form-message error-message" role="alert">{error}</p>}
       <form className="donation-form sd-add-donor" onSubmit={submit}>
-        {FIELDS.map(([field, label, type, required]) => (
+        {FIELDS.map(([field, label, type, required]) => {
+          const options = Array.isArray(type)
+            ? [...new Set([...type, ...(values[field] ? [values[field]] : [])])]
+            : [];
+          return (
           <label key={field} htmlFor={`new-donor-${field}`}>
             {label}{required ? ' *' : ''}
             {Array.isArray(type) ? (
@@ -78,7 +83,7 @@ export default function StaffAddDonor({ onCreated, onCancel, endpoint = '/api/do
                 value={values[field] || ''} aria-invalid={!!errors[field]}
                 onChange={event => setValues(current => ({ ...current, [field]: event.target.value }))}>
                 <option value="">Select…</option>
-                {type.map(option => <option key={option}>{option}</option>)}
+                {options.map(option => <option key={option} value={option}>{option}</option>)}
               </select>
             ) : (
               <input id={`new-donor-${field}`} type={type} required={required}
@@ -88,7 +93,8 @@ export default function StaffAddDonor({ onCreated, onCancel, endpoint = '/api/do
             )}
             {errors[field] && <span role="alert">{errors[field]}</span>}
           </label>
-        ))}
+          );
+        })}
         <div className="modal-actions">
           <button type="button" className="btn-secondary" disabled={saving} onClick={onCancel}>{cancelLabel}</button>
           <button type="submit" className="btn-action" disabled={saving}>{saving ? 'Saving…' : 'Save donor'}</button>

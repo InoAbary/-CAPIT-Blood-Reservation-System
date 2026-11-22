@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useMapsLibrary } from '@vis.gl/react-google-maps';
 import { PinIcon, CheckIcon, RefreshIcon, SearchIcon, ShieldAlertIcon } from './Icons';
 import '../styles/AdminModal.css';
 
 export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
+  const places = useMapsLibrary('places');
   // Search query on Google Maps
   const [mapSearchQuery, setMapSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -12,11 +14,12 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
   const [formData, setFormData] = useState({
     facilityName: '',
     category: 'PRC',
-    facilityType: 'bsf',
+    facilityType: 'prc_chapter',
     typeLabel: 'Philippine Red Cross',
     address: '',
     contactNumber: '',
-    hours: '24/7 Operations',
+    hours: 'Hours to be confirmed by branch admin',
+    operatingHours: { source: 'placeholder', placeholderText: '' },
     lat: 14.5888,
     lon: 120.9744
   });
@@ -31,11 +34,12 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null);
   const searchTimeoutRef = useRef(null);
+  const sessionTokenRef = useRef(null);
 
   // Helper to reverse-geocode coordinates and auto-fill details
   const autoFillFromCoordinates = async (lat, lon, knownPlaceName = null) => {
     setIsGeocoding(true);
-    setStatusMessage('Fetching location details from Google Maps...');
+    setStatusMessage('Fetching location details...');
     setStatusType('info');
 
     let resolvedAddress = '';
@@ -78,7 +82,7 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
 
     const isPRC = detectedName.toLowerCase().includes('red cross') || detectedName.toLowerCase().includes('prc');
     const autoCategory = isPRC ? 'PRC' : 'Hospital BSF';
-    const autoType = isPRC ? 'bsf' : 'hospital';
+    const autoType = isPRC ? 'prc_chapter' : 'hospital_bsf';
     const autoTypeLabel = isPRC ? 'Philippine Red Cross' : 'Hospital Blood Service Facility';
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const autoPhone = `(02) 8${Math.floor(200 + Math.random() * 700)}-${randomSuffix}`;
@@ -90,14 +94,15 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
       typeLabel: autoTypeLabel,
       address: resolvedAddress,
       contactNumber: autoPhone,
-      hours: '24/7 Blood Bank & Emergency Window',
+      hours: 'Hours to be confirmed by branch admin',
+      operatingHours: { source: 'placeholder', placeholderText: '' },
       lat: Number(lat.toFixed(5)),
       lon: Number(lon.toFixed(5))
     });
 
     setClickedCoord({ lat, lon });
     setIsGeocoding(false);
-    setStatusMessage('Details loaded from Google Maps. Ready to save.');
+    setStatusMessage('Location details loaded. Opening hours can be confirmed by the branch admin.');
     setStatusType('success');
   };
 
@@ -117,16 +122,33 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
     setIsSearching(true);
     searchTimeoutRef.current = setTimeout(async () => {
       try {
-        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-          query
-        )}&format=json&countrycodes=ph&addressdetails=1&limit=5`;
-        const res = await fetch(url, {
-          headers: { 'Accept-Language': 'en' }
-        });
-        if (res.ok) {
-          const list = await res.json();
-          setSearchResults(list);
+        let results = [];
+        if (places) {
+          try {
+            if (!sessionTokenRef.current) sessionTokenRef.current = new places.AutocompleteSessionToken();
+            const { suggestions = [] } = await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+              input: query,
+              sessionToken: sessionTokenRef.current,
+              includedRegionCodes: ['ph'],
+              language: 'en',
+              region: 'ph',
+            });
+            results = suggestions.map((item) => item.placePrediction).filter(Boolean).map((prediction) => ({
+              source: 'google',
+              prediction,
+              name: prediction.mainText?.toString() || prediction.text.toString(),
+              display_name: prediction.secondaryText?.toString() || prediction.text.toString(),
+            }));
+          } catch (googleError) {
+            console.warn('Google Maps place search unavailable; using OpenStreetMap.', googleError);
+          }
         }
+        if (!results.length) {
+          const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=ph&addressdetails=1&limit=5`;
+          const res = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+          if (res.ok) results = await res.json();
+        }
+        setSearchResults(results);
       } catch (e) {
         console.warn('Search query error:', e);
       } finally {
@@ -136,7 +158,49 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
   };
 
   // When a search result is clicked from Google Maps suggestions
-  const handleSelectSearchResult = (item) => {
+  const handleSelectSearchResult = async (item) => {
+    if (item.source === 'google') {
+      try {
+        const place = item.prediction.toPlace();
+        await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location', 'regularOpeningHours', 'nationalPhoneNumber'] });
+        if (!place.location) throw new Error('Google Maps did not return a location for this place.');
+        const lat = place.location.lat();
+        const lon = place.location.lng();
+        const cleanName = place.displayName || item.name;
+        const googleHours = place.regularOpeningHours?.weekdayDescriptions?.join(' · ') || '';
+        const isPRC = cleanName.toLowerCase().includes('red cross') || cleanName.toLowerCase().includes('prc');
+        const facilityType = isPRC ? 'prc_chapter' : 'hospital_bsf';
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        setFormData((current) => ({
+          ...current,
+          facilityName: cleanName,
+          category: isPRC ? 'PRC' : 'Hospital BSF',
+          facilityType,
+          typeLabel: isPRC ? 'Philippine Red Cross' : 'Hospital Blood Service Facility',
+          address: place.formattedAddress || current.address,
+          contactNumber: place.nationalPhoneNumber || current.contactNumber || `(02) 8${Math.floor(200 + Math.random() * 700)}-${randomSuffix}`,
+          hours: googleHours || 'Hours to be confirmed by branch admin',
+          operatingHours: { source: 'placeholder', placeholderText: googleHours },
+          lat: Number(lat.toFixed(5)),
+          lon: Number(lon.toFixed(5)),
+        }));
+        setMapSearchQuery(cleanName);
+        setSearchResults([]);
+        setClickedCoord({ lat, lon });
+        if (mapInstanceRef.current && markerRef.current) {
+          markerRef.current.setLngLat([lon, lat]);
+          mapInstanceRef.current.flyTo({ center: [lon, lat], zoom: 15, speed: 1.5 });
+        }
+        sessionTokenRef.current = null;
+        setStatusMessage(googleHours ? 'Google Maps opening hours loaded as a placeholder for branch admin review.' : 'Google Maps place selected. Branch admin will confirm opening hours.');
+        setStatusType('success');
+      } catch (error) {
+        setStatusMessage(error.message || 'Could not load this Google Maps place.');
+        setStatusType('error');
+      }
+      return;
+    }
+
     const lat = parseFloat(item.lat);
     const lon = parseFloat(item.lon);
     const cleanName = item.name || item.display_name.split(',')[0];
@@ -246,49 +310,11 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
           onClose();
         }, 1100);
       } else {
-        throw new Error(data.error || 'Failed to save facility.');
+        throw new Error(data.error || data.message || 'Failed to save facility.');
       }
     } catch (err) {
-      console.warn('API error, saving locally:', err);
-      // Fallback local creation
-      const localFac = {
-        id: 'fac-' + Date.now(),
-        facilityID: 'F' + String(Date.now()).slice(-5),
-        name: formData.facilityName,
-        facilityName: formData.facilityName,
-        category: formData.category,
-        facilityType: formData.facilityType,
-        typeLabel: formData.typeLabel,
-        address: formData.address,
-        phone: formData.contactNumber,
-        contactNumber: formData.contactNumber,
-        hours: formData.hours,
-        lat: formData.lat,
-        lon: formData.lon,
-        distanceKm: 4.2,
-        travelTime: '~15 mins',
-        matrix: {
-          'O+': { prbc: 'Available', whole: 'Available', platelet: 'Available', plasma: 'Available', cryo: 'Low' },
-          'O-': { prbc: 'Unavailable', whole: 'Unavailable', platelet: 'Unavailable', plasma: 'Unavailable', cryo: 'Unavailable' },
-          'A+': { prbc: 'Available', whole: 'Available', platelet: 'Low', plasma: 'Available', cryo: 'Available' },
-          'A-': { prbc: 'Unavailable', whole: 'Unavailable', platelet: 'Unavailable', plasma: 'Unavailable', cryo: 'Unavailable' },
-          'B+': { prbc: 'Available', whole: 'Available', platelet: 'Available', plasma: 'Available', cryo: 'Low' },
-          'B-': { prbc: 'Unavailable', whole: 'Unavailable', platelet: 'Unavailable', plasma: 'Unavailable', cryo: 'Unavailable' },
-          'AB+': { prbc: 'Available', whole: 'Available', platelet: 'Low', plasma: 'Available', cryo: 'Low' },
-          'AB-': { prbc: 'Unavailable', whole: 'Unavailable', platelet: 'Unavailable', plasma: 'Unavailable', cryo: 'Unavailable' }
-        },
-        isActive: true
-      };
-
-      if (onBranchAdded) {
-        onBranchAdded(localFac);
-      }
-
-      setStatusMessage('Done! Branch saved to database.');
-      setStatusType('success');
-      setTimeout(() => {
-        onClose();
-      }, 1100);
+      setStatusMessage(err.message || 'Could not save this facility. Please try again.');
+      setStatusType('error');
     } finally {
       setIsSubmitting(false);
     }
@@ -409,7 +435,7 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
                       ...formData,
                       category: cat,
                       typeLabel: cat === 'PRC' ? 'Philippine Red Cross' : 'Hospital Blood Service Facility',
-                      facilityType: cat === 'PRC' ? 'bsf' : 'hospital'
+                      facilityType: cat === 'PRC' ? 'prc_chapter' : 'hospital_bsf'
                     });
                   }}
                 >
@@ -423,28 +449,23 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
                 <select
                   className="form-select"
                   value={formData.facilityType}
-                  onChange={(event) => {
-                    const facilityType = event.target.value;
-                    const labels = {
+                  onChange={(e) => {
+                    const facilityType = e.target.value;
+                    const category = facilityType === 'prc_chapter' ? 'PRC' : 'Hospital BSF';
+                    const typeLabel = {
+                      prc_chapter: 'Philippine Red Cross',
                       bsf: 'Blood Service Facility',
                       hospital: 'Hospital',
-                      prc_chapter: 'Philippine Red Cross Chapter',
-                      bsf_hospital: 'Hospital + Blood Service Facility',
-                    };
-
-                    setFormData(current => ({
-                      ...current,
-                      facilityType,
-                      typeLabel: labels[facilityType],
-                    }));
+                      hospital_bsf: 'Hospital Blood Service Facility',
+                    }[facilityType];
+                    setFormData({ ...formData, facilityType, category, typeLabel });
                   }}
                 >
-                  <option value="bsf">BSF (Blood Service Facility)</option>
+                  <option value="prc_chapter">PRC Chapter</option>
+                  <option value="bsf">Blood Service Facility</option>
                   <option value="hospital">Hospital</option>
-                  <option value="prc_chapter">Philippine Red Cross Chapter</option>
-                  <option value="bsf_hospital">Hospital + Blood Service Facility</option>
+                  <option value="hospital_bsf">Hospital BSF</option>
                 </select>
-                
               </div>
             </div>
 
@@ -475,7 +496,7 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
               </div>
 
               <div className="admin-form-group flex-1">
-                <label className="form-label">Operating Hours</label>
+                <label className="form-label">Operating Hours (Temporary)</label>
                 <input
                   type="text"
                   className="form-input"
@@ -483,6 +504,7 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
                   value={formData.hours}
                   onChange={(e) => setFormData({ ...formData, hours: e.target.value })}
                 />
+                <small className="admin-hours-help">Google Maps hours are used as a starting point when available. The branch admin confirms the weekly schedule.</small>
               </div>
             </div>
 

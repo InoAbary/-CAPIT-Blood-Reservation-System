@@ -1,6 +1,8 @@
 const Donor = require('../../db/models/donor.cjs');
 const Counter = require('../../db/models/counters.cjs');
 const { PROFILE_FIELDS, validateProfile } = require('../utils/donorProfile.cjs');
+const Staff = require('../../db/models/staff.cjs');
+const { recordAdminAudit } = require('./adminAudit.cjs');
 
 async function createDonor(req, res) {
   try {
@@ -30,6 +32,21 @@ async function createDonor(req, res) {
       donorID: `D${String(counter.sequence).padStart(8, '0')}`,
       role: 'donor',
     });
+    if (req.user?.role === 'admin') {
+      try {
+        const actor = await Staff.findById(req.user.id).select('firstName lastName email').lean();
+        await recordAdminAudit({
+          action: 'Donor Created',
+          actor: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : 'System Admin',
+          actorRole: 'System Admin',
+          targetName: `${donor.firstName} ${donor.lastName}`.trim(),
+          targetRole: 'Donor',
+          details: `Donor record ${donor.donorID} was created.`,
+        });
+      } catch (auditError) {
+        console.error('Could not record donor creation audit event:', auditError.message);
+      }
+    }
     res.status(201).json({ donor: {
       _id: donor._id, donorID: donor.donorID, firstName: donor.firstName,
       lastName: donor.lastName, email: donor.email, bloodType: donor.bloodType,

@@ -50,7 +50,7 @@ export default function Login() {
     <main className="login-page">
     <section className="login-card">
     <div className="login-brand">✚</div>
-    <h1>Sandugo Blood Donation Network</h1>
+    <h1>Blood Reservation System</h1>
     <p className="login-subtitle">
     {user ? "You are signed in" : "Sign in to your account"}
     </p>
@@ -124,7 +124,7 @@ export default function Login() {
 
     {!user && (
       <p className="login-note">
-      No account? <Link to="/Register">Register</Link>
+      No account? <a href="/Register">Register</a>
       </p>
     )}
 

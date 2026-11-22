@@ -1,0 +1,15 @@
+export const RELIGION_OPTIONS = [
+  'Roman Catholic',
+  'Iglesia ni Cristo',
+  'Evangelical / Born Again Christian',
+  'Protestant / Other Christian',
+  'Islam',
+  'Seventh-day Adventist',
+  'Jehovah’s Witness',
+  'Indigenous / traditional beliefs',
+  'Buddhism',
+  'Hinduism',
+  'Other / not listed',
+  'No religion',
+  'Prefer not to say',
+];

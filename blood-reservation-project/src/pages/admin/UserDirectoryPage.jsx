@@ -1,58 +1,39 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { api, getErrorMessage } from '../lib/api.js';
 
-const roles = ['All Roles', 'System Admin', 'BSF Admin', 'PRC Admin', 'Hospital Supervisor', 'BSF Supervisor', 'Hospital Staff', 'BSF Staff', 'Donor'];
+const roles = ['All Roles', 'System Admin', 'Branch Admin', 'Hospital Staff', 'Staff', 'Donor', 'Recipient'];
+const PAGE_SIZE = 10;
 
 function UserDirectoryPage() {
+  const { admin: currentAdmin } = useOutletContext();
   const [users, setUsers] = useState([]);
   const [roleFilter, setRoleFilter] = useState('All Roles');
   const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
-  const [generatingId, setGeneratingId] = useState('');
-  const [generatedCredential, setGeneratedCredential] = useState(null);
   const [transfer, setTransfer] = useState(null);
-  const [transferTarget, setTransferTarget] = useState(null);
-  const [transferPassword, setTransferPassword] = useState('');
-  const [transferEmail, setTransferEmail] = useState('');
   const [acceptPassword, setAcceptPassword] = useState('');
   const [transferBusy, setTransferBusy] = useState(false);
-  const [currentAdmin, setCurrentAdmin] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('adminUser') || 'null');
-    } catch {
-      return null;
-    }
-  });
+  const [pendingAccountAction, setPendingAccountAction] = useState(null);
+  const [superAdminPassword, setSuperAdminPassword] = useState('');
+  const [accountActionBusy, setAccountActionBusy] = useState(false);
 
   const loadUsers = useCallback(async () => {
     setError('');
     try {
       const [result, transferResult] = await Promise.all([
-        api('/api/admin/users')
+        api('/api/admin/users'),
+        api('/api/admin/primary-admin-transfer'),
       ]);
       setUsers(result.users || []);
       setTransfer(transferResult?.direction ? transferResult : null);
-
-      // The new endpoint no longer returns canManageAccounts / isPrimaryAdmin.
-      // Fall back to whatever the caller already knows from localStorage unless
-      // the response explicitly includes them (keeps backward compatibility).
-      const hasPerms = typeof result.canManageAccounts === 'boolean' || typeof result.isPrimaryAdmin === 'boolean';
-
-      const savedAdmin = JSON.parse(localStorage.getItem('adminUser') || 'null');
-      if (savedAdmin && hasPerms) {
-        const updated = {
-          ...savedAdmin,
-          ...(typeof result.canManageAccounts === 'boolean' ? { canManageAccounts: result.canManageAccounts } : {}),
-          ...(typeof result.isPrimaryAdmin === 'boolean' ? { isPrimaryAdmin: result.isPrimaryAdmin } : {}),
-        };
-        localStorage.setItem('adminUser', JSON.stringify(updated));
-        window.dispatchEvent(new Event('admin-user-updated'));
-        setCurrentAdmin(updated);
-      } else if (savedAdmin) {
-        setCurrentAdmin(savedAdmin);
-      }
+      window.dispatchEvent(new CustomEvent('admin-user-updated', { detail: {
+        canManageAccounts: result.canManageAccounts === true,
+        isPrimaryAdmin: result.isPrimaryAdmin === true,
+      } }));
     } catch (requestError) {
       setError(getErrorMessage(requestError));
     } finally {
@@ -71,16 +52,52 @@ function UserDirectoryPage() {
     return matchesRole && matchesSearch;
   }), [users, roleFilter, search]);
 
-  async function toggleStatus(user) {
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE));
+  const visibleUsers = filteredUsers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [roleFilter, search]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [currentPage, totalPages]);
+
+  function requestAccountAction(user, action) {
     setError('');
+    setPendingAccountAction({ user, action });
+    setSuperAdminPassword('');
+  }
+
+  async function confirmAccountAction(event) {
+    event.preventDefault();
+    if (!pendingAccountAction) return;
+    setError('');
+    setNotice('');
+    setAccountActionBusy(true);
     try {
-      await api(`/api/admin/users/${user.id}/status`, {
-        method: 'PATCH',
-        body: JSON.stringify({ status: user.status === 'Active' ? 'Suspended' : 'Active' }),
-      });
+      const { user, action } = pendingAccountAction;
+      if (action === 'delete') {
+        const result = await api(`/api/admin/users/${encodeURIComponent(user.id)}`, {
+          method: 'DELETE',
+          body: JSON.stringify({ superadminPassword: superAdminPassword }),
+        });
+        setNotice(result.message || 'Account deleted.');
+      } else {
+        const status = user.status === 'Active' ? 'Suspended' : 'Active';
+        await api(`/api/admin/users/${encodeURIComponent(user.id)}/status`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status, superadminPassword: superAdminPassword }),
+        });
+        setNotice(`Account ${status === 'Active' ? 'activated' : 'deactivated'}.`);
+      }
+      setPendingAccountAction(null);
+      setSuperAdminPassword('');
       await loadUsers();
     } catch (requestError) {
       setError(getErrorMessage(requestError));
+    } finally {
+      setAccountActionBusy(false);
     }
   }
 
@@ -95,29 +112,6 @@ function UserDirectoryPage() {
       await loadUsers();
     } catch (requestError) {
       setError(getErrorMessage(requestError));
-    }
-  }
-
-  async function startPrimaryTransfer(event) {
-    event.preventDefault();
-    if (!transferTarget) return;
-    setError('');
-    setNotice('');
-    setTransferBusy(true);
-    try {
-      const result = await api(`/api/admin/primary-admin-transfer/target/${encodeURIComponent(transferTarget.id)}`, {
-        method: 'POST',
-        body: JSON.stringify({ currentPassword: transferPassword, confirmationEmail: transferEmail }),
-      });
-      setNotice(result.message);
-      setTransferTarget(null);
-      setTransferPassword('');
-      setTransferEmail('');
-      await loadUsers();
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setTransferBusy(false);
     }
   }
 
@@ -156,28 +150,9 @@ function UserDirectoryPage() {
     }
   }
 
-  async function generatePassword(user) {
-    setError('');
-    setNotice('');
-    setGeneratedCredential(null);
-    setGeneratingId(user.id);
-    try {
-      const result = await api(`/api/admin/supervisors/${encodeURIComponent(user.id)}/generate-password`, {
-        method: 'POST',
-      });
-      setNotice(result.message);
-      setGeneratedCredential({ userId: user.id, password: result.generatedPassword });
-      await loadUsers();
-    } catch (requestError) {
-      setError(getErrorMessage(requestError));
-    } finally {
-      setGeneratingId('');
-    }
-  }
-
   return (
     <section className="content-card" id="user-registry">
-      <div className="card-header-flex">
+      <div className="card-header-flex user-directory-header">
         <div>
           <h2 className="card-title">{currentAdmin?.canManageAccounts ? 'Account Directory' : 'My Accounts'}</h2>
           <p className="card-subtitle">
@@ -188,7 +163,7 @@ function UserDirectoryPage() {
                 : 'You can view accounts you created. Ask the Primary admin if you need account-management access.'}
           </p>
         </div>
-        <div className="filter-controls">
+        <div className="filter-controls user-directory-filters">
           <input
             aria-label="Search users"
             type="search"
@@ -229,73 +204,51 @@ function UserDirectoryPage() {
           <li>The Primary admin can grant Account manager access to let them create and deactivate accounts.</li>
         </ul>
       </div>
-      <div className="table-scroll">
+      <div className="table-scroll admin-bounded-table">
         <table className="custom-table">
           <thead>
-            <tr><th>User / Email</th><th>Role</th><th>Staff ID</th><th>Branch / Facility</th><th>Created By</th><th>Status</th><th>Action</th></tr>
+            <tr><th>User</th><th>Email</th><th>Role</th><th>Staff / Donor ID</th><th>Branch / Facility</th><th>Created By</th><th>Status</th><th>Actions</th></tr>
           </thead>
           <tbody>
-            {loading && <tr><td colSpan="7" className="empty-table">Loading accounts from MongoDB…</td></tr>}
-            {filteredUsers.map((user) => (
+            {loading && <tr><td colSpan="8" className="empty-table">Loading accounts from MongoDB…</td></tr>}
+            {visibleUsers.map((user) => (
               <tr key={user.id || user.email}>
-                <td><strong>{user.name}</strong><div className="subtext">{user.email}</div></td>
+                <td><strong>{user.name}</strong></td>
+                <td>{user.email || '—'}</td>
                 <td><span className="tag">{user.role}</span></td>
                 <td>{user.staffId || '—'}</td>
                 <td>{user.branch || '—'}</td>
                 <td>{user.createdByName || 'System'}</td>
-                <td><span className={`status-pill ${(user.status || '').toLowerCase()}`}>{user.status}</span></td>
+                <td><span className={`status-pill ${(user.status || '').toLowerCase().replace(/\s+/g, '-')}`}>{user.status}</span></td>
                 <td>
-                  {user.role === 'System Admin' ? (
+                  {user.isPrimaryAdmin ? (
+                    <span className="protected-label">Primary admin</span>
+                  ) : user.role === 'System Admin' ? (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }}>
                       <span className="protected-label">
-                        {user.isPrimaryAdmin ? 'Primary admin' : user.canManageAccounts ? 'Account manager' : 'No account access'}
+                        {user.canManageAccounts ? 'Account manager' : 'No account access'}
                       </span>
-                      {!user.isPrimaryAdmin && currentAdmin?.isPrimaryAdmin && !user.canManageAccounts && (
+                      {currentAdmin?.isPrimaryAdmin && !user.canManageAccounts && (
                         <button className="btn-action" type="button" onClick={() => authorizeAccountManagement(user)}>Grant account access</button>
                       )}
-                      {!user.isPrimaryAdmin && currentAdmin?.isPrimaryAdmin && !transfer?.direction && (
-                        <button className="btn-action" type="button" onClick={() => { setTransferTarget(user); setTransferEmail(''); setTransferPassword(''); }}>Start secure handoff</button>
-                      )}
-                      {transferTarget?.id === user.id && (
-                        <form onSubmit={startPrimaryTransfer} style={{ display: 'grid', gap: '6px', marginTop: '8px', maxWidth: '280px' }}>
-                          <strong>Verify this handoff</strong>
-                          <label htmlFor={`transfer-password-${user.id}`}>Your current password</label>
-                          <input id={`transfer-password-${user.id}`} className="form-control" type="password" value={transferPassword} onChange={(event) => setTransferPassword(event.target.value)} required autoComplete="current-password" />
-                          <label htmlFor={`transfer-email-${user.id}`}>Type {user.email} to confirm</label>
-                          <input id={`transfer-email-${user.id}`} className="form-control" type="email" value={transferEmail} onChange={(event) => setTransferEmail(event.target.value)} required />
-                          <button className="btn-action" type="submit" disabled={transferBusy}>{transferBusy ? 'Sending…' : 'Send handoff request'}</button>
-                          <button className="btn-action" type="button" onClick={() => setTransferTarget(null)}>Cancel</button>
-                        </form>
-                      )}
-                      {!user.isPrimaryAdmin && user.canManageAccounts && currentAdmin?.canManageAccounts && (
-                        <button className="btn-action" type="button" onClick={() => toggleStatus(user)}>{user.status === 'Active' ? 'Deactivate account' : 'Activate account'}</button>
+                      {user.canManageAccounts && currentAdmin?.canManageAccounts && (
+                        <button className="btn-action" type="button" onClick={() => requestAccountAction(user, 'status')}>{user.status === 'Active' ? 'Deactivate' : 'Activate'}</button>
                       )}
                     </div>
-                  ) : currentAdmin?.canManageAccounts ? (
-                    <>
-                      {user.status === 'Pending Setup'
-                        ? <button
-                            className="btn-action"
-                            type="button"
-                            onClick={() => generatePassword(user)}
-                            disabled={generatingId === user.id}
-                          >
-                            {generatingId === user.id ? 'Generating…' : 'Generate password'}
-                          </button>
-                        : <button className="btn-action" type="button" onClick={() => toggleStatus(user)}>{user.status === 'Active' ? 'Deactivate account' : 'Activate account'}</button>}
-                      {generatedCredential?.userId === user.id && (
-                        <div role="status" style={{ marginTop: '8px' }}>
-                          Temporary password: <code>{generatedCredential.password}</code>
-                        </div>
-                      )}
-                    </>
-                  ) : <span className="protected-label">Account manager access required</span>}
+                  ) : (
+                    <div className="user-account-actions">
+                      <button className="btn-action" type="button" onClick={() => requestAccountAction(user, 'status')}>
+                        {user.status === 'Active' ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button className="btn-action user-delete-action" type="button" onClick={() => requestAccountAction(user, 'delete')}>Delete</button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
             {!loading && filteredUsers.length === 0 && (
               <tr>
-                <td colSpan="7" className="empty-table">
+                <td colSpan="8" className="empty-table">
                   {users.length === 0
                     ? 'No accounts are stored in the connected database yet.'
                     : 'No users match your search.'}
@@ -305,6 +258,37 @@ function UserDirectoryPage() {
           </tbody>
         </table>
       </div>
+      <nav className="admin-pagination" aria-label="User directory pages">
+        <button className="btn-action" type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage <= 1}>
+          Previous
+        </button>
+        <span aria-live="polite">Page {currentPage} of {totalPages}</span>
+        <button className="btn-action" type="button" onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))} disabled={currentPage >= totalPages}>
+          Next
+        </button>
+      </nav>
+      {pendingAccountAction && (
+        <div className="admin-confirm-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !accountActionBusy) setPendingAccountAction(null); }}>
+          <form className="admin-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="account-action-title" onSubmit={confirmAccountAction}>
+            <h2 id="account-action-title">Confirm account {pendingAccountAction.action === 'delete' ? 'deletion' : 'status change'}</h2>
+            <p>
+              {pendingAccountAction.action === 'delete'
+                ? `Delete ${pendingAccountAction.user.name}'s account? This cannot be undone.`
+                : `${pendingAccountAction.user.status === 'Active' ? 'Deactivate' : 'Activate'} ${pendingAccountAction.user.name}'s account?`}
+              {' '}Enter the Primary admin password to continue.
+            </p>
+            {error && <p className="form-message error-message" role="alert">{error}</p>}
+            <label htmlFor="confirm-superadmin-password">Primary admin password</label>
+            <input id="confirm-superadmin-password" className="form-control" type="password" value={superAdminPassword} onChange={(event) => setSuperAdminPassword(event.target.value)} autoComplete="current-password" required autoFocus />
+            <div className="admin-confirm-actions">
+              <button className="btn-action" type="button" onClick={() => setPendingAccountAction(null)} disabled={accountActionBusy}>Cancel</button>
+              <button className={`btn-action${pendingAccountAction.action === 'delete' ? ' user-delete-action' : ' audit-download'}`} type="submit" disabled={accountActionBusy}>
+                {accountActionBusy ? 'Processing…' : pendingAccountAction.action === 'delete' ? 'Delete account' : pendingAccountAction.user.status === 'Active' ? 'Deactivate account' : 'Activate account'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </section>
   );
 }

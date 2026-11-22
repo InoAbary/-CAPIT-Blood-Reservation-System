@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { api, getErrorMessage } from '../lib/api.js';
 
 const metrics = [
@@ -13,16 +13,26 @@ const metrics = [
 function OverviewPage() {
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    api('/api/admin/summary')
-      .then(setSummary)
-      .catch((requestError) => setError(getErrorMessage(requestError)));
+  const loadSummary = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      setSummary(await api('/api/admin/summary'));
+    } catch (requestError) {
+      setError(getErrorMessage(requestError));
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => { loadSummary(); }, [loadSummary]);
 
   return (
     <section id="overview">
-      {error && <p className="form-message error-message" role="alert">{error}</p>}
+      {error && <p className="form-message error-message" role="alert">{error} <button className="btn-action" type="button" onClick={loadSummary}>Retry</button></p>}
+      {loading && <p className="card-subtitle" role="status">Loading network summary…</p>}
       <div className="metrics-grid">
         {metrics.map((metric) => (
           <article className="metric-card" key={metric.label}>

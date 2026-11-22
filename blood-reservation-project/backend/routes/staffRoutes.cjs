@@ -4,6 +4,7 @@ const Facility = require('../../db/models/facilities.cjs');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const Appointment = require('../../db/models/appointmentSchedules.cjs');
+const { BLOOD_SERVICE_FACILITY_TYPES } = require('../utils/facilityTypes.cjs');
 
 const router = express.Router();
 
@@ -23,41 +24,32 @@ router.get('/dashboard', async (req, res) => {
     if (!ctx) return;
     const { facility, user } = ctx;
 
-    const isProvider = ['bsf', 'prc_chapter', 'bsf_hospital'].includes(facility.facilityType);
-    const isHospital = ['hospital', 'bsf_hospital'].includes(facility.facilityType);
+    const isProvider = BLOOD_SERVICE_FACILITY_TYPES.includes(facility.facilityType);
 
     const [pendingBloodRequests, totalBloodRequests] = isProvider
       ? await Promise.all([
-          BloodRequest.countDocuments({ receivingFacilityID: facility._id, requestStatus: { $in: ['Pending', 'Allocated', 'Partially Fulfilled'] } }),
+          BloodRequest.countDocuments({ receivingFacilityID: facility._id, requestStatus: 'Pending' }),
           BloodRequest.countDocuments({ receivingFacilityID: facility._id }),
         ])
       : [0, 0];
 
-    const hospitalRequestIds = isHospital
+    const hospitalRequestIds = facility.facilityType === 'hospital'
       ? await BloodRequest.find({ hospitalFacilityID: facility._id }).select('_id').lean()
       : [];
 
-      const [openRequests, totalRequests] = isHospital
+    const [openRequests, totalRequests] = facility.facilityType === 'hospital'
       ? await Promise.all([
-          BloodRequest.countDocuments({ hospitalFacilityID: facility._id, requestStatus: { $in: ['Pending', 'Allocated','Approved', 'Partially Fulfilled'] } }),
+          BloodRequest.countDocuments({ hospitalFacilityID: facility._id, requestStatus: { $in: ['Pending', 'Approved', 'Partially Fulfilled'] } }),
           BloodRequest.countDocuments({ hospitalFacilityID: facility._id }),
         ])
       : [0, 0];
 
-      const [hospitalReleasedUnits, bsfReleasedUnits] = await Promise.all([
-        isHospital
-          ? BloodUnits.countDocuments({
-              requestID: { $in: hospitalRequestIds.map(request => request._id) },
-              status: 'Released',
-            })
-          : 0,
-        isProvider
-          ? BloodUnits.countDocuments({
-              facilityID: { $in: [String(facility._id), facility.facilityID] },
-              status: 'Released',
-            })
-          : 0,
-      ]);
+    const releasedUnits = facility.facilityType === 'hospital'
+      ? await BloodUnits.countDocuments({
+          requestID: { $in: hospitalRequestIds.map((r) => r._id) },
+          status: 'Released',
+        })
+      : await BloodUnits.countDocuments({ facilityID: facility.facilityID, status: 'Released' });
 
     return res.json({
       staff: {
@@ -79,9 +71,7 @@ router.get('/dashboard', async (req, res) => {
         totalBloodRequests,
         openRequests,
         totalRequests,
-        releasedUnits: isHospital ? hospitalReleasedUnits : bsfReleasedUnits,
-        hospitalReleasedUnits,
-        bsfReleasedUnits,
+        releasedUnits,
         // reportedUnits: count from BloodReport if you want it; omitted here
       },
     });
@@ -100,22 +90,20 @@ router.get('/pending-counts', async (req, res) => {
 
     const { user, facility } = ctx;
 
-    const isHybridFacility = facility.facilityType === 'bsf_hospital';
-    const isProvider = ['bsf', 'prc_chapter', 'bsf_hospital'].includes(facility.facilityType);
-    const canViewPendingCounts =
-      ['staff', 'branch-admin'].includes(user.role) ||
-      (isHybridFacility && user.role === 'hospital');
-
-      if (!canViewPendingCounts || !isProvider || facility.isActive === false) {
-        return res.status(403).json({
-          error: 'Pending counts are available to active BSF/PRC staff.',
-        });
-      }
+    if (
+      !['staff', 'branch-admin'].includes(user.role) ||
+      !BLOOD_SERVICE_FACILITY_TYPES.includes(facility.facilityType) ||
+      facility.isActive === false
+    ) {
+      return res.status(403).json({
+        error: 'Pending counts are available to active BSF/PRC staff.',
+      });
+    }
 
     const [bloodRequests, appointments] = await Promise.all([
       BloodRequest.countDocuments({
         receivingFacilityID: facility._id,
-        requestStatus: { $in: ['Pending', 'Allocated', 'Partially Fulfilled'] },
+        requestStatus: 'Pending',
       }),
       Appointment.countDocuments({
         venue: facility._id,
