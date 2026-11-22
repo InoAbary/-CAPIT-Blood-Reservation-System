@@ -7,7 +7,6 @@ import '../styles/BloodDonorForm.css';
 import {useAuth} from '../context/AuthContext'
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
 import '../styles/UI.css';
-import { BellIcon } from '@heroicons/react/24/outline';
 
 const DATE_ONLY = [34, 37];
 const FEMALE_ONLY_QUESTIONS = new Set([33, 34, 35, 36, 37]);
@@ -123,15 +122,6 @@ const pageHeader = (
             <h1>{t('questionnaire.pageTitle', 'Donor Application Form')}</h1>
         </div>
 
-        <button
-            type="button"
-            disabled
-            aria-label="Notifications unavailable"
-            title="Notifications coming soon"
-            className="grid size-10 shrink-0 place-items-center rounded-lg border border-blue-100 bg-blue-50 text-[#063b82]"
-        >
-            <BellIcon className="size-5" aria-hidden="true" />
-        </button>
     </header>
 );
 

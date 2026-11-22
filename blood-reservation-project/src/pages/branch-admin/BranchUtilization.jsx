@@ -144,23 +144,20 @@ function DetailFields({ fields }) {
   );
 }
 
-function RequestReference({ unit, onOpen }) {
-  const reference = unit.request?.reference;
-  if (!reference) return '—';
-
+function UnitDetailsButton({ unit, onOpen, label = 'View details' }) {
   return (
     <button
       type="button"
-      className="hospital-my-request-detail-button"
+      className="hospital-my-request-detail-button utilization-view-button utilization-details-button"
       aria-haspopup="dialog"
-      aria-label={`View request ${reference} for blood unit ${unit.bloodUnitID}`}
+      aria-label={`${label} for blood unit ${unit.bloodUnitID}`}
+      title={label}
       onClick={() => onOpen(unit)}
     >
-      {reference}
+      <EyeIcon aria-hidden="true" />
     </button>
   );
 }
-
 function OutcomeBadge({ unit }) {
   const outcome = utilizationOutcome(unit);
   const Icon = OUTCOME_ICONS[outcome] || InformationCircleIcon;
@@ -426,100 +423,46 @@ export default function BranchUtilization({
             >
               <thead>
                 <tr>
+                  {isHistory && <th scope="col">Report ID</th>}
                   <th scope="col">Blood unit ID</th>
-                  <th scope="col">Request ID</th>
                   <th scope="col">Blood type</th>
                   <th scope="col">Component</th>
-                  <th scope="col">Release date</th>
-                  <th scope="col">Release time</th>
-                  <th scope="col">Outcome</th>
-                  {isHistory && (
+                  {isHistory ? (
                     <>
+                      <th scope="col">Outcome</th>
                       <th scope="col">Report date</th>
-                      <th scope="col">Report time</th>
                       <th scope="col">Source</th>
                     </>
+                  ) : (
+                    <th scope="col">Release date</th>
                   )}
-                  {!isHistory && <th scope="col">Notes</th>}
                   <th scope="col">Action</th>
                 </tr>
               </thead>
               <tbody>
-                {hospitalUnits.length ? hospitalUnits.map((unit) => {
-                  const draft = drafts[unit.id] || EMPTY_REPORT;
-                  const formId = `utilization-form-${unit.id}`;
-                  return (
-                    <tr key={unit.id}>
-                      <td>
-                        <strong>{unit.bloodUnitID}</strong>
-                      </td>
-                      <td><RequestReference unit={unit} onOpen={showUnitDetails} /></td>
-                      <td>{unit.bloodType}</td>
-                      <td>{unit.component}</td>
+                {hospitalUnits.length ? hospitalUnits.map((unit) => (
+                  <tr key={unit.id}>
+                    {isHistory && <td>{unit.report.reportID || '—'}</td>}
+                    <td><strong>{unit.bloodUnitID}</strong></td>
+                    <td>{unit.bloodType}</td>
+                    <td>{unit.component}</td>
+                    {isHistory ? (
+                      <>
+                        <td><OutcomeBadge unit={unit} /></td>
+                        <td>{formatDate(unit.report.dateCreated)}</td>
+                        <td><SourceBadge report={unit.report} /></td>
+                      </>
+                    ) : (
                       <td>{formatDate(unit.releasedAt)}</td>
-                      <td>{formatDate(unit.releasedAt, UTILIZATION_TIME)}</td>
-                      {isHistory ? (
-                        <>
-                          <td><OutcomeBadge unit={unit} /></td>
-                          <td>{formatDate(unit.report.dateCreated)}</td>
-                          <td>{formatDate(unit.report.dateCreated, UTILIZATION_TIME)}</td>
-                          <td><SourceBadge report={unit.report} /></td>
-                          <td>
-                            <button type="button" className="hospital-my-request-detail-button utilization-view-button"
-                              aria-haspopup="dialog" onClick={() => showUnitDetails(unit)}>
-                              <EyeIcon aria-hidden="true" />
-                              {unit.report.isAssumed ? 'Report actual outcome' : 'View report'}
-                            </button>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td>
-                            <label className="sr-only" htmlFor={`utilization-status-${unit.id}`}>Usage status for {unit.bloodUnitID}</label>
-                            <select
-                              id={`utilization-status-${unit.id}`}
-                              form={formId}
-                              className="form-control"
-                              value={draft.status}
-                              required
-                              onChange={event => changeAwaitingOutcome(unit, event.target.value)}
-                            >
-                              <option value="" disabled>Select status</option>
-                              {REPORT_OUTCOMES.map(outcome => <option key={outcome}>{outcome}</option>)}
-                            </select>
-                          </td>
-                          <td>
-                            <label className="sr-only" htmlFor={`utilization-notes-${unit.id}`}>Notes for {unit.bloodUnitID}</label>
-                            <input
-                              id={`utilization-notes-${unit.id}`}
-                              form={formId}
-                              className="form-control"
-                              value={draft.description}
-                              onChange={event => updateDraft(unit.id, 'description', event.target.value)}
-                              placeholder="Notes (optional)"
-                            />
-                          </td>
-                          <td>
-                            <form className="utilization-row-actions" id={formId} onSubmit={(event) => submitReport(event, unit)}>
-                              {draft.status === 'Wasted' && (
-                                <button type="button" className="hospital-my-request-detail-button utilization-view-button"
-                                  aria-haspopup="dialog" aria-label={`Edit wastage reason for ${unit.bloodUnitID}`}
-                                  title="Edit wastage reason" onClick={() => openWastageReason(unit)}>
-                                  <PencilSquareIcon aria-hidden="true" />
-                                </button>
-                              )}
-                              <button className="btn-action" type="submit" disabled={Boolean(submittingUnit)}>
-                                {submittingUnit === unit.id ? 'Submitting…' : 'Submit'}
-                              </button>
-                            </form>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  );
-                }) : (
+                    )}
+                    <td>
+                      <UnitDetailsButton unit={unit} onOpen={showUnitDetails}
+                        label={!isHistory ? 'Report outcome' : unit.report.isAssumed ? 'Report actual outcome' : 'View report'} />
+                    </td>
+                  </tr>
+                )) : (
                   <tr>
-                    <td colSpan={isHistory ? 11 : 9} className="empty-table">
+                    <td colSpan={isHistory ? 8 : 5} className="empty-table">
                       {isHistory ? 'No utilization reports in history yet.' : 'No blood units awaiting a report.'}
                     </td>
                   </tr>
@@ -607,38 +550,26 @@ export default function BranchUtilization({
               <table className="custom-table branch-utilization-table">
                 <thead>
                   <tr>
-                    <th>Hospital</th><th>Blood Unit</th><th>Request ID</th><th>Blood Type</th><th>Component</th>
-                    <th>Release date</th><th>Release time</th><th>Outcome</th>
-                    {isWastageReport && <th>Wastage reason</th>}
+                    <th>Report ID</th><th>Hospital</th><th>Blood Type</th><th>Component</th>
+                    <th>Release date</th><th>Outcome</th>
                     {isCoverage && <th>Source</th>}
-                    <th>Report ID</th>
+                    <th>Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {visibleRecords.length ? visibleRecords.map((unit) => (
                     <tr key={unit.id}>
+                      <td>{unit.report?.reportID || '—'}</td>
                       <td>{unit.hospitalName}</td>
-                      <td><strong>{unit.bloodUnitID}</strong></td>
-                      <td><RequestReference unit={unit} onOpen={showUnitDetails} /></td>
                       <td>{unit.bloodType}</td>
                       <td>{unit.component}</td>
                       <td>{formatDate(unit.releasedAt)}</td>
-                      <td>{formatDate(unit.releasedAt, UTILIZATION_TIME)}</td>
                       <td><OutcomeBadge unit={unit} /></td>
-                      {isWastageReport && <td>{reportWastageReason(unit)}</td>}
                       {isCoverage && <td><SourceBadge report={unit.report} /></td>}
-                      <td>
-                        {unit.report ? (
-                          <button type="button" className="hospital-my-request-detail-button utilization-view-button"
-                            aria-haspopup="dialog" aria-label={`View utilization report for ${unit.bloodUnitID}`} onClick={() => showUnitDetails(unit)}>
-                            <EyeIcon aria-hidden="true" />
-                            {unit.report.reportID || 'View report'}
-                          </button>
-                        ) : '—'}
-                      </td>
+                      <td><UnitDetailsButton unit={unit} onOpen={showUnitDetails} /></td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={isWastageReport || isCoverage ? 10 : 9} className="empty-table">{isCoverage ? 'No bags without a hospital report match these filters.' : 'No hospital reports match these filters.'}</td></tr>
+                    <tr><td colSpan={isCoverage ? 8 : 7} className="empty-table">{isCoverage ? 'No bags without a hospital report match these filters.' : 'No hospital reports match these filters.'}</td></tr>
                   )}
                 </tbody>
               </table>
@@ -738,9 +669,9 @@ export default function BranchUtilization({
                   )}
                 </section>
               )}
-              {isHospital && selectedUnit.report?.isAssumed && (
+              {isHospital && (!selectedUnit.report || selectedUnit.report.isAssumed) && (
                 <form className="hospital-my-request-detail-section utilization-correction" onSubmit={event => submitReport(event, selectedUnit)}>
-                  <h4>Report actual outcome</h4>
+                  <h4>{selectedUnit.report ? 'Report actual outcome' : 'Report outcome'}</h4>
                   {error && <p className="form-message error-message" role="alert">{error}</p>}
                   <label className="utilization-control utilization-dropdown">
                     <span>Outcome</span>
@@ -748,17 +679,27 @@ export default function BranchUtilization({
                       className="form-control"
                       required
                       value={selectedDraft.status}
-                      onChange={event => updateDraft(selectedUnit.id, 'status', event.target.value)}
+                      onChange={event => selectedUnit.report
+                        ? updateDraft(selectedUnit.id, 'status', event.target.value)
+                        : changeAwaitingOutcome(selectedUnit, event.target.value)}
                     >
                       <option value="" disabled>Select status</option>
                       {REPORT_OUTCOMES.map(outcome => <option key={outcome}>{outcome}</option>)}
                     </select>
                   </label>
-                  <WastageReasonFields
-                    draft={selectedDraft}
-                    reasons={wastageReasons}
-                    onChange={(field, value) => updateDraft(selectedUnit.id, field, value)}
-                  />
+                  {selectedUnit.report ? (
+                    <WastageReasonFields
+                      draft={selectedDraft}
+                      reasons={wastageReasons}
+                      onChange={(field, value) => updateDraft(selectedUnit.id, field, value)}
+                    />
+                  ) : selectedDraft.status === 'Wasted' && (
+                    <button type="button" className="hospital-my-request-detail-button utilization-view-button"
+                      aria-haspopup="dialog" onClick={() => openWastageReason(selectedUnit)}>
+                      <PencilSquareIcon aria-hidden="true" />
+                      Edit wastage reason
+                    </button>
+                  )}
                   <label className="utilization-control">
                     <span>Notes (optional)</span>
                     <textarea
