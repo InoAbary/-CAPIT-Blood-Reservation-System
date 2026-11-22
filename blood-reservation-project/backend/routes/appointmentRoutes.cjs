@@ -459,14 +459,14 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
         const reminders = [
           'Stay hydrated. Drink plenty of water before your donation.',
           'Eat iron-rich foods, such as lean meat, beans, and leafy green vegetables, in the days before your donation.',
-          'Get enough sleep (7-9 hours) the night before your donation.',
-          'Eat a healthy meal 1-3 hours before your donation. Avoid fatty foods and do not arrive on an empty stomach.',
+          'Get at least 5 hours of quality sleep the night before your donation.',
+          'Eat a healthy meal before donating and avoid fatty foods in the 4 hours before your donation.',
           'Bring a valid ID for registration and verification.',
           'Ensure that you have answered and submitted the donor application form.',
-          'Avoid alcohol before your donation and on the day of your appointment.',
+          'Avoid alcohol for at least 24 hours before donating.',
           'Wear comfortable clothing with sleeves that can be raised above your elbow.',
-          'Bring a list of any medicines you take and discuss them with the screening staff. Do not stop prescribed medicines on your own.',
-          'If you feel unwell or develop a fever, contact the donation facility before attending to discuss rescheduling.',
+          'Tell the screening physician about any medications you take and any existing health conditions.',
+          'Donate only when you feel well. If you have a cough, cold, or fever, contact the donation facility to reschedule.',
           'Allow time for registration and donor screening, and follow any additional instructions from your donation facility.',
         ];
 

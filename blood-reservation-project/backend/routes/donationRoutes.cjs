@@ -8,6 +8,7 @@ const Donation = require('../../db/models/donation.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const Staff = require('../../db/models/staff.cjs');
 const { createDonor } = require('../services/createDonor.cjs');
+const { notifyPostDonation } = require('../services/postDonationNotifications.cjs');
 
 // ---------------------------------------------------------------------------
 // Resolve the facility a staff user acts on.
@@ -218,6 +219,10 @@ router.post('/staff-donations', async (req, res) => {
       encoder,
       notes: notes ? String(notes).trim() : undefined,
       dateTime: when,
+    });
+
+    void notifyPostDonation(donor).catch(() => {
+      console.error(`Donation ${donation._id}: post-donation notification failed`);
     });
 
     const populated = await Donation.findById(donation._id)
