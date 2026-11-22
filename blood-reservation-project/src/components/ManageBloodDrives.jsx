@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import DrivePlaceSearch from './DrivePlaceSearch';
-import { DriveCard, DriveStatusFilter, driveStatus } from '../pages/BloodDrives';
+import { ACTIVE_DRIVE_STATUSES, DriveCard, DriveStatusFilter, driveStatus } from '../pages/BloodDrives';
 
 const endpoint = '/api/blood-drives/manage';
 const fields = [
@@ -34,7 +34,7 @@ export default function ManageBloodDrives() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
   const [now, setNow] = useState(Date.now);
-  const [status, setStatus] = useState('All');
+  const [statuses, setStatuses] = useState(ACTIVE_DRIVE_STATUSES);
   const [showMap, setShowMap] = useState(false);
   const map = useRef(null);
   const load = useCallback(async signal => {
@@ -105,10 +105,9 @@ export default function ManageBloodDrives() {
     Math.abs(Number(draft.lat)) <= 90 && Math.abs(Number(draft.lon)) <= 180
     ? { latitude: Number(draft.lat), longitude: Number(draft.lon) }
     : null;
-  const visibleDrives = data?.drives.filter(drive => {
-    const current = driveStatus(drive, now);
-    return status === 'All' || current === status || (status === 'Active' && current !== 'Past');
-  });
+    const visibleDrives = data?.drives.filter(drive =>
+      statuses.includes(driveStatus(drive, now))
+    );
 
   return (
     <section className="content-card drive-management">
@@ -160,9 +159,10 @@ export default function ManageBloodDrives() {
           <button type="button" disabled={saving} onClick={() => setDraft(null)}>Cancel</button></div>
       </form>}
       {!data && !error && <p>Loading blood drives…</p>}
-      {data && <div className="drive-controls"><DriveStatusFilter status={status} onChange={setStatus} /></div>}
+      {data && <div className="drive-controls"><DriveStatusFilter statuses={statuses} onChange={setStatuses} /></div>}
       {data && !visibleDrives.length && <p>No drives match this status.</p>}
       <div className="drive-grid">{visibleDrives?.map(drive => <DriveCard key={drive._id} drive={drive.hostName ? drive : { ...drive, hostName: data.location.facilityName }} onEdit={edit} now={now} />)}</div>
     </section>
   );
 }
+

@@ -9,18 +9,33 @@ import '../styles/BloodDrives.css';
 
 const date = new Intl.DateTimeFormat('en-PH', { dateStyle: 'medium', timeZone: 'Asia/Manila' });
 const time = new Intl.DateTimeFormat('en-PH', { timeStyle: 'short', timeZone: 'Asia/Manila' });
-const statuses = ['Upcoming', 'Ongoing', 'Past', 'All'];
+export const ACTIVE_DRIVE_STATUSES = ['Ongoing', 'Upcoming'];
 
 export function driveStatus(drive, now) {
   return Date.parse(drive.endsAt) <= now ? 'Past' :
     Date.parse(drive.startsAt) <= now ? 'Ongoing' : 'Upcoming';
 }
 
-export function DriveStatusFilter({ status, onChange }) {
-  return <label>Status <select value={status} onChange={event => onChange(event.target.value)}>
-    <option value="Active">Upcoming and ongoing</option>
-    {statuses.map(option => <option key={option}>{option}</option>)}
-  </select></label>;
+export function DriveStatusFilter({ statuses, onChange }) {
+  return (
+    <div className="drive-status-options" role="group" aria-label="Drive status">
+      {ACTIVE_DRIVE_STATUSES.map(status => (
+        <label key={status}>
+          <input
+            type="checkbox"
+            checked={statuses.includes(status)}
+            onChange={event => {
+              const { checked } = event.target;
+              onChange(current => checked
+                ? [...current, status]
+                : current.filter(value => value !== status));
+            }}
+          />
+          {status}
+        </label>
+      ))}
+    </div>
+  );
 }
 
 function kmBetween(from, drive) {
@@ -85,8 +100,7 @@ export default function BloodDrives({ embedded = false }) {
   const [nearby, setNearby] = useState(false);
   const [range, setRange] = useState('25');
   const [order, setOrder] = useState('soonest');
-  const [status, setStatus] = useState('Active');
-  const includePast = status === 'Past' || status === 'All';
+  const [statuses, setStatuses] = useState(ACTIVE_DRIVE_STATUSES);
   const [error, setError] = useState('');
   const locationDialog = useRef(null);
   const inDonorHub = !embedded && donor && role === 'donor';
@@ -98,7 +112,7 @@ export default function BloodDrives({ embedded = false }) {
     async function load() {
       setNow(Date.now());
       try {
-        const response = await fetch('/api/blood-drives' + (includePast ? '?includePast=1' : ''),
+        const response = await fetch('/api/blood-drives',
           { signal: controller.signal, cache: 'no-store' });
         if (!response.ok) throw new Error();
         const data = await response.json();
@@ -116,7 +130,7 @@ export default function BloodDrives({ embedded = false }) {
       controller.abort();
       window.clearInterval(refresh);
     };
-  }, [includePast]);
+  }, []);
 
   function chooseLocation(place) {
     setLocation({ latitude: place.lat, longitude: place.lon, name: place.name });
@@ -133,8 +147,7 @@ export default function BloodDrives({ embedded = false }) {
   const active = (drives || []).filter(drive => {
     if (search && ![drive.title, drive.hostName, drive.venue, drive.address]
       .some(value => value?.toLowerCase().includes(search))) return false;
-    const current = driveStatus(drive, now);
-    return status === 'All' || current === status || (status === 'Active' && current !== 'Past');
+      return statuses.includes(driveStatus(drive, now));
   })
     .map(drive => ({ drive, distance: location ? kmBetween(location, drive) : null }))
     .filter(({ distance }) => !nearby || distance <= Number(range))
@@ -157,7 +170,7 @@ export default function BloodDrives({ embedded = false }) {
       <div className="drive-controls">
         <label>Search drives <input type="search" value={query} placeholder="Drive, facility, or venue"
           onChange={event => setQuery(event.target.value)} /></label>
-        <DriveStatusFilter status={status} onChange={setStatus} />
+        <DriveStatusFilter statuses={statuses} onChange={setStatuses} />
         <button type="button" onClick={() => locationDialog.current.showModal()}>
           {location ? 'Change location' : 'Choose location'}
         </button>
