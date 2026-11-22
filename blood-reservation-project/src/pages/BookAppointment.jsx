@@ -10,6 +10,7 @@ import { PinIcon } from '../components/Icons';
 import { readLocatorPreferences, saveLocatorPreferences } from '../utils/locatorPreferences';
 import '../styles/Dashboard.css';
 import '../styles/UI.css';
+import '../styles/BookAppointment.css';
 import { BellIcon, EyeIcon } from '@heroicons/react/24/outline';
 
 import { useDonationCooldown } from '../hooks/useDonationCooldown';

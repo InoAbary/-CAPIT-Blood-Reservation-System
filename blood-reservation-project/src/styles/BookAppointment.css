@@ -1,0 +1,185 @@
+/* Keep the donor appointment layout scoped to this page so staff pages retain
+   their original shared dashboard styles. */
+.donor-theme .appointment-form {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: end;
+  gap: 1rem;
+}
+
+.donor-theme .appointment-form > label,
+.donor-theme .appointment-venue-field {
+  min-width: 0;
+}
+
+.donor-theme .appointment-form input[type="date"],
+.donor-theme .appointment-form select,
+.donor-theme .appointment-venue-picker > input,
+.donor-theme .appointment-form .appointment-submit-button {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 3rem;
+  padding-block: 0;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.donor-theme .appointment-location-toolbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.donor-theme .appointment-location-hint {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.donor-theme .appointment-location-button {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.5rem 0.7rem;
+  background: #fff;
+  color: #334155;
+  font-size: 0.88rem;
+  cursor: pointer;
+}
+
+.donor-theme .appointment-location-button:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.donor-theme .appointment-venue-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.donor-theme .appointment-venue-picker {
+  position: relative;
+  width: 100%;
+}
+
+.donor-theme .appointment-venue-picker > input {
+  border: 1px solid #d5d9e2;
+  border-radius: 6px;
+  padding-inline: 0.65rem;
+  background: #fff;
+}
+
+.donor-theme .appointment-venue-options {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  width: min(720px, calc(100vw - 320px));
+  max-width: calc(100vw - 32px);
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+}
+
+.donor-theme .appointment-venue-option {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  border: 0;
+  border-bottom: 1px solid #eef2f7;
+  padding: 0.65rem 0.75rem;
+  background: #fff;
+  color: #172033;
+  text-align: left;
+  cursor: pointer;
+}
+
+.donor-theme .appointment-venue-option:last-child {
+  border-bottom: 0;
+}
+
+.donor-theme .appointment-venue-option:hover,
+.donor-theme .appointment-venue-option:focus-visible,
+.donor-theme .appointment-venue-option.selected {
+  background: #f8fafc;
+}
+
+.donor-theme .appointment-venue-option:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+.donor-theme .appointment-venue-option strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.donor-theme .appointment-venue-distance {
+  color: #2563eb;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.donor-theme .appointment-venue-address {
+  color: #64748b;
+  font-size: 0.76rem;
+  font-weight: 400;
+}
+
+.donor-theme .appointment-venue-empty {
+  padding: 0.8rem;
+  color: #64748b;
+  font-size: 0.82rem;
+}
+
+.donor-theme .appointment-form .appointment-hours {
+  grid-column: 1 / -1;
+  justify-self: stretch;
+  justify-content: flex-start;
+}
+
+@media (max-width: 900px) {
+  .donor-theme .appointment-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .donor-theme .appointment-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .donor-theme .appointment-location-toolbar {
+    align-items: flex-start;
+  }
+
+  .donor-theme .appointment-location-hint {
+    max-width: 24ch;
+  }
+
+  .donor-theme .appointment-venue-options {
+    width: min(720px, calc(100vw - 32px));
+  }
+}
