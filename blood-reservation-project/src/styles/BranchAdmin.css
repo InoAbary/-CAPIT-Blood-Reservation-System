@@ -532,6 +532,8 @@
 .status-denied,
 .status-cancelled { background: #fde7e7; color: #a02121; }
 .status-completed { background: #e8eefc; color: #2c4a99; }
+.status-attended { background: #e8f7ed; color: #116038; }
+.status-no_show { background: #fce5ed; color: #8c1940; }
 
 .muted { color: #888; }
 

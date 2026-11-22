@@ -23,8 +23,31 @@ const TABS = [
   { key: 'pending', label: 'Pending' },
   { key: 'approved', label: 'Approved' },
   { key: 'denied', label: 'Denied' },
+  { key: 'no_show', label: 'No-show' },
   { key: 'all', label: 'All' },
 ];
+
+const STATUS_LABEL = { no_show: 'No-show', attended: 'Attended' };
+
+const DECISION_LABELS = {
+  approve: { title: 'Approve appointment?', confirm: 'Confirm Approval', notice: 'Appointment approved.' },
+  deny: { title: 'Deny appointment?', confirm: 'Confirm Denial', notice: 'Appointment denied.' },
+  attend: { title: 'Confirm attendance?', confirm: 'Confirm attendance', notice: 'Attendance recorded.' },
+};
+
+const manilaDay = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Manila',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+function canMarkAttended(appointment) {
+  const scheduledTime = Date.parse(appointment.date);
+  return ['approved', 'no_show'].includes(appointment.status) &&
+    Number.isFinite(scheduledTime) &&
+    manilaDay.format(scheduledTime) === manilaDay.format(Date.now());
+}
 
 function EyeIcon() {
   return (
@@ -159,11 +182,7 @@ function StaffAppointments() {
       window.dispatchEvent(new Event('pending-counts-changed'));
       setDecisionTarget(null);
       setDecisionNote('');
-      setNotice(
-        decisionAction === 'approve'
-          ? 'Appointment approved.'
-          : 'Appointment denied.'
-      );
+      setNotice(DECISION_LABELS[decisionAction].notice);
   
       await load();
     } catch (err) {
@@ -241,7 +260,9 @@ function StaffAppointments() {
                     </span>
                   </td>
                   <td>
-                    <span className={`status-badge status-${a.status}`}>{a.status}</span>
+                  <span className={`status-badge status-${a.status}`}>
+                  {STATUS_LABEL[a.status] || a.status}
+                </span>
                   </td>
                   <td>
                     <div className="appt-actions">
@@ -256,7 +277,20 @@ function StaffAppointments() {
                       >
                         <EyeIcon />
                       </button>
-
+                      {canMarkAttended(a) && (
+                          <button
+                            type="button"
+                            className="btn-action"
+                            disabled={savingDecision}
+                            onClick={() => {
+                              setDecisionAction('attend');
+                              setDecisionTarget(a);
+                              setDecisionError('');
+                            }}
+                          >
+                            Mark attended
+                          </button>
+                        )}
                       {a.status === 'pending' && ( <>
                       <button
                         type="button"
@@ -499,9 +533,7 @@ function StaffAppointments() {
       >
         <form onSubmit={submitDecision}>
           <h3 id="appointment-decision-title">
-            {decisionAction === 'approve'
-              ? 'Approve appointment?'
-              : 'Deny appointment?'}
+          {DECISION_LABELS[decisionAction].title}
           </h3>
 
           <p>
@@ -514,7 +546,9 @@ function StaffAppointments() {
             {new Date(decisionTarget.date).toLocaleString()}
           </p>
 
-          {decisionAction === 'approve' ? (
+          {decisionAction === 'attend' ? (
+            <p>Confirm that this donor arrived for their appointment.</p>
+          ) : decisionAction === 'approve' ? (
             <p>
               Confirm that your facility can accommodate this donor
               at the scheduled date and time.
@@ -595,11 +629,7 @@ function StaffAppointments() {
                 )
               }
             >
-              {savingDecision
-                ? 'Saving…'
-                : decisionAction === 'approve'
-                  ? 'Confirm Approval'
-                  : 'Confirm Denial'}
+              {savingDecision ? 'Saving…' : DECISION_LABELS[decisionAction].confirm}
             </button>
           </div>
         </form>

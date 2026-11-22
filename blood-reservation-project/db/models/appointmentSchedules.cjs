@@ -27,7 +27,7 @@ const appointmentSchedSchema = new mongoose.Schema({
 
     status: {
       type: String,
-      enum: ['pending', 'approved', 'denied', 'cancelled', 'completed'],
+      enum: ['pending', 'approved', 'denied', 'cancelled', 'completed', 'attended', 'no_show'],
       default: 'pending',
       index: true,
     },
@@ -36,7 +36,9 @@ const appointmentSchedSchema = new mongoose.Schema({
       type: String, // staff's reason for denying, or donor's cancel note
       trim: true,
     },
-    
+    noShowAt: {
+      type: Date,
+    },
     decidedAt: {
       type: Date, // when staff approved/denied
     },

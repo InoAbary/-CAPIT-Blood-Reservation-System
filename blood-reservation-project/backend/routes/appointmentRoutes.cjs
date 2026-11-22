@@ -10,6 +10,8 @@ const FormAnswers = require('../../db/models/formAnswers.cjs');
 
 const {sendAppointmentEmail} = require('../utils/appointSchedEmail.cjs')
 const { notifyAppointment } = require('../services/appointmentNotifications.cjs');
+const { formatManilaDay, getNoShowDeadline, markNoShows } =
+  require('../services/appointmentAttendance.cjs');
 const { getNotificationPreferences } = require('../utils/notificationPreferences.cjs');
 
 const requireDonor = require('../middleware/requireDonor.cjs');
@@ -36,6 +38,7 @@ router.get('/', requireDonor, async (req, res) => {
     if (!donorId) {
         return res.status(401).json({ error: 'Donor authentication required.' });
     }
+    await markNoShows({ donor: donorId });
 
     const appointments = await Appointment.find({ donor: donorId })
       .populate('venue', 'facilityName address facilityType')
@@ -197,15 +200,22 @@ router.patch('/:id/cancel', requireDonor, async (req, res) => {
       });
     }
 
-    const appt = await Appointment.findOne({ _id: id, donor: donorId });
+    await markNoShows({ _id: id, donor: donorId });
+    let appt = await Appointment.findOne({ _id: id, donor: donorId });
     if (!appt) return res.status(404).json({ error: 'Appointment not found.' });
     if (!['pending', 'approved'].includes(appt.status)) {
       return res.status(409).json({ error: 'Only open appointments can be cancelled.' });
     }
 
-    appt.status = 'cancelled';
-    appt.note = note;
-    await appt.save();
+    appt = await Appointment.findOneAndUpdate(
+      { _id: id, donor: donorId, status: { $in: ['pending', 'approved'] } },
+      { $set: { status: 'cancelled', note } },
+      { returnDocument: 'after', runValidators: true }
+    );
+    
+    if (!appt) {
+      return res.status(409).json({ error: 'This appointment is no longer open.' });
+    }
     await appt.populate([
       { path: 'venue', select: 'facilityName' },
       { path: 'assocStaff', select: 'firstName lastName email' },
@@ -249,6 +259,7 @@ router.get('/staff-appointments', requireStaff, async (req, res) => {
       });
     }
 
+    await markNoShows({ venue: facilityId });
     const { status } = req.query;
     const filter = { venue: facilityId };
     if (status && status !== 'all') filter.status = status;
@@ -277,6 +288,7 @@ router.get('/staff-appointments/:id/details', requireStaff, async (req, res) => 
       });
     }
 
+    await markNoShows({ _id: req.params.id, venue: facilityId });
     const appointment = await Appointment.findOne({
       _id: req.params.id,
       venue: facilityId,
@@ -339,8 +351,8 @@ router.get('/staff-appointments/:id/details', requireStaff, async (req, res) => 
 router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
   try {
     const { action, note } = req.body || {};
-    if (!['approve', 'deny'].includes(action)) {
-      return res.status(400).json({ error: 'action must be "approve" or "deny".' });
+    if (!['approve', 'deny', 'attend'].includes(action)) {
+      return res.status(400).json({ error: 'Select a valid appointment action.' });
     }
 
     const denialReason = typeof note === 'string' ? note.trim() : '';
@@ -367,12 +379,49 @@ router.patch('/staff-appointments/:id', requireStaff, async (req, res) => {
     if (!appt) {
       return res.status(404).json({ error: 'Appointment not found at your facility.' });
     }
+    
+    const now = new Date();
+
+    if (action === 'attend') {
+      if (formatManilaDay(appt.date) !== formatManilaDay(now)) {
+        return res.status(409).json({
+          error: 'Attendance can only be recorded on the appointment day.',
+        });
+      }
+
+      const attended = await Appointment.findOneAndUpdate(
+        { _id: id, venue: facilityId, date: appt.date, status: { $in: ['approved', 'no_show'] } },
+        { $set: { status: 'attended' } },
+        { returnDocument: 'after', runValidators: true }
+      );
+
+      if (!attended) {
+        return res.status(409).json({ error: 'This appointment is not eligible for check-in.' });
+      }
+
+      return res.json({ appointment: attended });
+    }
+
     if (appt.status !== 'pending') {
       return res.status(409).json({ error: 'Only pending appointments can be decided.' });
     }
 
-    const changes = { status: action === 'approve' ? 'approved' : 'denied', assocStaff: staffId, decidedAt: new Date() };
-    if (action === 'deny') changes.note = denialReason;
+    const changes = {
+      status: action === 'approve' ? 'approved' : 'denied',
+      assocStaff: staffId,
+      decidedAt: now,
+    };
+
+    if (action === 'approve') {
+      changes.noShowAt = getNoShowDeadline(appt.date);
+
+      if (changes.noShowAt < now) {
+        return res.status(409).json({ error: 'The appointment cutoff has passed.' });
+      }
+    } else {
+      changes.note = denialReason;
+    }
+
     const decided = await Appointment.findOneAndUpdate(
       { _id: id, venue: facilityId, status: 'pending' },
       { $set: changes }, { new: true, runValidators: true }

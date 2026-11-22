@@ -20,6 +20,7 @@ const staffPasswordRecoveryRoutes = require('./routes/staffPasswordRecoveryRoute
 const branchAdminRoutes = require('./routes/branchAdminRoutes.cjs');
 const staffRoutes = require('./routes/staffRoutes.cjs');
 const appointmentRoutes = require('./routes/appointmentRoutes.cjs')
+const { startAppointmentAttendance } = require('./services/appointmentAttendance.cjs');
 const donationRoutes = require('./routes/donationRoutes.cjs')
 const donorBadgeRoutes = require('./routes/donorBadgeRoutes.cjs');
 
@@ -31,6 +32,7 @@ const app = express();
 
 
 connectDB().then(async () => {
+    startAppointmentAttendance();
     try {
         const { startDonationReminders } = require('./services/donationReminders.cjs');
         await startDonationReminders();
