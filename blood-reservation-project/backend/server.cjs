@@ -11,6 +11,7 @@ const facilityRoutes = require('./routes/FacilityRoutes.cjs');
 const bloodUnitRoutes = require('./routes/bloodUnitRoutes.cjs');
 const authRoutes = require('./routes/auth.cjs');
 const utilizationRoutes = require('./routes/utilizationRoutes.cjs');
+const { startAutomaticUtilizationReports } = require('./services/utilizationReports.cjs');
 const bloodRequestRoutes = require('./routes/bloodRequestRoutes.cjs');
 const adminRoutes = require('./routes/adminRoutes.cjs');
 const bloodRequestAdminRoutes = require('./routes/bloodRequestAdminRoutes.cjs');
@@ -33,6 +34,7 @@ const app = express();
 
 connectDB().then(async () => {
     startAppointmentAttendance();
+    startAutomaticUtilizationReports();
     try {
         const { startDonationReminders } = require('./services/donationReminders.cjs');
         await startDonationReminders();
