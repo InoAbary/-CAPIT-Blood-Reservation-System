@@ -12,6 +12,7 @@ import {
 const NAV_ITEMS = {
   donor: [
     { label: 'Overview', path: '/DonorDashboard', icon: Squares2X2Icon },
+    { label: 'Blood Drives', path: '/BloodDrives', icon: MapIcon },
     { label: 'Donor Application Form', path: '/BloodDonorForm', icon: ClipboardDocumentListIcon },
     { label: 'Book Appointment', path: '/BookAppointment', icon: CalendarDaysIcon },
     { label: 'Profile Settings', path: '/donor/profile', icon: Cog6ToothIcon },

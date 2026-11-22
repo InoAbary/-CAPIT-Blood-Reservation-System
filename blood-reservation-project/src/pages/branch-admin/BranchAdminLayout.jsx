@@ -54,6 +54,7 @@ export default function BranchAdminLayout() {
     
   const tabs = [
     ...workspaceTabs,
+    ...(['bsf', 'prc_chapter'].includes(facilityType) ? [{ id: 'blood-drives', label: 'Blood Drives', icon: '📍' }] : []),
     ...(reservationTab ? [reservationTab] : []),
     ...(inventoryTab ? [inventoryTab] : []),
     ...(hospitalRequestsTab ? [hospitalRequestsTab] : []),

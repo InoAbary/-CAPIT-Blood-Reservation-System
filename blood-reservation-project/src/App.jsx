@@ -7,6 +7,7 @@ import './App.css'
 import './i18n.js'
 
 import LandingPage from './pages/LandingPage';
+import BloodDrives from './pages/BloodDrives';
 
 import Register from './pages/Register'
 import Login from './pages/Login'
@@ -56,8 +57,10 @@ function App() {
   return (
     <AuthProvider>
     <Routes>
+    <Route path="/BloodDrives" element={<BloodDrives />} />
     {/* ---- Public ---- */}
     <Route path="/" element={<LandingPage />}>
+      <Route path="blood-drives" element={<BloodDrives embedded />} />
       <Route path="Register" element={<Register />} />
       <Route path="Login" element={<Login />} />
     </Route>
