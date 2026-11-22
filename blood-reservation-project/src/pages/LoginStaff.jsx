@@ -119,13 +119,6 @@ export default function Login() {
       {error}
       </p>
     )}
-
-    {!user && (
-      <p className="login-note">
-      No account? <a href="/Register/Staff">Register</a>
-      </p>
-    )}
-
     </section>
     </main>
   );
