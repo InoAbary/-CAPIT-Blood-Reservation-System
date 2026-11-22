@@ -19,12 +19,14 @@ async function request(path, options = {}) {
   return result;
 }
 
-const TABS = [
-  { key: 'pending', label: 'Pending' },
-  { key: 'approved', label: 'Approved' },
-  { key: 'denied', label: 'Denied' },
-  { key: 'no_show', label: 'No-show' },
-  { key: 'all', label: 'All' },
+const APPOINTMENT_STATUS_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'attended', label: 'Attended' },
+  { value: 'no_show', label: 'No-show' },
+  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'denied', label: 'Denied' },
 ];
 
 const STATUS_LABEL = { no_show: 'No-show', attended: 'Attended' };
@@ -70,6 +72,7 @@ function EyeIcon() {
 
 function StaffAppointments() {
   const [status, setStatus] = useState('pending');
+  const [sortOrder, setSortOrder] = useState('oldest');
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -192,6 +195,10 @@ function StaffAppointments() {
     }
   };
 
+  const sortedAppointments = sortOrder === 'oldest'
+  ? appointments
+  : [...appointments].reverse();
+
   return (
     <section className="content-card">
       <h2 className="card-title">Appointments</h2>
@@ -200,18 +207,34 @@ function StaffAppointments() {
       {error && <p className="form-message error-message" role="alert">{error}</p>}
       {notice && <p className="form-message" role="status">{notice}</p>}
 
-      <div className="segmented-tabs">
-        {TABS.map((tab) => (
-          <button
-            key={tab.key}
-            type="button"
-            className={`segmented-btn${status === tab.key ? ' segmented-btn--active' : ''}`}
-            onClick={() => setStatus(tab.key)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      <div className="staff-appointment-filters">
+  <div className="form-group">
+    <label htmlFor="staff-appointment-status">Status</label>
+    <select
+      id="staff-appointment-status"
+      className="form-control"
+      value={status}
+      onChange={event => setStatus(event.target.value)}
+    >
+      {APPOINTMENT_STATUS_OPTIONS.map(({ value, label }) => (
+        <option key={value} value={value}>{label}</option>
+      ))}
+    </select>
+  </div>
+
+  <div className="form-group">
+      <label htmlFor="staff-appointment-order">Date order</label>
+      <select
+        id="staff-appointment-order"
+        className="form-control"
+        value={sortOrder}
+        onChange={event => setSortOrder(event.target.value)}
+      >
+        <option value="oldest">Oldest first</option>
+        <option value="newest">Newest first</option>
+      </select>
+    </div>
+  </div>
 
       {loading ? (
         <p>Loading appointments…</p>
@@ -219,7 +242,7 @@ function StaffAppointments() {
         <p className="muted">Nothing to show here.</p>
       ) : (
         <div className="appt-table-wrap">
-          <table className="appt-table">
+         <table className="appt-table staff-appt-table">
             <thead>
               <tr>
                 <th>Donor</th>
@@ -231,7 +254,7 @@ function StaffAppointments() {
               </tr>
             </thead>
             <tbody>
-              {appointments.map((a) => (
+            {sortedAppointments.map((a) => (
                 <tr key={a._id}>
                   <td>
                     <strong>
@@ -239,7 +262,6 @@ function StaffAppointments() {
                         ? `${a.donor.firstName || ''} ${a.donor.lastName || ''}`.trim() || a.donor.email
                         : 'Unknown donor'}
                     </strong>
-                    {a.note && <span className="appt-note">Note: {a.note}</span>}
                   </td>
                   <td>
                     {a.donor?.bloodType ? (
@@ -443,6 +465,14 @@ function StaffAppointments() {
                   </div>
                 </section>
 
+                {detailData.appointment.note?.trim() && (
+                  <section className="appointment-details-section">
+                    <h4>Appointment note</h4>
+                    <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                      {detailData.appointment.note}
+                    </p>
+                  </section>
+                )}
                 <section className="appointment-details-section">
                   <div className="prescreen-heading">
                     <div>
