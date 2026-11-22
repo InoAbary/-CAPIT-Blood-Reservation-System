@@ -92,7 +92,7 @@ export default function LandingPage() {
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab.id}
-                className={`landing-tab-btn ${tab.id === 'drives' ? 'landing-drives-tab' : ''} ${activeTab === tab.id ? 'active' : ''}`}
+                className={`landing-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => {
                   if (tab.path) {
                     if (activeTab !== tab.id) navigate(tab.path);

@@ -52,8 +52,6 @@
 .drive-landing { padding: clamp(.85rem, 3vw, 1.75rem); text-align: left; color-scheme: light; background: #fff; }
 .drive-landing .ui-page-header--card { border-color: #f0cdd4; border-left-color: #8f1d2c; }
 .drive-landing .ui-page-header h1 { color: #8f1d2c; }
-.landing-tabs-bar-header .landing-drives-tab { color: #fff; background: #8f1d2c; border-radius: 8px 8px 0 0; }
-.landing-tabs-bar-header .landing-drives-tab:is(:hover, .active) { background: #761625; }
 @media (max-width: 360px) { .drive-card { height: auto; min-height: 16rem; } }
 .drive-form > h3,
 .drive-form > .drive-host {
