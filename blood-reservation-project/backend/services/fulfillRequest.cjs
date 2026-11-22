@@ -3,6 +3,7 @@ const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const Inventory = require('../../db/models/inventories.cjs');
 const History = require('../../db/models/bloodUnitsHistory.cjs');
 const Operation = require('../../db/models/fulfillmentOperation.cjs');
+const { notifyBloodRelease } = require('./bloodReleaseNotifications.cjs');
 const ALLOWED_STATUSES = ['Allocated','Approved', 'Partially Fulfilled'];
 const COMPONENTS = ['Packed RBC', 'Plasma', 'Platelets', 'Whole Blood'];
 const fail = (status, message) => Object.assign(new Error(message), { status });
@@ -81,9 +82,19 @@ async function finishOperation(operation) {
         collectionDate: unit.collectionDate, status: 'Released', releasedAt: unit.releasedAt })),
         releasedCount: released.length, requestedReleaseCount: operation.units,
         partialRelease: released.length < operation.units, availableAfter: available };
-        // Release the durable request lock only after all projections/history are saved.
-        await Operation.updateOne({ _id: operation._id }, { $set: { active: false, state: 'Completed', result, lastError: '' } });
-        return result;
+    // Only the caller that completes the operation dispatches notifications.
+    const completion = await Operation.updateOne({ _id: operation._id, active: true }, {
+        $set: { active: false, state: 'Completed', result, lastError: '' }
+    });
+    if (completion.modifiedCount === 1) {
+        const notifications = await Promise.allSettled(released.map(unit => notifyBloodRelease(unit.donorID)));
+        for (const [index, notification] of notifications.entries()) {
+            if (notification.status === 'rejected') {
+                console.error(`Blood release operation ${operation._id}: notification failed for unit ${released[index]._id}`);
+            }
+        }
+    }
+    return result;
 }
 async function fulfillRequest({
     requestID, facilityID, actorID, units, expectedFulfilledUnits, bloodUnitIDs,

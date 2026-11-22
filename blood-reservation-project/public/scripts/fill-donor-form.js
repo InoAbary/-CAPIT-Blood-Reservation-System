@@ -1,4 +1,10 @@
 // Synthetic data for local development only. Never use for real donor screening.
+/*
+ * run with
+ *
+ const { fillDonorForm *} = await import('/scripts/fill-donor-form.js');
+ await fillDonorForm();
+ */
 export async function fillDonorForm({ answers = {}, dates = {} } = {}) {
     if (!['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)) {
         throw new Error('Donor form test autofill is restricted to localhost.');
