@@ -54,11 +54,11 @@ async function getBranchContext(req, res) {
 }
 
 function canReceiveBranchRequests({ facility }) {
-  return ['bsf', 'prc_chapter', 'bsf_hospital'].includes(facility.facilityType);
+  return ['bsf', 'prc_chapter', 'hospital_bsf'].includes(facility.facilityType);
 }
 
 function canManageHospitalRequests({ facility }) {
-  return ['hospital', 'bsf_hospital'].includes(facility.facilityType);
+  return ['hospital', 'hospital_bsf'].includes(facility.facilityType);
 }
 
 function formatUser(user) {
