@@ -10,41 +10,45 @@ const workspaceTabs = [
   { id: 'create-user', label: 'Create user', icon: '＋' },
   { id: 'users', label: 'User view', icon: '👥' },
   { id: 'blood-locator', label: 'Blood locator', icon: '📍' },
-  { id: 'facility-hours', label: 'Opening hours', icon: '🕒' },
 ];
 
 export default function BranchAdminLayout() {
   const { staff, loading, logoutStaff } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [facilityType, setFacilityType] = useState(null);
+  const [assignedFacilityType, setFacilityType] = useState(null);
+  const [workspace, setWorkspace] = useState('hospital');
+
+  const isHybridFacility = assignedFacilityType === 'bsf_hospital';
+  const facilityType = isHybridFacility ? workspace : assignedFacilityType;
+
   const pendingCounts = usePendingCounts(
     staff?._id || staff?.id,
-    ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facilityType)
+    ['bsf', 'prc_chapter'].includes(facilityType)
   );
   const utilizationTab = facilityType === 'hospital'
     ? { id: 'utilization', label: 'Utilization form', icon: '🩸' }
-    : ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facilityType)
+    : ['bsf', 'prc_chapter'].includes(facilityType)
       ? { id: 'utilization', label: 'Utilization dashboard', icon: '📈' }
       : null;
   const reservationTab = facilityType === 'hospital'
     ? { id: 'reservation', label: 'Blood reservation', icon: '📝' }
-    : ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facilityType)
+    : ['bsf', 'prc_chapter'].includes(facilityType)
       ? { id: 'branch-requests', label: 'Hospital Requests', icon: '📥' }
       : null;
   const hospitalRequestsTab = facilityType === 'hospital'
-    ? { id: 'my-requests', label: staff?.role === 'branch-admin' ? 'Branch requests' : 'My requests', icon: '🔔' }
+    ? { id: 'my-requests', label: 'My requests', icon: '🔔' }
     : null;
-  const donorFormsTab = ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facilityType)
+  const donorFormsTab = ['bsf', 'prc_chapter'].includes(facilityType)
     ? { id: 'donor-forms', label: 'Donor Forms Submitted', icon: '📋' }
     : null;
-  const inventoryTab = ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facilityType)
+  const inventoryTab = ['bsf', 'prc_chapter'].includes(facilityType)
     ? { id: 'inventory', label: 'Inventory', icon: '🩸' }
     : null;
-  const appointmentsTab = ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facilityType)
+  const appointmentsTab = ['bsf', 'prc_chapter'].includes(facilityType)
     ? { id: 'appointments', label: 'Appointments', icon: '🩸' }
     : null;
-  const donationsTab = ['bsf', 'hospital_bsf', 'prc_chapter'].includes(facilityType)
+  const donationsTab = ['bsf', 'prc_chapter'].includes(facilityType)
     ? { id: 'donations', label: 'Log Donations', icon: '🩸' }
     : null;
     
@@ -91,7 +95,7 @@ export default function BranchAdminLayout() {
 
   return (
     <div className="app-container">
-      <aside className="sidebar">
+      <aside className="sidebar branch-workspace-sidebar" data-workspace={facilityType}>
         <div className="brand">
           <div className="brand-icon">+</div>
           <div>
@@ -129,6 +133,18 @@ export default function BranchAdminLayout() {
           ))}
         </nav>
         <div className="sidebar-footer">
+        {isHybridFacility && (
+          <button
+            className="logout-button"
+            type="button"
+            onClick={() => {
+              setWorkspace(current => current === 'hospital' ? 'bsf' : 'hospital');
+              setActiveTab('dashboard');
+            }}
+          >
+            Switch to {workspace === 'hospital' ? 'BSF' : 'Hospital'}
+          </button>
+        )}
           <button className="logout-button" type="button" onClick={handleLogout}>
             <span aria-hidden="true">↪</span>
             Log out
