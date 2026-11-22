@@ -11,7 +11,7 @@ import { readLocatorPreferences, saveLocatorPreferences } from '../utils/locator
 import '../styles/Dashboard.css';
 import '../styles/UI.css';
 import '../styles/BookAppointment.css';
-import { BellIcon, EyeIcon } from '@heroicons/react/24/outline';
+import { EyeIcon } from '@heroicons/react/24/outline';
 
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
 
@@ -567,15 +567,7 @@ function BookAppointment() {
           <p>Choose a venue and preferred start time. Staff will review your request.</p>
         </div>
 
-        <button
-          type="button"
-          disabled
-          aria-label="Notifications unavailable"
-          title="Notifications coming soon"
-          className="grid size-10 shrink-0 place-items-center rounded-lg border border-blue-100 bg-blue-50 text-[#063b82]"
-        >
-          <BellIcon className="size-5" aria-hidden="true" />
-        </button>
+        
       </header>
 
       <div className="appointment-container content-card">

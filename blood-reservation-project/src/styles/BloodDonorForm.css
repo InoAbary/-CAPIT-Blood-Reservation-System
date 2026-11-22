@@ -499,7 +499,7 @@
     box-sizing: border-box;
 
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 110px;
+    grid-template-columns: minmax(0, 1fr) minmax(110px, max-content);
     gap: 24px;
     align-items: center;
 
@@ -562,11 +562,16 @@
     color: #444;
 }
 
-.submitted-remark {
-    margin: 8px 0 0;
-    color: #666;
-    font-size: 0.9rem;
-}
+.submitted-answer-controls { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.submitted-remark-button { display: grid; flex-shrink: 0; width: 32px; height: 32px; place-items: center; padding: 0; border: 1px solid #f0cdd4; border-radius: 8px; background: #fff5f6; color: #8f1d2c; cursor: pointer; }
+.submitted-remark-button svg { width: 16px; height: 16px; }
+.submitted-remark-dialog { position: fixed; inset: 0; margin: auto; box-sizing: border-box; width: min(28rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto; padding: 1.25rem; border: 1px solid #f0cdd4; border-radius: 14px; background: #fff; color: #111827; color-scheme: light; text-align: left; }
+.submitted-remark-dialog::backdrop { background: rgb(15 23 42 / 45%); }
+.submitted-remark-dialog h2 { margin: 0; color: #111827; font-size: 1.125rem; font-weight: 700; }
+.submitted-remark-dialog .submitted-remark { margin: .75rem 0 0; color: #111827; white-space: pre-wrap; overflow-wrap: anywhere; }
+.submitted-remark-dialog form { display: flex; justify-content: flex-end; margin-top: 1rem; }
+.submitted-remark-dialog button { padding: .45rem .75rem; border: 1px solid #f0cdd4; border-radius: 8px; background: #fff5f6; color: #8f1d2c; cursor: pointer; }
+.submitted-remark-button:focus-visible, .submitted-remark-dialog button:focus-visible { outline: 2px solid #8f1d2c; outline-offset: 2px; }
 
 .submitted-form-actions {
     display: flex;
@@ -600,10 +605,7 @@
         gap: 12px;
     }
 
-    .submitted-answer-value {
-        justify-self: start;
-        margin-left: 42px;
-    }
+    .submitted-answer-controls { justify-content: flex-start; margin-left: 42px; }
 
     .submitted-form-actions .submit-btn {
         width: 100%;

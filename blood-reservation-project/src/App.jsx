@@ -47,6 +47,7 @@ import AuditLogPage from './pages/admin/AuditLogPage';
 import AdminChangeOwner from './pages/admin/AdminChangeOwner';
 import BranchAdminLayout from './pages/branch-admin/BranchAdminLayout';
 import BranchDashboard from './pages/branch-admin/BranchDashboard';
+import DonorDonationHistoryPage from './pages/DonorDonationHistoryPage';
 
 import { AuthProvider } from './context/AuthContext'
 
@@ -73,6 +74,7 @@ function App() {
     {/* ---- Donor-only ---- */}
     <Route path="/donor/change-number" element={<ProtectedRoute require="donor"><ChangeMobileNumber /></ProtectedRoute>} />
     <Route path="/donor/profile" element={<ProtectedRoute require="donor"><DonorProfile /></ProtectedRoute>} />
+    <Route path="/donor/donation-history" element={<ProtectedRoute require="donor"><DonorDonationHistoryPage /></ProtectedRoute>} />
     <Route
     path="/DonorDashboard"
     element={

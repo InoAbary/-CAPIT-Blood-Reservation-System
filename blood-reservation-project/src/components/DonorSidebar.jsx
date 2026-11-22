@@ -9,6 +9,7 @@ import {
   MapIcon,
   ArrowsRightLeftIcon,
   Cog6ToothIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 
 const NAV_ITEMS = {
@@ -16,6 +17,7 @@ const NAV_ITEMS = {
     { label: 'Overview', path: '/DonorDashboard', icon: Squares2X2Icon },
     { label: 'Donor Application Form', path: '/BloodDonorForm', icon: ClipboardDocumentListIcon },
     { label: 'Book Appointment', path: '/BookAppointment', icon: CalendarDaysIcon, badgeKey: 'appointments' },
+    { label: 'Donation History', path: '/donor/donation-history', icon: ClockIcon },
     { label: 'Profile Settings', path: '/donor/profile', icon: Cog6ToothIcon },
   ],
   recipient: [
