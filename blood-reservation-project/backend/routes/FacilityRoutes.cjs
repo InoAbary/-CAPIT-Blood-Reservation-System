@@ -4,7 +4,6 @@ const Facility = require('./../../db/models/facilities.cjs');   // adjust paths 
 const Inventory = require('../../db/models/inventories.cjs');
 const syncInventory = require('../services/syncInventory.cjs');
 const Counter = require('../../db/models/counters.cjs');
-const BloodUnits = require('../../db//models/bloodUnits.cjs')
 const { getStockBalances, stockKey } = require('../services/requestStock.cjs');
 const Staff = require('../../db/models/staff.cjs');
 const { recordAdminAudit } = require('../services/adminAudit.cjs');
@@ -117,37 +116,19 @@ router.post('/availability/batch', async (req, res) => {
       return res.json({ success: true, availability: {} });
     }
 
-    const match = {
-      facilityID: { $in: facilityIDs },
-      status: 'In-stock',
-      expiryDate: { $gt: new Date() },
-    };
-    if (bloodType) match.bloodType = bloodType;
-    if (component) match.component = component;
-
-    const rows = await BloodUnits.aggregate([
-      { $match: match },
-      {
-        $group: {
-          _id: {
-            facilityID: '$facilityID',
-            bloodType: '$bloodType',
-            component: '$component',
-          },
-          units: { $sum: 1 },
-        },
-      },
-    ]);
+    const ids = facilityIDs.filter(id => typeof id === 'string' && mongoose.isObjectIdOrHexString(id));
+    const balances = await getStockBalances(ids, {
+      bloodType: typeof bloodType === 'string' ? bloodType : undefined,
+      components: typeof component === 'string' && component ? [component] : undefined,
+    });
 
     // Shape: { [facilityID]: { [bloodType]: { [component]: unitCount } } }
     const availability = {};
-    for (const r of rows) {
-      const f = r._id.facilityID;
-      const bt = r._id.bloodType;
-      const ck = r._id.component;
-      availability[f] = availability[f] || {};
-      availability[f][bt] = availability[f][bt] || {};
-      availability[f][bt][ck] = r.units;
+    for (const [key, balance] of balances) {
+      const [facilityID, type, product] = key.split('|');
+      availability[facilityID] ??= {};
+      availability[facilityID][type] ??= {};
+      availability[facilityID][type][product] = balance.availableUnits;
     }
 
     res.json({ success: true, availability });
