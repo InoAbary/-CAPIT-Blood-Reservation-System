@@ -11,11 +11,10 @@ const BloodRequest = require('../../db/models/BloodRequest.cjs');
 const { OPEN_BLOOD_REQUEST_STATUSES } = require('../utils/openBloodRequestStatuses.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const BloodReport = require('../../db/models/bloodReports.cjs');
-const FormAnswers = require('../../db/models/formAnswers.cjs');
 
 const tabs = {
   donor: ['appointments'],
-  bsf: ['branch-requests', 'appointments', 'donor-forms', 'utilization'],
+  bsf: ['branch-requests', 'appointments', 'utilization'],
   hospital: ['my-requests', 'utilization'],
 };
 
@@ -84,27 +83,6 @@ async function countAwaitingReports(facility) {
   return result?.count || 0;
 }
 
-async function countDonorForms(facility, newer, now) {
-  const offset = 8 * 60 * 60 * 1000;
-  const start = new Date(Math.floor((now.getTime() + offset) / 86400000) * 86400000 - offset);
-  const end = new Date(start.getTime() + 86400000);
-  const [result] = await FormAnswers.aggregate([
-    { $match: { createdAt: { $gte: start, $lt: end } } },
-    { $lookup: {
-      from: Appointment.collection.name, localField: 'donor', foreignField: 'donor',
-      pipeline: [
-        { $match: { venue: facility, date: { $gte: start, $lt: end },
-          status: { $in: ['pending', 'approved', 'completed'] } } },
-        { $sort: { createdAt: -1, _id: -1 } }, { $limit: 1 },
-      ],
-      as: 'appointment',
-    } },
-    { $match: { 'appointment.0': { $exists: true },
-      $or: [{ createdAt: newer }, { 'appointment.0.createdAt': newer }] } },
-    { $count: 'count' },
-  ]);
-  return result?.count || 0;
-}
 
 async function countWorkAndCancellations(model, facilityFilter, statusField, openStatuses, cancelledStatus, newer) {
   const [counts] = await model.aggregate([
@@ -124,7 +102,7 @@ async function countWorkAndCancellations(model, facilityFilter, statusField, ope
   return counts || { total: 0, unreadCount: 0 };
 }
 
-function countUnreadUpdates(scope, tab, newer, now) {
+function countUnreadUpdates(scope, tab, newer) {
   if (scope.workspace === 'donor') {
     return Appointment.countDocuments({
       donor: scope.owner, status: { $in: ['approved', 'denied', 'cancelled', 'attended', 'no_show', 'completed'] },
@@ -132,7 +110,6 @@ function countUnreadUpdates(scope, tab, newer, now) {
     });
   }
   if (tab === 'utilization') return countNewReports(scope.facility, newer);
-  if (tab === 'donor-forms') return countDonorForms(scope.facility, newer, now);
   return BloodRequest.countDocuments({
     hospitalFacilityID: scope.facility, updatedAt: newer,
     requestStatus: { $in: [...OPEN_BLOOD_REQUEST_STATUSES, 'Fulfilled', 'Cancelled'] },
@@ -140,7 +117,7 @@ function countUnreadUpdates(scope, tab, newer, now) {
   });
 }
 
-async function countTab(scope, tab, newer, now) {
+async function countTab(scope, tab, newer) {
   if (scope.workspace === 'hospital' && tab === 'utilization') {
     return { total: await countAwaitingReports(scope.facility), unreadCount: 0 };
   }
@@ -156,7 +133,7 @@ async function countTab(scope, tab, newer, now) {
       'Cancelled', newer,
     );
   }
-  const unreadCount = await countUnreadUpdates(scope, tab, newer, now);
+  const unreadCount = await countUnreadUpdates(scope, tab, newer);
   return { total: unreadCount, unreadCount };
 }
 

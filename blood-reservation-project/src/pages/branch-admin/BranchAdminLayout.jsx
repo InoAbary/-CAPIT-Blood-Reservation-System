@@ -40,9 +40,6 @@ export default function BranchAdminLayout() {
   const hospitalRequestsTab = facilityType === 'hospital'
     ? { id: 'my-requests', label: 'My requests', icon: '🔔' }
     : null;
-  const donorFormsTab = ['bsf', 'prc_chapter'].includes(facilityType)
-    ? { id: 'donor-forms', label: 'Donor Forms Submitted', icon: '📋' }
-    : null;
   const inventoryTab = ['bsf', 'prc_chapter'].includes(facilityType)
     ? { id: 'inventory', label: 'Inventory', icon: '🩸' }
     : null;
@@ -58,7 +55,6 @@ export default function BranchAdminLayout() {
     ...(reservationTab ? [reservationTab] : []),
     ...(inventoryTab ? [inventoryTab] : []),
     ...(hospitalRequestsTab ? [hospitalRequestsTab] : []),
-    ...(donorFormsTab ? [donorFormsTab] : []),
     ...(utilizationTab ? [utilizationTab] : []),
     ...(appointmentsTab ? [appointmentsTab] : []),
     ...(donationsTab ? [donationsTab] : []),
