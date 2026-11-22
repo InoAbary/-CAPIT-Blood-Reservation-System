@@ -5,6 +5,8 @@ const router = express.Router();
 
 const Donor = require('../../db/models/donor.cjs');
 const Donation = require('../../db/models/donation.cjs');
+const Appointment = require('../../db/models/appointmentSchedules.cjs');
+const { formatManilaDay } = require('../services/appointmentAttendance.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const Staff = require('../../db/models/staff.cjs');
 const { createDonor } = require('../services/createDonor.cjs');
@@ -210,7 +212,28 @@ router.post('/staff-donations', async (req, res) => {
     if (!donor) return res.status(404).json({ error: 'Donor not found.' });
     if (!facility) return res.status(404).json({ error: 'Facility not found.' });
 
-    const donation = await Donation.create({
+    const manilaDayStart = new Date(`${formatManilaDay(when)}T00:00:00+08:00`);
+    const manilaDayEnd = new Date(manilaDayStart.getTime() + 24 * 60 * 60 * 1000);
+    const visit = {
+      donor: donorID,
+      venue: facilityID,
+      date: { $gte: manilaDayStart, $lt: manilaDayEnd },
+    };
+    const attended = await Appointment.find({ ...visit, status: 'attended' }).select('_id').limit(2).lean();
+    let appointmentID = attended.length === 1 ? attended[0]._id : null;
+
+    if (!attended.length) {
+      const completed = await Appointment.find({ ...visit, status: 'completed' }).select('_id').lean();
+      const linked = await Donation.find({
+        _id: { $in: completed.map(appointment => appointment._id) },
+        donorID,
+        facilityID,
+        appointmentID: { $exists: true },
+      }).select('_id').limit(2).lean();
+      if (linked.length === 1) appointmentID = linked[0]._id;
+    }
+
+    const record = {
       donorID,
       facilityID,
       donationType,
@@ -219,11 +242,38 @@ router.post('/staff-donations', async (req, res) => {
       encoder,
       notes: notes ? String(notes).trim() : undefined,
       dateTime: when,
-    });
+    };
 
-    void notifyPostDonation(donor).catch(() => {
-      console.error(`Donation ${donation._id}: post-donation notification failed`);
-    });
+    let donation;
+    let shouldNotify = true;
+    if (appointmentID) {
+      // One donation per appointment, enforced by MongoDB's unique _id on standalone servers.
+      const result = await Donation.findOneAndUpdate(
+        { _id: appointmentID },
+        { $setOnInsert: { ...record, appointmentID } },
+        { upsert: true, returnDocument: 'after', runValidators: true, includeResultMetadata: true }
+      );
+      donation = result.value;
+      shouldNotify = Boolean(result.lastErrorObject?.upserted);
+      try {
+        await Appointment.updateOne(
+          { _id: appointmentID, ...visit, status: 'attended' },
+          { $set: { status: 'completed' } },
+          { runValidators: true }
+        );
+      } catch (error) {
+        // The attendance job will reconcile a saved donation if the status update fails.
+        console.error('Could not complete appointment for recorded donation:', error);
+      }
+    } else {
+      donation = await Donation.create(record);
+    }
+
+    if (shouldNotify) {
+      void notifyPostDonation(donor).catch(() => {
+        console.error(`Donation ${donation._id}: post-donation notification failed`);
+      });
+    }
 
     const populated = await Donation.findById(donation._id)
       .populate('donorID', 'firstName lastName email bloodType')

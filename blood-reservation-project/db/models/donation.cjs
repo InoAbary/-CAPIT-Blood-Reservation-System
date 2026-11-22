@@ -7,6 +7,10 @@ const donationSchema = new mongoose.Schema({
         ref: 'Donors',
         required: true
     },
+    appointmentID: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Appointment_Schedules',
+    },
     dateTime: {
         type: Date,
         default: Date.now

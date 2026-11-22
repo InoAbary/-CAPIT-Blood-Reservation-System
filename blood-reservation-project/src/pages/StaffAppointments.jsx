@@ -24,12 +24,13 @@ const APPOINTMENT_STATUS_OPTIONS = [
   { value: 'pending', label: 'Pending' },
   { value: 'approved', label: 'Approved' },
   { value: 'attended', label: 'Attended' },
+  { value: 'completed', label: 'Completed' },
   { value: 'no_show', label: 'No-show' },
   { value: 'cancelled', label: 'Cancelled' },
   { value: 'denied', label: 'Denied' },
 ];
 
-const STATUS_LABEL = { no_show: 'No-show', attended: 'Attended' };
+const STATUS_LABEL = { no_show: 'No-show', attended: 'Attended', completed: 'Completed' };
 
 const DECISION_LABELS = {
   approve: { title: 'Approve appointment?', confirm: 'Confirm Approval', notice: 'Appointment approved.' },

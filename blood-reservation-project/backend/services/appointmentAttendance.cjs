@@ -1,4 +1,5 @@
 const Appointment = require('../../db/models/appointmentSchedules.cjs');
+const Donation = require('../../db/models/donation.cjs');
 
 const LAST_APPOINTMENT_TIME = '15:00';
 
@@ -30,6 +31,28 @@ function markNoShows(scope = {}, now = new Date()) {
   );
 }
 
+async function completeRecordedAppointments() {
+  const appointments = await Appointment.aggregate([
+    { $match: { status: 'attended' } },
+    { $lookup: {
+      from: Donation.collection.name,
+      localField: '_id',
+      foreignField: '_id',
+      as: 'linkedDonation',
+    } },
+    { $match: { $expr: { $eq: [{ $arrayElemAt: ['$linkedDonation.appointmentID', 0] }, '$_id'] } } },
+    { $project: { _id: 1 } },
+  ]);
+
+  if (appointments.length) {
+    await Appointment.updateMany(
+      { _id: { $in: appointments.map(appointment => appointment._id) }, status: 'attended' },
+      { $set: { status: 'completed' } },
+      { runValidators: true }
+    );
+  }
+}
+
 function startAppointmentAttendance() {
   let running = false;
 
@@ -38,7 +61,7 @@ function startAppointmentAttendance() {
     running = true;
 
     try {
-      await markNoShows();
+      await Promise.all([markNoShows(), completeRecordedAppointments()]);
     } catch (error) {
       console.error('Appointment attendance check failed:', error.message);
     } finally {
