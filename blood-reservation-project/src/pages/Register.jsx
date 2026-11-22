@@ -1,16 +1,52 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Trans, useTranslation } from 'react-i18next';
+import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom'
 import '../styles/Register.css'
 import NotificationOptions from '../components/NotificationOptions';
-import { RELIGION_OPTIONS } from '../utils/donorFieldOptions';
 
-function FieldLabel({ children, required = false }) {
+const REGISTRATION_CHOICES = {
+    civilStatus: ['Single', 'Married', 'Separated', 'Widowed', 'Divorced', 'Annulled'],
+    nationality: ['Filipino'],
+    religion: ['Roman Catholic', 'Other Christian', 'Islam', 'Buddhism', 'Hinduism', 'Judaism', 'No religion', 'Prefer not to say'],
+    education: ['No formal education', 'Elementary', 'Junior high school', 'Senior high school', 'Vocational or technical', 'College undergraduate', 'College graduate', 'Postgraduate']
+};
+const OTHER_CHOICE = '__other__';
+
+function RequiredLabel({ children }) {
+    return <span>{children} <span className="register-required" aria-hidden="true">*</span></span>;
+}
+
+function RegistrationChoice({ field, label, value, onChange, required = false }) {
+    const { t } = useTranslation();
+    const [isOther, setIsOther] = useState(false);
+
+    function selectOption(event) {
+        const selection = event.target.value;
+        setIsOther(selection === OTHER_CHOICE);
+        onChange(selection === OTHER_CHOICE ? '' : selection);
+    }
+
     return (
-        <span className="register-label-text">
-            {children}
-            {required && <span className="register-required-mark" aria-hidden="true">*</span>}
-        </span>
+        <div className="register-choice">
+            <label>
+                {required ? <RequiredLabel>{label}</RequiredLabel> : label}
+                <select required={required} value={isOther ? OTHER_CHOICE : value} onChange={selectOption}>
+                    <option value="" disabled={required}>
+                        {required ? t('registration.selectOption', 'Select an option') : t('registration.optionalChoice', 'Select an option (optional)')}
+                    </option>
+                    {REGISTRATION_CHOICES[field].map(option => (
+                        <option key={option} value={option}>{t(`registration.options.${option}`, option)}</option>
+                    ))}
+                    <option value={OTHER_CHOICE}>{t('registration.other', 'Other (specify)')}</option>
+                </select>
+            </label>
+            {isOther && (
+                <label>
+                    <RequiredLabel>{t('registration.specify', '{{field}} (please specify)', { field: label })}</RequiredLabel>
+                    <input type="text" required value={value} onChange={event => onChange(event.target.value)} />
+                </label>
+            )}
+        </div>
     );
 }
 
@@ -111,9 +147,11 @@ function Register(){
         }
     }
 
+    const setField = (field, value) => setDonorData(current => ({ ...current, [field]: value }));
+
     const bind = (field) => ({
         value: donorData[field],
-        onChange: (e) => setDonorData({ ...donorData, [field]: e.target.value })
+        onChange: (event) => setField(field, event.target.value)
     });
 
     return (
@@ -122,119 +160,126 @@ function Register(){
             <button onClick={() => i18n.changeLanguage('fil')}>Filipino</button>
 
             <form onSubmit={handleFormSubmission} className="register-form">
-                <p className="register-required-note"><span aria-hidden="true">*</span> Required field</p>
+                <p className="register-required-note">
+                    <span className="register-required" aria-hidden="true">*</span>{' '}
+                    {t('registration.requiredNote', 'Indicates a required field.')}
+                </p>
 
                 {/* --- Name --- */}
                 <div className="register-fieldgroup">
-                    <label><FieldLabel required>{t('donorData.lastName', 'Surname')}</FieldLabel>
+                    <label><RequiredLabel>{t('formData.lastName', 'Surname')}</RequiredLabel>
                         <input type="text" required {...bind('lastName')} />
                     </label>
-                    <label><FieldLabel required>{t('donorData.firstName', 'First Name')}</FieldLabel>
+                    <label><RequiredLabel>{t('formData.firstName', 'First Name')}</RequiredLabel>
                         <input type="text" required {...bind('firstName')} />
                     </label>
-                    <label>{t('donorData.middleName', 'Middle Name')}
+                    <label>{t('formData.middleName', 'Middle Name')}
                         <input type="text" {...bind('middleName')} />
                     </label>
                 </div>
 
                 {/* --- Demographics --- */}
                 <div className="register-fieldgroup">
-                    <label><FieldLabel required>{t('donorData.birthDate', 'Birth Date')}</FieldLabel>
+                    <label><RequiredLabel>{t('formData.birthDate', 'Birth Date')}</RequiredLabel>
                         <input type="date" required {...bind('birthDate')} />
                     </label>
-                    <label><FieldLabel>{t('donorData.age', 'Age')}</FieldLabel>
-                        <input type="number" min="16" max="65" disabled required {...bind('age')} />
+                    <label>{t('formData.age', 'Age')}
+                        <input type="number" min="16" max="65" disabled {...bind('age')} />
                     </label>
-                    <label><FieldLabel required>{t('donorData.civilStatus', 'Civil Status')}</FieldLabel>
-                        <input type="text" required {...bind('civilStatus')} />
+                    <RegistrationChoice
+                        field="civilStatus"
+                        label={t('formData.civilStatus', 'Civil Status')}
+                        value={donorData.civilStatus}
+                        onChange={value => setField('civilStatus', value)}
+                        required
+                    />
+                    <label><RequiredLabel>{t('formData.sex', 'Sex')}</RequiredLabel>
+                        <select required {...bind('sex')}>
+                            <option value="" disabled>{t('registration.selectSex', 'Select Sex')}</option>
+                            <option value="Male">{t('registration.options.Male', 'Male')}</option>
+                            <option value="Female">{t('registration.options.Female', 'Female')}</option>
+                        </select>
                     </label>
-                    <label><FieldLabel required>{t('donorData.sex', 'Sex')}</FieldLabel>
-                        <span className="register-select-wrap">
-                            <select required {...bind('sex')}>
-                                <option value="" disabled>{t('donorData.selectSex', 'Select Sex')}</option>
-                                <option value="Male">{t('donorData.male', 'Male')}</option>
-                                <option value="Female">{t('donorData.female', 'Female')}</option>
-                            </select>
-                        </span>
-                    </label>
-                    <label><FieldLabel required>{t('donorData.bloodType', 'Blood Type')}</FieldLabel>
-                        <span className="register-select-wrap">
-                            <select required {...bind('bloodType')}>
-                                <option value="" disabled>{t('donorData.selectBloodType', 'Select Blood Type')}</option>
-                                <option value="A+">A+</option>
-                                <option value="A-">A-</option>
-                                <option value="B+">B+</option>
-                                <option value="B-">B-</option>
-                                <option value="O+">O+</option>
-                                <option value="O-">O-</option>
-                                <option value="AB+">AB+</option>
-                                <option value="AB-">AB-</option>
-                            </select>
-                        </span>
+                    <label><RequiredLabel>{t('registration.bloodType', 'Blood Type')}</RequiredLabel>
+                        <select required {...bind('bloodType')}>
+                            <option value="" disabled>{t('registration.selectBloodType', 'Select Blood Type')}</option>
+                            <option value="A+">A+</option>
+                            <option value="A-">A-</option>
+                            <option value="B+">B+</option>
+                            <option value="B-">B-</option>
+                            <option value="O+">O+</option>
+                            <option value="O-">O-</option>
+                            <option value="AB+">AB+</option>
+                            <option value="AB-">AB-</option>
+                        </select>
                     </label>
                 </div>
 
                 {/* --- Address --- */}
                 <div className="register-fieldgroup">
-                    <label><FieldLabel required>{t('donorData.houseNumber', 'House Number')}</FieldLabel>
+                    <label><RequiredLabel>{t('formData.houseNumber', 'House Number')}</RequiredLabel>
                         <input type="text" required {...bind('houseNumber')} />
                     </label>
-                    <label><FieldLabel required>{t('donorData.street', 'Street')}</FieldLabel>
+                    <label><RequiredLabel>{t('formData.street', 'Street')}</RequiredLabel>
                         <input type="text" required {...bind('street')} />
                     </label>
-                    <label><FieldLabel required>{t('donorData.barangay', 'Barangay')}</FieldLabel>
+                    <label><RequiredLabel>{t('formData.barangay', 'Barangay')}</RequiredLabel>
                         <input type="text" required {...bind('barangay')} />
                     </label>
-                    <label>{t('donorData.municipality', 'Town/Municipality')}
+                    <label>{t('formData.municipality', 'Town/Municipality')}
                         <input type="text" {...bind('municipality')} />
                     </label>
-                    <label>{t('donorData.province', 'Province/City')}
+                    <label>{t('formData.province', 'Province/City')}
                         <input type="text" {...bind('province')} />
                     </label>
-                    <label>Zip Code
+                    <label>{t('formData.zipCode', 'Zip Code')}
                         <input type="text" {...bind('zipCode')} />
                     </label>
                 </div>
 
                 {/* --- Office address (full width) --- */}
                 <div className="register-fieldgroup is-full">
-                    <label>{t('donorData.officeAddress', 'Office Address')}
+                    <label>{t('formData.officeAddress', 'Office Address')}
                         <input type="text" {...bind('officeAddress')} />
                     </label>
                 </div>
 
                 {/* --- Background --- */}
                 <div className="register-fieldgroup">
-                    <label><FieldLabel required>{t('donorData.nationality', 'Nationality')}</FieldLabel>
-                        <input type="text" required {...bind('nationality')} />
-                    </label>
-                    <label>{t('donorData.religion', 'Religion')}
-                        <span className="register-select-wrap">
-                            <select {...bind('religion')}>
-                                <option value="">Select Religion</option>
-                                {RELIGION_OPTIONS.map(option => (
-                                    <option key={option} value={option}>{option}</option>
-                                ))}
-                            </select>
-                        </span>
-                    </label>
-                    <label><FieldLabel required>{t('donorData.education', 'Education')}</FieldLabel>
-                        <input type="text" required {...bind('education')} />
-                    </label>
-                    <label>{t('donorData.occupation', 'Occupation')}
+                    <RegistrationChoice
+                        field="nationality"
+                        label={t('registration.nationality', 'Nationality')}
+                        value={donorData.nationality}
+                        onChange={value => setField('nationality', value)}
+                        required
+                    />
+                    <RegistrationChoice
+                        field="religion"
+                        label={t('formData.religion', 'Religion')}
+                        value={donorData.religion}
+                        onChange={value => setField('religion', value)}
+                    />
+                    <RegistrationChoice
+                        field="education"
+                        label={t('formData.education', 'Education')}
+                        value={donorData.education}
+                        onChange={value => setField('education', value)}
+                        required
+                    />
+                    <label>{t('formData.occupation', 'Occupation')}
                         <input type="text" {...bind('occupation')} />
                     </label>
                 </div>
 
                 {/* --- Contact --- */}
                 <div className="register-fieldgroup">
-                    <label>Telephone Number
+                    <label>{t('formData.telephoneNumber', 'Telephone Number')}
                         <input type="text" {...bind('telephoneNumber')} />
                     </label>
-                    <label><FieldLabel required>Mobile Number</FieldLabel>
-                        <input type="tel" autoComplete="tel" required {...bind('mobileNumber')} />
+                    <label>{t('formData.mobileNumber', 'Mobile Number')}
+                        <input type="text" {...bind('mobileNumber')} />
                     </label>
-                    <label><FieldLabel required>E-mail Address</FieldLabel>
+                    <label><RequiredLabel>{t('formData.email', 'E-mail Address')}</RequiredLabel>
                         <input type="email" required {...bind('email')} />
                     </label>
                 </div>
@@ -269,10 +314,10 @@ function Register(){
 
                 <div className="register-fieldgroup">
                     <div className="password-pair">
-                        <label><FieldLabel required>Password</FieldLabel>
+                        <label><RequiredLabel>{t('registration.password', 'Password')}</RequiredLabel>
                             <input type="password" required {...bind('password')} />
                         </label>
-                        <label><FieldLabel required>Confirm Password</FieldLabel>
+                        <label><RequiredLabel>{t('registration.confirmPassword', 'Confirm Password')}</RequiredLabel>
                             <input type="password" required {...bind('confirmPassword')} />
                         </label>
                     </div>
@@ -296,3 +341,4 @@ function Register(){
 }
 
 export default Register;
+

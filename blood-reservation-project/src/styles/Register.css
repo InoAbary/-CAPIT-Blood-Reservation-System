@@ -100,20 +100,22 @@
     min-width: 0; /* prevent grid blowout */
 }
 
-.register-page .register-required-note {
-    margin: 0;
-    color: var(--reg-color-text-muted);
-    font-size: 0.8rem;
-}
-
-.register-page .register-required-note span,
-.register-page .register-required-mark {
+.register-page .register-required {
     color: var(--reg-color-danger);
     font-weight: 700;
 }
 
-.register-page .register-required-mark {
-    margin-left: 0.18rem;
+.register-page .register-required-note {
+    color: var(--reg-color-text-muted);
+    font-size: 0.8125rem;
+    text-align: left;
+}
+
+.register-page .register-choice {
+    display: grid;
+    align-content: start;
+    gap: 0.625rem;
+    min-width: 0;
 }
 
 /* ---------- Inputs ---------- */
@@ -152,37 +154,9 @@
     cursor: not-allowed;
 }
 
-.register-page .register-form input:invalid:not(:placeholder-shown) {
+.register-page .register-form input:user-invalid,
+.register-page .register-form select:user-invalid {
     border-color: var(--reg-color-danger);
-}
-
-.register-page .register-select-wrap {
-    position: relative;
-    display: block;
-    width: 100%;
-}
-
-.register-page .register-select-wrap select {
-    appearance: none;
-    padding-right: 2.25rem;
-    cursor: pointer;
-}
-
-.register-page .register-select-wrap::after {
-    position: absolute;
-    top: 50%;
-    right: 0.9rem;
-    width: 0.48rem;
-    height: 0.48rem;
-    border-right: 2px solid #687386;
-    border-bottom: 2px solid #687386;
-    content: "";
-    pointer-events: none;
-    transform: translateY(-70%) rotate(45deg);
-}
-
-.register-page .register-select-wrap:focus-within::after {
-    border-color: var(--reg-color-primary);
 }
 
 /* ---------- Password pair — keep side by side, span 2 cols ---------- */
@@ -305,3 +279,4 @@
         width: 100%;
     }
 }
+
