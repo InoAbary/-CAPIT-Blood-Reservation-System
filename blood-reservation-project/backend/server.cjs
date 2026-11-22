@@ -80,6 +80,7 @@ app.use('/api/donor', require('./routes/donorProfileRoutes.cjs'));
 app.use('/api/staff-recovery', staffPasswordRecoveryRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/donations', requireStaff, donationRoutes);
+app.use('/api/blood-drives', require('./routes/bloodDriveRoutes.cjs'));
 
 app.use('/api/sidebar', require('./routes/sidebarRoutes.cjs'));
 

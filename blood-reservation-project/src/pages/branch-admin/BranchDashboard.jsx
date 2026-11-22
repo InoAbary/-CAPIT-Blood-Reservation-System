@@ -4,6 +4,7 @@ import BloodBankMap from '../BloodBankMap';
 import BloodRequestForm from '../Bloodrequestform';
 import BranchRequests from './BranchRequests';
 import BranchUtilization from './BranchUtilization';
+import ManageBloodDrives from '../../components/ManageBloodDrives';
 import StaffAppointments from '../StaffAppointments';
 import HospitalRequests from './HospitalRequests';
 import StaffDonations from '../StaffDonations';
@@ -422,6 +423,7 @@ function BranchDashboard() {
         </section>
       )}
 
+      {activeTab === 'blood-drives' && <ManageBloodDrives />}
       {activeTab === 'utilization' && <BranchUtilization />}
 
       {activeTab === 'blood-locator' && (

@@ -4,6 +4,7 @@ import BloodBankMap from './BloodBankMap';
 import BloodRequestForm from './Bloodrequestform';
 import BranchRequests from './branch-admin/BranchRequests';
 import BranchUtilization from './branch-admin/BranchUtilization';
+import ManageBloodDrives from '../components/ManageBloodDrives';
 import HospitalRequests from './branch-admin/HospitalRequests';
 import Inventory from './Inventory';
 import StaffAppointments from './StaffAppointments'
@@ -54,6 +55,7 @@ const STAFF_TABS = [
   { key: 'inventory', label: 'Inventory', icon: ArchiveBoxIcon, facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'appointments', label: 'Appointments', icon: CalendarDaysIcon, facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'donations', label: 'Log Donations', icon: HeartIcon, facilityTypes: ['bsf', 'prc_chapter'] },
+  { key: 'blood-drives', label: 'Blood Drives', icon: MapPinIcon, facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'profile', label: 'Profile Settings', icon: Cog6ToothIcon },
 ];
 
@@ -281,6 +283,8 @@ function StaffDashboard() {
               </div>
             </section>
           )}
+
+          {activeTab === 'blood-drives' && <ManageBloodDrives />}
 
           {activeTab === 'utilization' && (
             <BranchUtilization basePath="/api/staff" facilityType={facilityType} />
