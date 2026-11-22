@@ -1,0 +1,62 @@
+.drive-hub, .drive-public { color-scheme: light; }
+.drive-public { min-height: 100svh; padding-block: 2rem; background: #edf5ff; color: #102440; }
+.drive-page { width: min(100% - 2rem, 72rem); margin-inline: auto; text-align: left; }
+.drive-management { text-align: left; }
+.drive-heading, .drive-controls, .drive-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.25rem; }
+.drive-heading { justify-content: space-between; margin-bottom: 1rem; }
+.drive-heading :is(h1,h2), .drive-card h3 { margin: 0 0 .35rem; color: #102440; }
+.drive-heading p, .drive-card p, .drive-card dl { margin: .3rem 0; color: #475569; }
+.drive-controls, .drive-form { padding: 1rem; margin-bottom: 1rem; border: 1px solid #d7e5f5; border-radius: 12px; background: #f8fafc; }
+.drive-controls label { display: inline-flex; gap: .5rem; align-items: center; }
+.drive-controls input[type="number"] { width: 5rem; }
+.drive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr)); gap: 1rem; margin-top: 1rem; }
+.drive-card { padding: 1rem; min-width: 0; border: 1px solid #d7e5f5; border-top: 4px solid #8f1d2c; border-radius: 12px; background: #fff; overflow-wrap: anywhere; }
+.drive-card h3 { margin-top: .5rem; font-weight: 700; }
+.drive-card dl div { display: grid; grid-template-columns: 3.25rem 1fr; gap: .5rem; }
+.drive-card dd { margin: 0; }
+.drive-status { display: inline-block; padding: .15rem .55rem; border-radius: 999px; background: #edf5ff; color: #063b82; font-weight: 650; }
+.drive-status[data-status="Ongoing"] { background: #ecfdf3; color: #067647; }
+.drive-status[data-status="Past"] { background: #f1f5f9; color: #475569; }
+.drive-description { white-space: pre-wrap; }
+.drive-actions { margin-top: .5rem; }
+.drive-actions svg { width: 1rem; height: 1rem; }
+:is(.drive-actions, .drive-controls) :is(a, button) { display: inline-flex; align-items: center; gap: .35rem; padding: .4rem .65rem; border: 1px solid #f0cdd4; border-radius: 8px; color: #8f1d2c; background: #fff5f6; font-weight: 650; cursor: pointer; }
+:is(.drive-actions, .drive-controls) button:disabled { opacity: .5; cursor: default; }
+:is(.drive-controls, .drive-form) :is(select,input:not([type="checkbox"]),textarea) { padding: .4rem .55rem; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #102440; }
+.drive-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .75rem; }
+.drive-form label { display: grid; gap: .25rem; min-width: 0; }
+.drive-form :is(h3, p, .drive-actions, .drive-location), .drive-form label:has(textarea) { grid-column: 1 / -1; }
+.drive-location .maplibregl-map { margin-top: .5rem; border: 1px solid #d7e5f5; border-radius: 8px; }
+.drive-details { position: fixed; inset: 0; margin: auto; width: min(34rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); padding: 1.25rem; border: 1px solid #d7e5f5; border-radius: 14px; background: #fff; color: #102440; text-align: left; overflow: auto; }
+.drive-details::backdrop { background: #10244080; }
+.drive-details dl div { grid-template-columns: minmax(4.5rem, auto) 1fr; padding: .4rem 0; border-bottom: 1px solid #edf2f7; }
+.drive-details dt { font-weight: 650; }
+.drive-details .drive-description { margin: .75rem 0; }
+.drive-close { padding: .35rem .65rem; border: 1px solid #d7e5f5; border-radius: 7px; background: #edf5ff; color: #063b82; cursor: pointer; }
+.drive-grid { grid-template-columns: repeat(auto-fill, minmax(0, 19rem)); }
+.drive-card { box-sizing: border-box; height: 16rem; display: flex; flex-direction: column; }
+.drive-card > .drive-status { align-self: flex-start; }
+.drive-card > .drive-actions { margin-top: auto; }
+.drive-place-search label { display: grid; gap: .35rem; }
+.drive-place-search input { min-width: 0; width: 100%; padding: .5rem .65rem; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #102440; }
+.drive-place-results { display: grid; gap: .35rem; margin: .75rem 0; padding: 0; list-style: none; }
+.drive-place-results button { display: grid; gap: .2rem; width: 100%; padding: .55rem .65rem; text-align: left; border: 1px solid #d7e5f5; border-radius: 8px; background: #fff; color: #102440; cursor: pointer; }
+.drive-place-results button:hover, .drive-place-results button:focus-visible { background: #edf5ff; }
+.drive-place-results :is(span, small) { color: #475569; overflow-wrap: anywhere; }
+.drive-card-identity { display: grid; gap: .35rem; flex-shrink: 0; min-width: 0; margin-block: .5rem; }
+.drive-card-identity h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 0; line-height: 1.25; }
+.drive-card-identity p { margin: 0; font-size: .875rem; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drive-card > dl, .drive-card > .drive-actions { flex-shrink: 0; }
+.drive-feedback { margin: 1rem 0; padding: .65rem .85rem; border: 1px solid #d7e5f5; border-radius: 8px; background: #f8fafc; color: #475569; }
+.drive-feedback[role="alert"] { border-color: #f0cdd4; color: #8f1d2c; }
+.drive-landing { padding: clamp(.85rem, 3vw, 1.75rem); text-align: left; color-scheme: light; background: #fff; }
+.drive-landing .ui-page-header--card { border-color: #f0cdd4; border-left-color: #8f1d2c; }
+.drive-landing .ui-page-header h1 { color: #8f1d2c; }
+.landing-tabs-bar-header .landing-drives-tab { color: #fff; background: #8f1d2c; border-radius: 8px 8px 0 0; }
+.landing-tabs-bar-header .landing-drives-tab:is(:hover, .active) { background: #761625; }
+@media (max-width: 360px) { .drive-card { height: auto; min-height: 16rem; } }
+.drive-form > h3,
+.drive-form > .drive-host {
+  color: #000;
+}
+

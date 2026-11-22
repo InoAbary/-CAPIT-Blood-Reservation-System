@@ -13,6 +13,7 @@ const TABS = [
   { id: 'login',    label: 'Login',           icon: null,                  path: '/Login' },
   { id: 'register', label: 'Register',        icon: null,                  path: '/Register' },
   { id: 'map',      label: 'Blood Bank Map',  icon: <PinIcon size={14} /> },
+  { id: 'drives',   label: 'Blood Drives',     icon: <PinIcon size={14} />, path: '/blood-drives' },
   { id: 'about',    label: 'About Us',        icon: null },
 ];
 
@@ -71,12 +72,13 @@ export default function LandingPage() {
   const loginMatch = useMatch('/Login');
   const registerMatch = useMatch('/Register');
   const panelRef = useRef(null);
+  const drivesMatch = useMatch('/blood-drives');
   const authTab = loginMatch ? 'login' : registerMatch ? 'register' : null;
-  const activeTab = authTab || infoTab;
+  const activeTab = authTab || (drivesMatch ? 'drives' : infoTab);
 
   function selectInfoTab(tab) {
     setInfoTab(tab);
-    if (authTab) navigate('/');
+    if (authTab || drivesMatch) navigate('/');
   }
 
   return (
@@ -90,7 +92,7 @@ export default function LandingPage() {
                 type="button"
                 role="tab"
                 aria-selected={activeTab === tab.id}
-                className={`landing-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
+                className={`landing-tab-btn ${tab.id === 'drives' ? 'landing-drives-tab' : ''} ${activeTab === tab.id ? 'active' : ''}`}
                 onClick={() => {
                   if (tab.path) {
                     if (activeTab !== tab.id) navigate(tab.path);
@@ -162,7 +164,7 @@ export default function LandingPage() {
       <section className="landing-tabs-section">
         <div className="landing-tabs-container">
           <div className={authTab ? 'landing-tab-panel landing-tab-panel-auth' : 'landing-tab-panel'} ref={panelRef}>
-            {authTab && <Outlet />}
+            {(authTab || drivesMatch) && <Outlet />}
             {activeTab === 'map' && (
               <div className="landing-panel landing-panel-map">
                 <BloodBankMap />
