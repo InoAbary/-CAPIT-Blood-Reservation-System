@@ -91,7 +91,7 @@ const viewRequests = view === 'ongoing' ? ongoing : history;
 const statusOptions = [...new Set(
   viewRequests
     .map(item => item.requestStatus)
-    .filter(status => status && !['Pending', 'Approved', 'Rejected'].includes(status))
+    .filter(status => ['Allocated', 'Partially Fulfilled', 'Fulfilled', 'Cancelled'].includes(status))
 )].sort();
 const activeStatus = statusOptions.includes(statusFilter) ? statusFilter : 'all';
 

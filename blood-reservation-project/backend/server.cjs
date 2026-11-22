@@ -81,6 +81,8 @@ app.use('/api/staff-recovery', staffPasswordRecoveryRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/donations', requireStaff, donationRoutes);
 
+app.use('/api/sidebar', require('./routes/sidebarRoutes.cjs'));
+
 app.use('/api', (req, res) => {
     res.status(404).json({ error: 'API endpoint not found.' });
 });

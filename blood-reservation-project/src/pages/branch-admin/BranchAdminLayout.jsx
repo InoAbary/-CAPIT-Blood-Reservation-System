@@ -3,7 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/AdminDashboard.css';
 import '../../styles/BranchAdmin.css';
-import { usePendingCounts } from '../../hooks/usePendingCounts';
+import { useSidebarBadges } from '../../hooks/useSidebarBadges';
 
 const workspaceTabs = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
@@ -22,9 +22,10 @@ export default function BranchAdminLayout() {
   const isHybridFacility = assignedFacilityType === 'hospital_bsf';
   const facilityType = isHybridFacility ? workspace : assignedFacilityType;
 
-  const pendingCounts = usePendingCounts(
+  const pendingCounts = useSidebarBadges(
     staff?._id || staff?.id,
-    ['bsf', 'prc_chapter'].includes(facilityType)
+    facilityType === 'hospital' ? 'hospital' : ['bsf', 'prc_chapter'].includes(facilityType) ? 'bsf' : null,
+    activeTab
   );
   const utilizationTab = facilityType === 'hospital'
     ? { id: 'utilization', label: 'Utilization form', icon: '🩸' }
@@ -124,7 +125,7 @@ export default function BranchAdminLayout() {
               {pendingCounts?.[tab.id] > 0 && (
                 <span
                   className="workspace-pending-badge"
-                  aria-label={`${pendingCounts[tab.id]} pending`}
+                  aria-label={`${pendingCounts[tab.id]} items needing attention`}
                 >
                   {pendingCounts[tab.id] > 99 ? '99+' : pendingCounts[tab.id]}
                 </span>
