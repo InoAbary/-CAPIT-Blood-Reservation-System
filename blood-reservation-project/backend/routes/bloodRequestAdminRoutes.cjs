@@ -7,7 +7,7 @@ const Facility = require('../../db/models/facilities.cjs');
 const requireRequestStaff = require('../middleware/requireRequestAdmin.cjs');
 const router = express.Router();
 const REVIEW_ROLES = new Set(['staff', 'supervisor', 'admin']);
-const RECEIVER_TYPES = ['bsf', 'prc_chapter', 'bsf_hospital'];
+const RECEIVER_TYPES = ['bsf', 'prc_chapter', 'hospital_bsf'];
 const COMPONENTS = ['Packed RBC', 'Platelets', 'Plasma', 'Whole Blood'];
 const BLOOD_TYPES = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 const PATIENT_FIELDS = ['firstName', 'lastName', 'middleName', 'age', 'sex', 'wardRoom', 'diagnosis',
@@ -25,7 +25,7 @@ async function assignedFacility(req) {
 }
 
 function canSubmitRequest(staff, facility) {
-    if (facility?.facilityType === 'bsf_hospital') {
+    if (facility?.facilityType === 'hospital_bsf') {
         return ['staff', 'hospital', 'branch-admin'].includes(staff.role);
     }
 
@@ -50,7 +50,7 @@ async function requireReviewer(req, res, next) {
     try {
         const facility = await assignedFacility(req);
         const role = req.requestStaff.role;
-        const canReview = facility?.facilityType === 'bsf_hospital'
+        const canReview = facility?.facilityType === 'hospital_bsf'
             ? ['staff', 'hospital', 'branch-admin'].includes(role)
             : REVIEW_ROLES.has(role);
 

@@ -19,7 +19,7 @@ export default function BranchAdminLayout() {
   const [assignedFacilityType, setFacilityType] = useState(null);
   const [workspace, setWorkspace] = useState('hospital');
 
-  const isHybridFacility = assignedFacilityType === 'bsf_hospital';
+  const isHybridFacility = ['bsf_hospital', 'hospital_bsf'].includes(assignedFacilityType);
   const facilityType = isHybridFacility ? workspace : assignedFacilityType;
 
   const pendingCounts = usePendingCounts(

@@ -93,7 +93,7 @@ function StaffDashboard() {
   const facility = dashboard?.facility;
   const summary = dashboard?.summary;
   const assignedFacilityType = facility?.facilityType;
-  const isHybridFacility = assignedFacilityType === 'bsf_hospital';
+  const isHybridFacility = ['bsf_hospital', 'hospital_bsf'].includes(assignedFacilityType);
   const defaultWorkspace = staff?.role === 'hospital' ? 'hospital' : 'bsf';
 
   const facilityType = isHybridFacility
