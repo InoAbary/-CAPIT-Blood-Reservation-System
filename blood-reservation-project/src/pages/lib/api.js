@@ -12,8 +12,9 @@ export async function api(url, options = {}) {
   const contentType = response.headers.get('content-type') || '';
 
   if (!contentType.includes('application/json') && !contentType.includes('+json')) {
+    const responseInfo = `HTTP ${response.status}${contentType ? ` (${contentType})` : ' (no content type)'} `;
     const err = new Error(
-      `The API at ${url} did not return JSON. The backend may not be running or this endpoint may be unavailable.`,
+      `The API at ${url} did not return JSON (${responseInfo.trim()}). The backend may not be running or this endpoint may be unavailable.`,
     );
     err.status = response.status;
     throw err;

@@ -11,10 +11,15 @@ const facilitySchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    category: {
+        type: String,
+        enum: ['PRC', 'Hospital BSF'],
+        default: 'Hospital BSF'
+    },
     facilityType: {
         type: String,
         required: true,
-        enum: ['bsf', 'hospital', 'prc_chapter', 'hospital_bsf']
+        enum: ['prc_chapter', 'bsf', 'hospital', 'hospital_bsf']
     },
     typeLabel: {
         type: String,
@@ -31,6 +36,18 @@ const facilitySchema = new mongoose.Schema({
     hours: {       
         type: String,
         required: true
+    },
+    operatingHours: {
+        type: new mongoose.Schema({
+            daysOpen: [{ type: String, enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] }],
+            is24Hours: { type: Boolean, default: false },
+            opensAt: { type: String, default: '' },
+            closesAt: { type: String, default: '' },
+            source: { type: String, enum: ['placeholder', 'branch_admin'], default: 'placeholder' },
+            placeholderText: { type: String, default: '' },
+            updatedAt: { type: Date },
+        }, { _id: false }),
+        default: undefined,
     },
     lat: {       
         type: Number,

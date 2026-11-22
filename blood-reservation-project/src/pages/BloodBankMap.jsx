@@ -3,6 +3,9 @@ import MapLibreView from '../components/MapLibreView';
 import FacilityCard from '../components/FacilityCard';
 import ChangeLocationModal from '../components/ChangeLocationModal';
 import AdminAddBranchModal from '../components/AdminAddBranchModal';
+import AdminEditFacilityModal from '../components/AdminEditFacilityModal';
+import { formatFacilityHours } from '../utils/facilityOpenStatus';
+import { readLocatorPreferences, saveLocatorPreferences } from '../utils/locatorPreferences';
 import {
   SearchIcon,
   PinIcon,
@@ -43,6 +46,7 @@ const isSameFacility = (first, second) => Boolean(
     (first.facilityID && second.facilityID && first.facilityID === second.facilityID)
   )
 );
+const hasBloodInventory = (facility) => facility.facilityType !== 'hospital';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -101,24 +105,30 @@ function buildMatrix(facilityAvailability) {
 
 function formatFacility(f) {
   const mongoId = f._id?.$oid || f._id || null
+  const isPrc = f.facilityType === 'prc_chapter' || (
+    !f.facilityType && (f.category === 'PRC' || f.facilityName?.toLowerCase().includes('red cross'))
+  );
+  const category = isPrc ? 'PRC' : 'Hospital BSF';
+  const typeLabels = {
+    prc_chapter: 'Philippine Red Cross',
+    bsf: 'Blood Service Facility',
+    hospital: 'Hospital',
+    hospital_bsf: 'Hospital Blood Service Facility',
+  };
   return {
     id: f.facilityID || f._id?.$oid || 'fac-' + Math.random(),
     mongoId,
     facilityID: f.facilityID,
+    facilityType: f.facilityType,
     name: f.facilityName || f.name,
     facilityName: f.facilityName || f.name,
-    category:
-      f.category ||
-      (f.facilityName?.includes('Red Cross') ? 'PRC' : 'Hospital BSF'),
-    typeLabel:
-      (f.typeLabel ||
-        (f.category === 'PRC'
-          ? 'Philippine Red Cross'
-          : 'Blood Service Facility')).replace(/^Hospital\s+/i, ''),
-    priority: f.category === 'PRC' ? 1 : 2,
+    category,
+    typeLabel: f.typeLabel || typeLabels[f.facilityType] || (category === 'PRC' ? 'Philippine Red Cross' : 'Blood Service Facility'),
+    priority: f.facilityType === 'prc_chapter' || category === 'PRC' ? 1 : ['bsf', 'hospital_bsf'].includes(f.facilityType) ? 2 : 3,
     address: f.address,
     phone: f.contactNumber || f.contactNuber || f.phone || '(02) 8527-2195',
-    hours: f.hours || '8:00 AM - 5:00 PM',
+    hours: formatFacilityHours(f.operatingHours, f.hours || 'Hours to be confirmed'),
+    operatingHours: f.operatingHours || null,
     lat: Number(f.lat) || 14.5995,
     lon: Number(f.lon) || 120.9842,
     quote: f.quote || 'Integrated blood facility connected to central repository.',
@@ -132,18 +142,30 @@ function formatFacility(f) {
 // ---------------------------------------------------------------------------
 
 export default function BloodBankMap() {
+  const [savedPreferences] = useState(readLocatorPreferences);
   const [facilitiesList, setFacilitiesList] = useState([]);
+  const [facilitiesLoaded, setFacilitiesLoaded] = useState(false);
+  const [locatorNow, setLocatorNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setLocatorNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Filter state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedBloodTypes, setSelectedBloodTypes] = useState(['B-']);
-  const [selectedComponent, setSelectedComponent] = useState('Packed RBC');
-  const [selectedRadiusKm, setSelectedRadiusKm] = useState(null);
-  const [hierarchyMode, setHierarchyMode] = useState('prc-first');
-  const [hideUnavailable, setHideUnavailable] = useState(false);
-  const [viewMode, setViewMode] = useState('split');
+  const [searchQuery, setSearchQuery] = useState(savedPreferences.searchQuery || '');
+  const [selectedBloodTypes, setSelectedBloodTypes] = useState(
+    Array.isArray(savedPreferences.selectedBloodTypes) && savedPreferences.selectedBloodTypes.length
+      ? savedPreferences.selectedBloodTypes
+      : ['B-']
+  );
+  const [selectedComponent, setSelectedComponent] = useState(savedPreferences.selectedComponent || 'Packed RBC');
+  const [selectedRadiusKm, setSelectedRadiusKm] = useState(Number.isFinite(savedPreferences.selectedRadiusKm) ? savedPreferences.selectedRadiusKm : null);
+  const [hierarchyMode, setHierarchyMode] = useState(['prc-first', 'prc-only', 'bsf-only', 'hospital-bsf-only', 'hospital-only'].includes(savedPreferences.hierarchyMode) ? savedPreferences.hierarchyMode : 'prc-first');
+  const [hideUnavailable, setHideUnavailable] = useState(Boolean(savedPreferences.hideUnavailable));
+  const [viewMode, setViewMode] = useState(['split', 'map-only', 'list-only'].includes(savedPreferences.viewMode) ? savedPreferences.viewMode : 'split');
 
-  const [currentOrigin, setCurrentOrigin] = useState({
+  const [currentOrigin, setCurrentOrigin] = useState(savedPreferences.currentOrigin && Number.isFinite(savedPreferences.currentOrigin.lat) && Number.isFinite(savedPreferences.currentOrigin.lon) ? savedPreferences.currentOrigin : {
     name: 'City of Manila',
     lat: 14.5888,
     lon: 120.9744,
@@ -158,6 +180,7 @@ export default function BloodBankMap() {
 
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showAdminModal, setShowAdminModal] = useState(false);
+  const [editingFacility, setEditingFacility] = useState(null);
 
   const [bloodTypes] = useState(BLOOD_TYPE_OPTIONS);
   const [components] = useState(COMPONENT_OPTIONS);
@@ -184,7 +207,7 @@ export default function BloodBankMap() {
       setPinnedFacility(null);
     }
 
-    if (facility && source === 'map' && viewMode === 'map-only') setViewMode('split');
+    if (source === 'map' && viewMode === 'map-only') setViewMode('split');
   };
 
   const { donor, staff, logoutDonor } = useAuth();
@@ -195,6 +218,7 @@ export default function BloodBankMap() {
   );
 
   const isAdmin = !donor && staff?.role === 'admin';
+  const isSystemAdmin = !donor && ['admin', 'System Admin'].includes(staff?.role);
 
   // -------------------------------------------------------------------------
   // Availability cache (single slot, TTL, in-flight dedupe)
@@ -272,6 +296,10 @@ export default function BloodBankMap() {
         const formatted = await loadFacilities();
         if (cancelled || !formatted) return;
         setFacilitiesList(formatted);
+        const findSavedFacility = (id) => id && formatted.find((facility) => facility.mongoId === id || facility.facilityID === id);
+        setSelectedFacility(findSavedFacility(savedPreferences.selectedFacilityId) || null);
+        setPinnedFacility(findSavedFacility(savedPreferences.pinnedFacilityId) || null);
+        setFacilitiesLoaded(true);
       } catch (err) {
         console.warn('API facilities fetch failed:', err);
       }
@@ -280,7 +308,23 @@ export default function BloodBankMap() {
     return () => {
       cancelled = true;
     };
-  }, [loadFacilities]);
+  }, [loadFacilities, savedPreferences]);
+
+  useEffect(() => {
+    if (!facilitiesLoaded) return;
+    saveLocatorPreferences({
+      searchQuery,
+      selectedBloodTypes,
+      selectedComponent,
+      selectedRadiusKm,
+      hierarchyMode,
+      hideUnavailable,
+      viewMode,
+      currentOrigin,
+      selectedFacilityId: selectedFacility?.mongoId || null,
+      pinnedFacilityId: pinnedFacility?.mongoId || null,
+    });
+  }, [facilitiesLoaded, searchQuery, selectedBloodTypes, selectedComponent, selectedRadiusKm, hierarchyMode, hideUnavailable, viewMode, currentOrigin, selectedFacility, pinnedFacility]);
 
   // -------------------------------------------------------------------------
   // Derived values
@@ -297,7 +341,10 @@ export default function BloodBankMap() {
     statusesFor(facility, componentKey).some((status) => status === 'Available' || status === 'Low');
 
   const facilitiesWithDistance = useMemo(() => {
-    return facilitiesList.map((fac) => {
+    const visibleFacilities = isSystemAdmin
+      ? facilitiesList
+      : facilitiesList.filter((fac) => fac.facilityType !== 'hospital');
+    return visibleFacilities.map((fac) => {
       const dist = computeHaversineKm(
         currentOrigin.lat,
         currentOrigin.lon,
@@ -307,15 +354,27 @@ export default function BloodBankMap() {
       const approxMins = Math.max(5, Math.round(dist * 2.8));
       return { ...fac, distanceKm: dist, travelTime: `~${approxMins} mins` };
     });
-  }, [facilitiesList, currentOrigin]);
+  }, [facilitiesList, currentOrigin, isSystemAdmin]);
+
+  useEffect(() => {
+    if (!isSystemAdmin && selectedFacility?.facilityType === 'hospital') {
+      setSelectedFacility(null);
+      setPinnedFacility(null);
+    }
+  }, [isSystemAdmin, selectedFacility]);
+
+  useEffect(() => {
+    if (!isSystemAdmin && hierarchyMode === 'hospital-only') setHierarchyMode('prc-first');
+  }, [isSystemAdmin, hierarchyMode]);
 
   const filteredFacilities = useMemo(() => {
     return facilitiesWithDistance.filter((fac) => {
       if (selectedRadiusKm !== null && fac.distanceKm > selectedRadiusKm) return false;
 
       if (hierarchyMode === 'prc-only' && fac.category !== 'PRC') return false;
-      if (hierarchyMode === 'bsf-only' && fac.category !== 'Hospital BSF')
-        return false;
+      if (hierarchyMode === 'bsf-only' && fac.facilityType !== 'bsf' && !( !fac.facilityType && fac.category === 'Hospital BSF')) return false;
+      if (hierarchyMode === 'hospital-bsf-only' && fac.facilityType !== 'hospital_bsf') return false;
+      if (hierarchyMode === 'hospital-only' && isSystemAdmin && fac.facilityType !== 'hospital') return false;
 
       if (searchQuery && searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
@@ -339,6 +398,7 @@ export default function BloodBankMap() {
     facilitiesWithDistance,
     selectedRadiusKm,
     hierarchyMode,
+    isSystemAdmin,
     searchQuery,
     hideUnavailable,
     selectedBloodTypes,
@@ -356,8 +416,14 @@ export default function BloodBankMap() {
   const bsfFacilities = useMemo(
     () =>
       filteredFacilities
-        .filter((f) => f.category === 'Hospital BSF')
+        .filter((f) => f.category === 'Hospital BSF' && hasBloodInventory(f))
         .sort((a, b) => a.distanceKm - b.distanceKm),
+    [filteredFacilities]
+  );
+  const hospitalFacilities = useMemo(
+    () => filteredFacilities
+      .filter((f) => f.facilityType === 'hospital')
+      .sort((a, b) => a.distanceKm - b.distanceKm),
     [filteredFacilities]
   );
 
@@ -368,6 +434,9 @@ export default function BloodBankMap() {
     !isSameFacility(facility, selectedFacilityInResults)
   );
   const remainingBsfFacilities = bsfFacilities.filter((facility) =>
+    !isSameFacility(facility, selectedFacilityInResults)
+  );
+  const remainingHospitalFacilities = hospitalFacilities.filter((facility) =>
     !isSameFacility(facility, selectedFacilityInResults)
   );
 
@@ -387,14 +456,19 @@ export default function BloodBankMap() {
     return () => window.cancelAnimationFrame(frame);
   }, [selectedFacilityInResults?.id, viewMode]);
 
-  const totalPrcFacilities = facilitiesList.filter((facility) => facility.category === 'PRC').length;
-  const totalBsfFacilities = facilitiesList.filter((facility) => facility.category === 'Hospital BSF').length;
+  const totalPrcFacilities = facilitiesList.filter((facility) => facility.facilityType === 'prc_chapter' || facility.category === 'PRC').length;
+  const totalBsfFacilities = facilitiesList.filter((facility) => facility.facilityType === 'bsf' || (!facility.facilityType && facility.category === 'Hospital BSF')).length;
+  const totalHospitalBsfFacilities = facilitiesList.filter((facility) => facility.facilityType === 'hospital_bsf').length;
+  const totalHospitalFacilities = facilitiesList.filter((facility) => facility.facilityType === 'hospital').length;
+  const totalBloodServiceFacilities = totalBsfFacilities + totalHospitalBsfFacilities;
+  const totalVisibleFacilityCount = totalPrcFacilities + totalBloodServiceFacilities + (isSystemAdmin ? totalHospitalFacilities : 0);
+  const shownBsfCount = filteredFacilities.filter((facility) => facility.facilityType === 'bsf' || (!facility.facilityType && facility.category === 'Hospital BSF')).length;
+  const shownHospitalBsfCount = filteredFacilities.filter((facility) => facility.facilityType === 'hospital_bsf').length;
 
-  const availableCount = useMemo(() => {
-    return facilitiesWithDistance.filter((f) => {
-      return hasStockForSelection(f, compKey);
-    }).length;
-  }, [facilitiesWithDistance, selectedBloodTypes, compKey]);
+  const availableCount = useMemo(() => facilitiesList.filter((facility) =>
+    (facility.facilityType === 'bsf' || facility.facilityType === 'hospital_bsf' || (!facility.facilityType && facility.category === 'Hospital BSF'))
+      && hasStockForSelection(facility, compKey)
+  ).length, [facilitiesList, selectedBloodTypes, compKey]);
 
   const toggleBloodType = (bloodType) => {
     setSelectedBloodTypes((current) => {
@@ -488,12 +562,29 @@ export default function BloodBankMap() {
       travelTime: '~15 mins',
     };
 
-    // New branch has no inventory yet; a re-sync will pull its units in.
-    setFacilitiesList((prev) => [formatted, ...prev]);
+    const existing = facilitiesList.find((item) => item.mongoId === String(newBranch._id));
+    if (existing) formatted.matrix = existing.matrix;
+    setFacilitiesList((prev) => existing
+      ? prev.map((item) => item.mongoId === String(newBranch._id) ? formatted : item)
+      : [formatted, ...prev]);
     setSelectedFacility(formatted);
-    setSyncToast(
-      `Branch "${formatted.name}" added to MongoDB & active on locator.`
-    );
+    setSyncToast(existing ? `Facility "${formatted.name}" updated.` : `Branch "${formatted.name}" added and active on locator.`);
+    setTimeout(() => setSyncToast(null), 4500);
+  };
+
+  const handleDeleteFacility = async (facility) => {
+    if (!window.confirm(`Remove ${facility.name} from the active facility directory?`)) return;
+    try {
+      const response = await fetch(`/api/facilities/${facility.mongoId}`, { method: 'DELETE' });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Could not remove facility.');
+      setFacilitiesList((items) => items.filter((item) => item.mongoId !== facility.mongoId));
+      setSelectedFacility((selected) => selected?.mongoId === facility.mongoId ? null : selected);
+      setPinnedFacility((pinned) => pinned?.mongoId === facility.mongoId ? null : pinned);
+      setSyncToast(`Facility "${facility.name}" removed from the active directory.`);
+    } catch (error) {
+      setSyncToast(error.message || 'Could not remove facility.');
+    }
     setTimeout(() => setSyncToast(null), 4500);
   };
 
@@ -511,10 +602,9 @@ export default function BloodBankMap() {
           <h1 className="hero-title">Sandugo Blood Locator</h1>
 
           <p className="hero-description">
-            Locate verified blood stocks across nearest Philippine Red Cross
-            chapters and Blood Service Facilities. Reflects simplified,
-            privacy-preserving availability statuses (Available, Low,
-            Unavailable) with locational routing and proximity mapping.
+            Find nearby PRC chapters, BSFs, and Hospital BSFs. System Admins can
+            also view hospitals. Blood availability is shown for facilities that
+            provide blood services.
           </p>
 
           {isAdmin && (
@@ -533,6 +623,15 @@ export default function BloodBankMap() {
 
           <div className="hero-metrics-grid">
             <div className="metric-card">
+              <span className="metric-label">Facilities Shown</span>
+              <div className="metric-value-row">
+                <span className="metric-value facility-total">
+                  {filteredFacilities.length} of {totalVisibleFacilityCount} Facilities
+                </span>
+              </div>
+            </div>
+
+            <div className="metric-card">
               <span className="metric-label">PRC Chapters Shown</span>
               <div className="metric-value-row">
                 <span className="metric-value prc-red">
@@ -542,13 +641,31 @@ export default function BloodBankMap() {
             </div>
 
             <div className="metric-card">
-              <span className="metric-label">BSFs Shown</span>
+              <span className="metric-label">Hospital BSFs Shown</span>
               <div className="metric-value-row">
-                <span className="metric-value bsf-blue">
-                  {bsfFacilities.length} of {totalBsfFacilities} Facilities
+                <span className="metric-value hospital-bsf-yellow">
+                  {shownHospitalBsfCount} of {totalHospitalBsfFacilities} Facilities
                 </span>
               </div>
             </div>
+
+            <div className="metric-card">
+              <span className="metric-label">BSFs Shown</span>
+              <div className="metric-value-row">
+                <span className="metric-value bsf-green">
+                  {shownBsfCount} of {totalBsfFacilities} Facilities
+                </span>
+              </div>
+            </div>
+
+            {isSystemAdmin && <div className="metric-card">
+              <span className="metric-label">Hospitals Shown</span>
+              <div className="metric-value-row">
+                <span className="metric-value hospital-blue">
+                  {hospitalFacilities.length} of {totalHospitalFacilities} Hospitals
+                </span>
+              </div>
+            </div>}
 
             <div className="metric-card">
               <span className="metric-label">Available for {targetBTLabel}</span>
@@ -558,7 +675,7 @@ export default function BloodBankMap() {
                     availableCount > 0 ? 'avail-green' : 'avail-red'
                   }`}
                 >
-                  {availableCount} of {facilitiesList.length} BSFs
+                  {availableCount} of {totalBloodServiceFacilities} Blood Service Facilities
                 </span>
               </div>
             </div>
@@ -677,7 +794,7 @@ export default function BloodBankMap() {
                 }`}
                 onClick={() => setHierarchyMode('prc-first')}
               >
-                1. PRC First, then Participating BSFs (Recommended)
+                PRC → BSF / Hospital BSF
               </button>
               <button
                 type="button"
@@ -686,7 +803,7 @@ export default function BloodBankMap() {
                 }`}
                 onClick={() => setHierarchyMode('prc-only')}
               >
-                PRC Chapters Only
+                PRC Chapters
               </button>
               <button
                 type="button"
@@ -695,8 +812,24 @@ export default function BloodBankMap() {
                 }`}
                 onClick={() => setHierarchyMode('bsf-only')}
               >
-                BSFs Only
+                BSFs
               </button>
+              <button
+                type="button"
+                className={`hierarchy-btn ${
+                  hierarchyMode === 'hospital-bsf-only' ? 'active' : ''
+                }`}
+                onClick={() => setHierarchyMode('hospital-bsf-only')}
+              >
+                Hospital BSFs
+              </button>
+              {isSystemAdmin && <button
+                type="button"
+                className={`hierarchy-btn ${hierarchyMode === 'hospital-only' ? 'active' : ''}`}
+                onClick={() => setHierarchyMode('hospital-only')}
+              >
+                Hospitals
+              </button>}
             </div>
 
             <label className="checkbox-available-only">
@@ -758,6 +891,8 @@ export default function BloodBankMap() {
             <div className="map-column">
               <MapLibreView
                 facilities={filteredFacilities}
+                showHospitalLegend={isSystemAdmin}
+                currentTime={locatorNow}
                 selectedFacility={selectedFacility}
                 onSelectFacility={handleSelectFacility}
                 selectedBloodTypes={selectedBloodTypes}
@@ -781,14 +916,17 @@ export default function BloodBankMap() {
                   <FacilityCard
                     key={`selected-${selectedFacilityInResults.facilityID || selectedFacilityInResults.id}`}
                     facility={selectedFacilityInResults}
+                    currentTime={locatorNow}
                     selectedBloodTypes={selectedBloodTypes}
                     selectedComponent={selectedComponent}
                     isSelected
+                    isAdmin={isAdmin}
+                    onEdit={setEditingFacility}
+                    onDelete={handleDeleteFacility}
                     onSelect={handleSelectFacility}
                   />
                 </>
               )}
-
               {remainingPrcFacilities.length > 0 && (
                 <>
                   <div className="priority-section-header">
@@ -808,10 +946,14 @@ export default function BloodBankMap() {
                     <FacilityCard
                       key={fac.facilityID || fac.id}
                       facility={fac}
+                      currentTime={locatorNow}
                       selectedBloodTypes={selectedBloodTypes}
                       selectedComponent={selectedComponent}
                       isSelected={isSameFacility(selectedFacility, fac)}
                       onSelect={handleSelectFacility}
+                      isAdmin={isAdmin}
+                      onEdit={setEditingFacility}
+                      onDelete={handleDeleteFacility}
                     />
                   ))}
                 </>
@@ -826,8 +968,7 @@ export default function BloodBankMap() {
                     <h4 className="priority-title">
                       <span className="priority-dot bsf"></span>
                       <span>
-                        PRIORITY 2: PARTICIPATING BLOOD SERVICE
-                        FACILITIES (BSFs)
+                        PRIORITY 2: BSFs & HOSPITAL BSFs
                       </span>
                       <span className="priority-count">
                         ({remainingBsfFacilities.length} facilities)
@@ -840,10 +981,47 @@ export default function BloodBankMap() {
                     <FacilityCard
                       key={fac.facilityID || fac.id}
                       facility={fac}
+                      currentTime={locatorNow}
                       selectedBloodTypes={selectedBloodTypes}
                       selectedComponent={selectedComponent}
                       isSelected={isSameFacility(selectedFacility, fac)}
                       onSelect={handleSelectFacility}
+                      isAdmin={isAdmin}
+                      onEdit={setEditingFacility}
+                      onDelete={handleDeleteFacility}
+                    />
+                  ))}
+                </>
+              )}
+
+              {remainingHospitalFacilities.length > 0 && (
+                <>
+                  <div
+                    className="priority-section-header"
+                    style={{ marginTop: '1.5rem' }}
+                  >
+                    <h4 className="priority-title">
+                      <span className="priority-dot bsf"></span>
+                      <span>HOSPITALS</span>
+                      <span className="priority-count">
+                        ({remainingHospitalFacilities.length} facilities)
+                      </span>
+                    </h4>
+                    <span className="priority-sub">Facility details · no blood inventory</span>
+                  </div>
+
+                  {remainingHospitalFacilities.map((fac) => (
+                    <FacilityCard
+                      key={fac.facilityID || fac.id}
+                      facility={fac}
+                      currentTime={locatorNow}
+                      selectedBloodTypes={selectedBloodTypes}
+                      selectedComponent={selectedComponent}
+                      isSelected={isSameFacility(selectedFacility, fac)}
+                      onSelect={handleSelectFacility}
+                      isAdmin={isAdmin}
+                      onEdit={setEditingFacility}
+                      onDelete={handleDeleteFacility}
                     />
                   ))}
                 </>
@@ -873,7 +1051,7 @@ export default function BloodBankMap() {
                     No Blood Service Facilities Found
                   </h4>
                   <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>
-                    Try expanding your search radius.
+                    Try expanding your search radius or searching for a different facility.
                   </p>
                 </div>
               )}
@@ -899,6 +1077,8 @@ export default function BloodBankMap() {
           onClose={() => setShowLocationModal(false)}
         />
       )}
+
+      {isAdmin && editingFacility && <AdminEditFacilityModal facility={editingFacility} onClose={() => setEditingFacility(null)} onSaved={handleBranchAdded} />}
 
       {/* Admin Add Branch Modal */}
       {isAdmin && showAdminModal && (

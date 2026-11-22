@@ -183,35 +183,17 @@ function App() {
       </ProtectedRoute>
     }
     >
+      <Route index element={<OverviewPage />} />
       <Route path="donors" element={<DonorDirectoryPage />} />
       <Route path="donors/add" element={<AddDonorPage />} />
       <Route path="donors/:id/edit" element={<EditDonorPage />} />
+      <Route path="user-directory" element={<UserDirectoryPage />} />
+      <Route path="provision-supervisor" element={<ProvisionSupervisorPage />} />
+      <Route path="audit-log" element={<AuditLogPage />} />
+      <Route path="map" element={<BloodBankMap />} />
+      <Route path="change-owner" element={<AdminChangeOwner />} />
     </Route>
     <Route path="/DonationCooldown" element={<DonationCooldown />} />
-    <Route
-    path="/admin/user-directory"
-    element={
-      <ProtectedRoute require="staff"  allowedRoles={['admin']}>
-      <UserDirectoryPage />
-      </ProtectedRoute>
-    }
-    />
-    <Route
-    path="/admin/provision-supervisor"
-    element={
-      <ProtectedRoute require="staff"  allowedRoles={['admin']}>
-      <ProvisionSupervisorPage />
-      </ProtectedRoute>
-    }
-    />
-    <Route
-    path="/admin/change-owner"
-    element={
-      <ProtectedRoute require="staff"  allowedRoles={['admin']}>
-      <AdminChangeOwner />
-      </ProtectedRoute>
-    }
-    />
 
     {/* ---- Fallback ---- */}
     <Route path="*" element={<Navigate to="/" replace />} />

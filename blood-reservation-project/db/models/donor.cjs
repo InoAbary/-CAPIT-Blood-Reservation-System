@@ -69,6 +69,7 @@ const donorSchema = new mongoose.Schema({
     otherID:        { type: String, trim: true },
 
     password:       { type: String }, //donors without a password do not have an active account
+    isActive:       { type: Boolean, default: true },
     role:           { type: String, enum: ['donor', 'recipient'], default: "donor"},
     passwordReset: {
         type: passwordResetSchema,

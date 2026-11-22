@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Staff = require('../../db/models/staff.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const requireStaff = require('./requireStaff.cjs');
+const { BLOOD_SERVICE_FACILITY_TYPES } = require('../utils/facilityTypes.cjs');
 const deny = (res, status, message) => res.status(status).json({ success: false, message });
 
 async function loadAccess(req, res, next) {
@@ -9,13 +10,7 @@ async function loadAccess(req, res, next) {
         if (!mongoose.isObjectIdOrHexString(req.user?.id)) return deny(res, 401, 'Invalid staff session.');
         const account = await Staff.findById(req.user.id).select('_id role isActive facilityID').lean();
         if (!account || account.isActive !== true) return deny(res, 401, 'Staff account is unavailable.');
-        const isAdmin = account.role === 'admin';
-        const isBranchAccount = ['staff', 'branch-admin', 'hospital'].includes(account.role);
-
-        if (!isAdmin && !isBranchAccount) {
-            return deny(res, 403, 'Inventory access is limited to branch staff and administrators.');
-        }
-
+        if (!['staff', 'branch-admin', 'admin'].includes(account.role)) return deny(res, 403, 'Inventory access is limited to branch staff and administrators.');
         let facility = null;
 
         if (isBranchAccount) {
@@ -37,8 +32,8 @@ async function loadAccess(req, res, next) {
                 return deny(res, 403, 'Your account needs an active blood service facility assignment.');
             }
         }
-
-        req.inventoryAccess = { account, facility, canEdit: isBranchAccount };
+        // Role and facility are taken from the CURRENT account, not client input.
+        req.inventoryAccess = { account, facility, canEdit: ['staff', 'branch-admin'].includes(account.role) };
         req.user = { ...req.user, id: String(account._id), role: account.role };
         res.set('Cache-Control', 'no-store');
         return next();

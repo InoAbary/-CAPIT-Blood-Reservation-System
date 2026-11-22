@@ -36,7 +36,7 @@ const inventorySchema = new mongoose.Schema({
     updatedBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Staff',
-        default: null
+        required: true
     }
 
     

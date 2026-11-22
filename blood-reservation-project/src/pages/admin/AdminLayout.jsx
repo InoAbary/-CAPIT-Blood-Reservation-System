@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import '../../styles/AdminDashboard.css';
-import { api, getErrorMessage } from '../lib/api.js';
+import { api } from '../lib/api.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 
 const navigation = [
@@ -10,17 +10,19 @@ const navigation = [
   { to: '/admin/user-directory', label: 'User Directory', icon: '👥' },
   { to: '/admin/provision-supervisor', label: 'Create Account', icon: '🛡️' },
   { to: '/admin/audit-log', label: 'Audit Log', icon: '🕒', end: true },
-  { to: '/BloodBankMap', label: 'Blood Bank Map', icon: '🕒', end: true },
-  { to: '/admin/change-owner', label: 'Change Ownership', icon: '🕒', end: true },
+  { to: '/admin/map', label: 'Blood Bank Map', icon: '🗺️', end: true },
+  { to: '/admin/change-owner', label: 'System Admins', icon: '🔐', end: true },
 ];
 
 const pageDetails = {
-  '/admin': ['Admin Dashboard', 'Manage supervisor accounts and review the CAPIT network at a glance.'],
+  '/admin': ['Admin Dashboard', 'Manage administrator accounts and review system activity at a glance.'],
   '/admin/donors': ['Donor Directory', 'View and search all donor records.'],
   '/admin/donors/add': ['Add Donor', 'Create a donor record for someone who has not registered.'],
   '/admin/user-directory': ['User Directory', 'View registered accounts, roles, and institution assignments.'],
   '/admin/provision-supervisor': ['Create Account', 'Create administrator and supervisor accounts.'],
   '/admin/audit-log': ['Audit Log', 'Review recorded administrative actions.'],
+  '/admin/map': ['Blood Bank Map', 'View and manage blood service facilities.'],
+  '/admin/change-owner': ['System Admins & Ownership', 'Create System Admin accounts, assign access, or transfer Primary admin ownership.'],
 };
 
 function AdminLayout() {
@@ -28,40 +30,32 @@ function AdminLayout() {
   const navigate = useNavigate();
   const { staff, loading: authLoading, logoutStaff } = useAuth();
   const [title, description] = pageDetails[pathname] || (/^\/admin\/donors\/[^/]+\/edit$/.test(pathname) ? ['Edit Donor', 'Update donor profile and contact information.'] : pageDetails['/admin']);
-  const [backendStatus, setBackendStatus] = React.useState('Checking backend…');
   const currentUser = staff;
-  const [displayUser, setDisplayUser] = React.useState(currentUser);
+  const [adminProfile, setAdminProfile] = React.useState(null);
+  const adminId = currentUser?.id || currentUser?._id;
 
   React.useEffect(() => {
-    setDisplayUser(currentUser);
-    const syncAdminUser = () => {
-      try {
-        const latest = JSON.parse(localStorage.getItem('adminUser') || 'null');
-        if (latest) setDisplayUser((existing) => ({ ...existing, ...latest }));
-      } catch { /* keep the current user label */ }
+    if (!adminId) return undefined;
+    let active = true;
+    api('/api/admin/current')
+      .then((result) => { if (active) setAdminProfile(result.admin); })
+      .catch(() => { if (active) setAdminProfile(currentUser); });
+    return () => { active = false; };
+  }, [adminId]);
+
+  React.useEffect(() => {
+    const syncAdminPermissions = (event) => {
+      if (event.detail) setAdminProfile((current) => ({ ...(current || {}), ...event.detail }));
     };
-    window.addEventListener('admin-user-updated', syncAdminUser);
-    return () => window.removeEventListener('admin-user-updated', syncAdminUser);
-  }, [currentUser]);
+    window.addEventListener('admin-user-updated', syncAdminPermissions);
+    return () => window.removeEventListener('admin-user-updated', syncAdminPermissions);
+  }, []);
 
-  React.useEffect(() => {
-    if (authLoading) return undefined;
-    if (!currentUser) {
-      localStorage.removeItem('adminUser');
-      navigate('/Login/Staff', { replace: true });
-      return;
-    }
-    if (!['System Admin', 'admin'].includes(currentUser.role)) {
-      navigate('/StaffDashboard', { replace: true });
-      return;
-    }
-    let isCurrent = true;
-    
-  }, [authLoading, currentUser, navigate]);
+  const displayUser = adminProfile || currentUser;
+  const displayName = [displayUser?.firstName, displayUser?.lastName].filter(Boolean).join(' ') || displayUser?.name || displayUser?.email || 'Administrator';
 
   const handleLogout = async () => {
     await logoutStaff();
-    localStorage.removeItem('adminUser');
     navigate('/Login/Staff', { replace: true });
   };
 
@@ -108,21 +102,18 @@ function AdminLayout() {
             <div className="breadcrumb">WORKSPACE / ADMIN</div>
             <h1 className="page-title">{title}</h1>
             <p className="page-description">{description}</p>
-            <p role="status" style={{ fontSize: '12px', color: '#64748b', margin: '8px 0 0' }}>
-              {backendStatus}
-            </p>
           </div>
           <div className="user-profile">
-            <div className="avatar">{(displayUser?.name || 'A').slice(0, 1).toUpperCase()}</div>
+            <div className="avatar">{displayName.slice(0, 1).toUpperCase()}</div>
             <div className="user-info">
-              <span className="user-name">{displayUser?.name}</span>
+              <span className="user-name">{displayName}</span>
               <span className="user-role">
                 {displayUser?.isPrimaryAdmin ? 'Primary admin' : displayUser?.canManageAccounts ? 'Account manager' : displayUser?.role}
               </span>
             </div>
           </div>
         </header>
-        <Outlet />
+        <Outlet context={{ admin: displayUser }} />
       </main>
     </div>
   );

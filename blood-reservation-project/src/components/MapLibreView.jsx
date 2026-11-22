@@ -3,6 +3,8 @@ import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { ClockIcon, PhoneIcon, RefreshIcon, PinIcon } from './Icons';
 import '../styles/PRCRadarMap.css';
+import { getFacilityOpenStatus } from '../utils/facilityOpenStatus';
+import { readLocatorPreferences, saveLocatorPreferences } from '../utils/locatorPreferences';
 
 export default function MapLibreView({
   facilities,
@@ -11,16 +13,20 @@ export default function MapLibreView({
   selectedBloodTypes,
   selectedComponent,
   currentOrigin = { name: 'City of Manila', lat: 14.5888, lon: 120.9744 },
+  currentTime,
+  showHospitalLegend = false,
 }) {
   const mapRef = useRef(null);
 
-  const [viewState, setViewState] = useState({
-    longitude: currentOrigin.lon || 120.9744,
-    latitude: currentOrigin.lat || 14.5888,
-    zoom: 11.8,
+  const [viewState, setViewState] = useState(() => {
+    const saved = readLocatorPreferences().mapView;
+    return saved && Number.isFinite(saved.longitude) && Number.isFinite(saved.latitude) && Number.isFinite(saved.zoom)
+      ? saved
+      : { longitude: currentOrigin.lon || 120.9744, latitude: currentOrigin.lat || 14.5888, zoom: 11.8 };
   });
 
-  const [mapTheme, setMapTheme] = useState('dark'); // 'dark' (Dark Matter) or 'light' (Positron)
+  const [mapTheme, setMapTheme] = useState(() => readLocatorPreferences().mapTheme === 'light' ? 'light' : 'dark'); // 'dark' (Dark Matter) or 'light' (Positron)
+  const lastOriginRef = useRef(currentOrigin);
 
   const mapStyleUrl =
     mapTheme === 'dark'
@@ -29,7 +35,10 @@ export default function MapLibreView({
 
   // Fly to new origin when currentOrigin changes
   useEffect(() => {
-    if (currentOrigin?.lat && currentOrigin?.lon) {
+    const hasOriginChanged = currentOrigin?.lat !== lastOriginRef.current?.lat
+      || currentOrigin?.lon !== lastOriginRef.current?.lon;
+    if (hasOriginChanged && currentOrigin?.lat && currentOrigin?.lon) {
+      lastOriginRef.current = currentOrigin;
       setViewState((prev) => ({
         ...prev,
         longitude: currentOrigin.lon,
@@ -69,6 +78,23 @@ export default function MapLibreView({
     return 'Unavailable';
   };
 
+  const FacilityMarkerIcon = ({ type }) => {
+    if (type === 'prc_chapter') {
+      return <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="currentColor" d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" /></svg>;
+    }
+    if (type === 'bsf') {
+      return <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="currentColor" d="M12 2C10.3 5.3 5 10.9 5 15.6a7 7 0 0 0 14 0C19 10.9 13.7 5.3 12 2Z" /><path fill="#15803d" d="M10.5 10h3v2.5H16v3h-2.5V18h-3v-2.5H8v-3h2.5z" /></svg>;
+    }
+    const backgroundColor = type === 'hospital_bsf' ? '#eab308' : '#2563eb';
+    return (
+      <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+        <path fill="currentColor" d="M3 22V7h5V3h8v4h5v15h-7v-5h-4v5H3Zm7-15h2V5h2v2h2v2h-2v2h-2V9h-2V7Z" />
+        <path fill={backgroundColor} d="M5.5 11h2v2h-2zm0 4h2v2h-2zm11-4h2v2h-2zm0 4h2v2h-2z" />
+        {type === 'hospital_bsf' && <path d="M19 1.2s-3 3.3-3 5.4a3 3 0 0 0 6 0c0-2.1-3-5.4-3-5.4Z" fill="#b91c1c" stroke="#fff" strokeWidth=".8" />}
+      </svg>
+    );
+  };
+
   const resetView = () => {
     const targetLon = currentOrigin.lon || 120.9744;
     const targetLat = currentOrigin.lat || 14.5888;
@@ -77,6 +103,7 @@ export default function MapLibreView({
       latitude: targetLat,
       zoom: 11.8,
     });
+    saveLocatorPreferences({ mapView: { longitude: targetLon, latitude: targetLat, zoom: 11.8 } });
     mapRef.current?.flyTo?.({
       center: [targetLon, targetLat],
       zoom: 11.8,
@@ -90,7 +117,7 @@ export default function MapLibreView({
       <div className="radar-header-overlay">
         <span className="radar-center-dot"></span>
         <span>
-          <strong>Center: {currentOrigin.name}</strong> · Showing {facilities.length} BSFs
+          <strong>Center: {currentOrigin.name}</strong> · Showing {facilities.length} facilities
         </span>
       </div>
 
@@ -100,7 +127,11 @@ export default function MapLibreView({
           className="radar-control-btn"
           style={{ width: 'auto', padding: '0 10px', fontSize: '0.75rem', fontWeight: 600 }}
           title="Toggle Dark / Light Map Style"
-          onClick={() => setMapTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+          onClick={() => setMapTheme((current) => {
+            const next = current === 'dark' ? 'light' : 'dark';
+            saveLocatorPreferences({ mapTheme: next });
+            return next;
+          })}
         >
           {mapTheme === 'dark' ? 'Light Map' : 'Dark Map'}
         </button>
@@ -113,7 +144,10 @@ export default function MapLibreView({
       <Map
         ref={mapRef}
         {...viewState}
-        onMove={(evt) => setViewState(evt.viewState)}
+        onMove={(evt) => {
+          setViewState(evt.viewState);
+          saveLocatorPreferences({ mapView: { longitude: evt.viewState.longitude, latitude: evt.viewState.latitude, zoom: evt.viewState.zoom } });
+        }}
         style={{ width: '100%', height: '100%' }}
         mapStyle={mapStyleUrl}
         attributionControl={false}
@@ -161,8 +195,17 @@ export default function MapLibreView({
         {/* Facility Markers */}
         {facilities.map((fac) => {
           const isSelected = selectedFacility?.id === fac.id;
+          const hasBloodInventory = fac.facilityType !== 'hospital';
           const status = getFacilityStatus(fac);
-          const isPRC = fac.category === 'PRC';
+          const type = fac.facilityType || (fac.category === 'PRC' ? 'prc_chapter' : 'hospital_bsf');
+          const facilityColors = {
+            prc_chapter: '#dc2626',
+            hospital: '#2563eb',
+            hospital_bsf: '#eab308',
+            bsf: '#16a34a',
+          };
+          const typeColor = facilityColors[type] || facilityColors.hospital_bsf;
+          const markerTextColor = type === 'hospital_bsf' ? '#1f2937' : '#ffffff';
 
           let statusBg = '#22c55e'; // Available (Green)
           if (status === 'Low') statusBg = '#f59e0b'; // Low (Amber)
@@ -195,33 +238,37 @@ export default function MapLibreView({
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 4,
-                    padding: '3px 7px 3px 5px',
-                    borderRadius: 9999,
-                    background: isPRC ? '#dc2626' : '#0284c7',
-                    color: '#ffffff',
+                    gap: 3,
+                    width: 30,
+                    height: 30,
+                    justifyContent: 'center',
+                    borderRadius: 10,
+                    background: typeColor,
+                    color: markerTextColor,
                     border: isSelected ? '2px solid #38bdf8' : '1.5px solid #ffffff',
                     boxShadow: isSelected
                       ? '0 0 14px rgba(56, 189, 248, 0.8)'
                       : '0 2px 8px rgba(0,0,0,0.4)',
-                    fontSize: '11px',
-                    fontWeight: 800,
+                    position: 'relative',
                   }}
                 >
-                  {isPRC ? (
-                    <span style={{ fontSize: '12px', lineHeight: 1 }}>✚</span>
-                  ) : (
-                    <span style={{ fontSize: '11px', lineHeight: 1 }}>H</span>
-                  )}
-                  <span
+                  <FacilityMarkerIcon type={type} />
+                  {hasBloodInventory && <span
+                    title={`Availability: ${status}`}
+                    aria-label={`Availability: ${status}`}
                     style={{
-                      width: 7,
-                      height: 7,
+                      position: 'absolute',
+                      top: -5,
+                      right: -5,
+                      width: 12,
+                      height: 12,
                       borderRadius: '50%',
                       background: statusBg,
-                      border: '1px solid #ffffff',
+                      border: '2px solid #ffffff',
+                      boxShadow: '0 1px 5px rgba(0,0,0,0.75)',
+                      zIndex: 2,
                     }}
-                  />
+                  />}
                 </div>
 
                 {/* Name Label */}
@@ -255,45 +302,44 @@ export default function MapLibreView({
         <div className="radar-bottom-card">
           <div className="bottom-card-top">
             <span className="bottom-card-tag">
-              {selectedFacility.category === 'PRC' ? 'PRC Priority Chapter' : 'Participating BSF'} ·{' '}
+              {selectedFacility.typeLabel || (selectedFacility.category === 'PRC' ? 'PRC Chapter' : 'Blood Service Facility')} ·{' '}
               {selectedFacility.distanceKm} km · {selectedFacility.travelTime}
             </span>
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-                padding: '2px 8px',
-                borderRadius: 9999,
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                background:
-                  getFacilityStatus(selectedFacility) === 'Available'
-                    ? 'rgba(34, 197, 94, 0.2)'
-                    : getFacilityStatus(selectedFacility) === 'Low'
-                    ? 'rgba(245, 158, 11, 0.2)'
-                    : 'rgba(239, 68, 68, 0.2)',
-                color:
-                  getFacilityStatus(selectedFacility) === 'Available'
-                    ? '#4ade80'
-                    : getFacilityStatus(selectedFacility) === 'Low'
-                    ? '#fbbf24'
-                    : '#f87171',
-                border: `1px solid ${
-                  getFacilityStatus(selectedFacility) === 'Available'
-                    ? '#22c55e'
-                    : getFacilityStatus(selectedFacility) === 'Low'
-                    ? '#f59e0b'
-                    : '#ef4444'
-                }`,
-              }}
-            >
-              {getFacilityStatus(selectedFacility) === 'Available'
-                ? '✓ Available'
-                : getFacilityStatus(selectedFacility) === 'Low'
-                ? '▲ Low'
-                : '✕ Unavailable'}
-            </span>
+            <div className="bottom-card-statuses">
+              <span className={`facility-open-status ${getFacilityOpenStatus(selectedFacility.operatingHours, currentTime).state}`}>
+                {getFacilityOpenStatus(selectedFacility.operatingHours, currentTime).label}
+              </span>
+              {selectedFacility.facilityType !== 'hospital' && <span
+                className="bottom-card-inventory-status"
+                style={{
+                  background:
+                    getFacilityStatus(selectedFacility) === 'Available'
+                      ? 'rgba(34, 197, 94, 0.14)'
+                      : getFacilityStatus(selectedFacility) === 'Low'
+                      ? 'rgba(245, 158, 11, 0.14)'
+                      : 'rgba(127, 29, 29, 0.24)',
+                  color:
+                    getFacilityStatus(selectedFacility) === 'Available'
+                      ? '#86efac'
+                      : getFacilityStatus(selectedFacility) === 'Low'
+                      ? '#fcd34d'
+                      : '#fca5a5',
+                  border: `1px solid ${
+                    getFacilityStatus(selectedFacility) === 'Available'
+                      ? 'rgba(74, 222, 128, 0.55)'
+                      : getFacilityStatus(selectedFacility) === 'Low'
+                      ? 'rgba(251, 191, 36, 0.55)'
+                      : 'rgba(248, 113, 113, 0.55)'
+                  }`,
+                }}
+              >
+                {getFacilityStatus(selectedFacility) === 'Available'
+                  ? '✓ Available'
+                  : getFacilityStatus(selectedFacility) === 'Low'
+                  ? '▲ Low'
+                  : '✕ Unavailable'}
+              </span>}
+            </div>
           </div>
 
           <h4 className="bottom-card-title">{selectedFacility.name}</h4>
@@ -325,7 +371,13 @@ export default function MapLibreView({
       )}
 
       {/* Map Legend */}
-      <div className="radar-legend">
+      <div className="radar-facility-legend" aria-label="Facility types">
+        <div className="legend-item"><span className="legend-dot facility-prc"></span><span>PRC</span></div>
+        {showHospitalLegend && <div className="legend-item"><span className="legend-dot facility-hospital"></span><span>Hospital</span></div>}
+        <div className="legend-item"><span className="legend-dot facility-hospital-bsf"></span><span>Hospital BSF</span></div>
+        <div className="legend-item"><span className="legend-dot facility-bsf"></span><span>BSF</span></div>
+      </div>
+      <div className="radar-legend" aria-label="Blood availability status">
         <div className="legend-item">
           <span className="legend-dot available"></span>
           <span>Available</span>

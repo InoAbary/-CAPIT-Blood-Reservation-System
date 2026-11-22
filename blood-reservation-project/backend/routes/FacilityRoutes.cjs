@@ -3,9 +3,11 @@ const mongoose = require('mongoose');
 const Facility = require('./../../db/models/facilities.cjs');   // adjust paths to your model files
 const Inventory = require('../../db/models/inventories.cjs');
 const syncInventory = require('../services/syncInventory.cjs');
-const { getStockBalances, stockKey } = require('../services/requestStock.cjs');
 const Counter = require('../../db/models/counters.cjs');
 const BloodUnits = require('../../db//models/bloodUnits.cjs')
+const { getStockBalances, stockKey } = require('../services/requestStock.cjs');
+const Staff = require('../../db/models/staff.cjs');
+const { recordAdminAudit } = require('../services/adminAudit.cjs');
 
 const router = express.Router();
 const { authenticateInventory, authorizeFacility } = require('../middleware/inventoryAccess.cjs');
@@ -30,6 +32,8 @@ const nextFacilityID = async () => {
 
     return `F${String(counter.sequence).padStart(8, '0')}`;
 }
+
+const exactTextPattern = (value) => new RegExp(`^${String(value || '').trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')}$`, 'i');
 
 // Dedicated inventory picker; keep the public map directory unchanged.
 router.get('/inventory-access', ...authenticateInventory, async (req, res) => {
@@ -73,21 +77,29 @@ router.get('/:id', validateId, async (req, res) => {
 
 router.get('/:id/inventory', ...authenticateInventory, authorizeFacility, validateId, async (req, res) => {
     try {
-        const facility = req.inventoryFacility;
-        const readOnly = !req.inventoryAccess.canEdit;
-        const snapshot = await syncInventory(facility, { readOnly });
+        const facility = await Facility.findById(req.params.id).lean();
+        if (!facility) {
+            return res.status(404).json({ message: 'Facility not found.' });
+        }
 
-        const [items, balances] = await Promise.all([
-            readOnly ? snapshot : Inventory.find({ facilityID: facility._id })
-                .select('bloodType component availQuantity availStatus lastUpdated')
-                .lean(),
-            getStockBalances([facility._id]),
-        ]);
+        if (!req.inventoryAccess.canEdit) {
+            const items = await syncInventory(facility, { readOnly: true });
+            const balances = await getStockBalances([facility._id]);
+            const emptyBalance = { inStockUnits: 0, allocatedUnits: 0, availableUnits: 0 };
+            return res.json(items.map((item) => ({
+                ...item,
+                ...(balances.get(stockKey(facility._id, item.bloodType, item.component)) ?? emptyBalance),
+            })));
+        }
+        await syncInventory(facility);
 
-        
+        const items = await Inventory.find({ facilityID: facility._id })
+        .select('bloodType component availQuantity availStatus lastUpdated')
+        .lean();
 
+        const balances = await getStockBalances([facility._id]);
         const emptyBalance = { inStockUnits: 0, allocatedUnits: 0, availableUnits: 0 };
-        return res.json(items.map(item => ({
+        return res.json(items.map((item) => ({
             ...item,
             ...(balances.get(stockKey(facility._id, item.bloodType, item.component)) ?? emptyBalance),
         })));
@@ -147,11 +159,32 @@ router.post('/availability/batch', async (req, res) => {
 
 router.post('/', requireStaff, requireRole("admin"), async(req,res) => {
     try {
-        const {facilityName, category, facilityType, typeLabel, address, contactNumber, hours, lat, lon} = req.body
+        const {facilityName, category, facilityType, typeLabel, address, contactNumber, hours, operatingHours, lat, lon} = req.body
         if (!facilityName || !address) {
             return res.status(400).json({
                 success: false,
                 message: 'facilityName and address are required.',
+            });
+        }
+
+        // Reject repeat submissions by name, or by the same address and map location.
+        const latitude = Number(lat);
+        const longitude = Number(lon);
+        const duplicateMatch = [{ facilityName: exactTextPattern(facilityName) }];
+        if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+            const coordinateTolerance = 0.00015;
+            duplicateMatch.push({
+                address: exactTextPattern(address),
+                lat: { $gte: latitude - coordinateTolerance, $lte: latitude + coordinateTolerance },
+                lon: { $gte: longitude - coordinateTolerance, $lte: longitude + coordinateTolerance },
+            });
+        }
+        const duplicate = await Facility.findOne({ $or: duplicateMatch }).select('facilityID facilityName').lean();
+        if (duplicate) {
+            return res.status(409).json({
+                success: false,
+                duplicate: true,
+                message: `${duplicate.facilityName} is already in the facility directory${duplicate.facilityID ? ` (${duplicate.facilityID})` : ''}.`,
             });
         }
 
@@ -168,10 +201,33 @@ router.post('/', requireStaff, requireRole("admin"), async(req,res) => {
             address,
             contactNumber,
             hours,
+            operatingHours: {
+                daysOpen: [],
+                is24Hours: false,
+                opensAt: '',
+                closesAt: '',
+                source: 'placeholder',
+                placeholderText: String(operatingHours?.placeholderText || '').slice(0, 1200),
+            },
             lat,
             lon,
             isActive: true,
         });
+
+        try {
+            const actor = await Staff.findById(req.user.id).select('firstName lastName email').lean();
+            await recordAdminAudit({
+                action: 'Facility Created',
+                actor: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : 'System Admin',
+                actorRole: 'System Admin',
+                targetName: facility.facilityName,
+                targetRole: 'Facility',
+                branch: facility.facilityName,
+                details: `A ${facility.typeLabel || facility.facilityType} facility was added to the network.`,
+            });
+        } catch (auditError) {
+            console.error('Could not record facility creation audit event:', auditError.message);
+        }
 
         res.status(201).json({ success: true, facility });
     } catch (err) {
@@ -181,6 +237,40 @@ router.post('/', requireStaff, requireRole("admin"), async(req,res) => {
             message: 'Failed to create facility.',
             error: err.message,
         });
+    }
+});
+
+router.put('/:id', requireStaff, requireRole('admin'), validateId, async (req, res) => {
+    try {
+        const allowed = ['facilityName', 'category', 'facilityType', 'typeLabel', 'address', 'contactNumber', 'hours', 'lat', 'lon'];
+        const updates = Object.fromEntries(allowed.filter((key) => req.body?.[key] !== undefined).map((key) => [key, req.body[key]]));
+        if (!updates.facilityName?.trim() || !updates.address?.trim()) {
+            return res.status(400).json({ success: false, message: 'Facility name and address are required.' });
+        }
+        const facility = await Facility.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+        if (!facility) return res.status(404).json({ success: false, message: 'Facility not found.' });
+        try {
+            const actor = await Staff.findById(req.user.id).select('firstName lastName email').lean();
+            await recordAdminAudit({ action: 'Facility Updated', actor: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : 'System Admin', actorRole: 'System Admin', targetName: facility.facilityName, targetRole: 'Facility', branch: facility.facilityName, details: `Facility ${facility.facilityID} details were updated.` });
+        } catch (auditError) { console.error('Could not record facility update audit event:', auditError.message); }
+        return res.json({ success: true, facility });
+    } catch (err) {
+        return res.status(400).json({ success: false, message: err.message || 'Failed to update facility.' });
+    }
+});
+
+// Archive instead of physically deleting so historical appointments and inventory retain their facility reference.
+router.delete('/:id', requireStaff, requireRole('admin'), validateId, async (req, res) => {
+    try {
+        const facility = await Facility.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
+        if (!facility) return res.status(404).json({ success: false, message: 'Facility not found.' });
+        try {
+            const actor = await Staff.findById(req.user.id).select('firstName lastName email').lean();
+            await recordAdminAudit({ action: 'Facility Archived', actor: actor ? `${actor.firstName || ''} ${actor.lastName || ''}`.trim() || actor.email : 'System Admin', actorRole: 'System Admin', targetName: facility.facilityName, targetRole: 'Facility', branch: facility.facilityName, details: `Facility ${facility.facilityID} was removed from the active directory.` });
+        } catch (auditError) { console.error('Could not record facility archive audit event:', auditError.message); }
+        return res.json({ success: true, message: 'Facility removed from the active directory.' });
+    } catch (err) {
+        return res.status(500).json({ success: false, message: 'Failed to remove facility.' });
     }
 });
 

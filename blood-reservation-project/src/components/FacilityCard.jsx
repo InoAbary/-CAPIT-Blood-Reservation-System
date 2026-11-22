@@ -1,5 +1,6 @@
 import React from 'react';
 import { ClockIcon, PhoneIcon, PinIcon } from './Icons';
+import { getFacilityOpenStatus } from '../utils/facilityOpenStatus';
 
 export default function FacilityCard({
   facility,
@@ -7,6 +8,10 @@ export default function FacilityCard({
   selectedComponent,
   isSelected,
   onSelect,
+  isAdmin = false,
+  onEdit,
+  onDelete,
+  currentTime,
 }) {
   const selectedTypes = Array.isArray(selectedBloodTypes) ? selectedBloodTypes : [selectedBloodTypes];
   const selectedTypesLabel = selectedTypes.length <= 2
@@ -44,8 +49,16 @@ export default function FacilityCard({
 
   const mainStatus = aggregateStatus(currentCompKey);
 
+  const hasBloodInventory = facility.facilityType !== 'hospital';
+  const facilityTypeColor = {
+    prc_chapter: '#dc2626',
+    hospital: '#2563eb',
+    hospital_bsf: '#a16207',
+    bsf: '#15803d',
+  }[facility.facilityType] || (facility.category === 'PRC' ? '#dc2626' : '#2563eb');
   const isAvailable = mainStatus === 'Available';
   const isLow = mainStatus === 'Low';
+  const openStatus = getFacilityOpenStatus(facility.operatingHours, currentTime);
   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${facility.lat},${facility.lon}`)}`;
 
   return (
@@ -57,23 +70,28 @@ export default function FacilityCard({
       {/* Top Header Row */}
       <div className="card-top-row">
         <span className="card-category-meta">
-          <strong style={{ color: facility.category === 'PRC' ? '#dc2626' : '#0284c7' }}>
+          <strong style={{ color: facilityTypeColor }}>
             {facility.typeLabel}
           </strong>{' '}
           · {facility.distanceKm} km away · {facility.travelTime}
         </span>
 
         <div className="card-status-badges">
-          <span className="card-bt-badge" title={`Selected blood types: ${selectedTypes.join(', ')}`}>
-            {selectedTypesLabel} · {selectedComponent?.includes('Packed') ? 'Packed' : selectedComponent?.split(' ')[0]}
+          <span className={`facility-open-status ${openStatus.state}`} aria-label={`Facility status: ${openStatus.label}`}>
+            {openStatus.label}
           </span>
-          <span
-            className={`card-status-pill ${
-              isAvailable ? 'available' : isLow ? 'low' : 'unavailable'
-            }`}
-          >
-            {isAvailable ? '✓ Available' : isLow ? '▲ Low' : '✕ Out of Stock'}
-          </span>
+          {hasBloodInventory && <>
+            <span className="card-bt-badge" title={`Selected blood types: ${selectedTypes.join(', ')}`}>
+              {selectedTypesLabel} · {selectedComponent?.includes('Packed') ? 'Packed' : selectedComponent?.split(' ')[0]}
+            </span>
+            <span
+              className={`card-status-pill ${
+                isAvailable ? 'available' : isLow ? 'low' : 'unavailable'
+              }`}
+            >
+              {isAvailable ? '✓ Available' : isLow ? '▲ Low' : '✕ Out of Stock'}
+            </span>
+          </>}
         </div>
       </div>
 
@@ -81,18 +99,16 @@ export default function FacilityCard({
       <h3 className="card-facility-name">{facility.name}</h3>
       <p className="card-facility-address">{facility.address}</p>
 
-      {/* Stock Summary Header */}
-      <div className="card-stock-header">
-        <span className="stock-header-title">
-          Stock Summary for <strong>{selectedTypesLabel}</strong>:
-        </span>
-        <span className="stock-sync-time">
-          BBIS Synced: {facility.bbisSyncedMins} minutes ago
-        </span>
-      </div>
+      {hasBloodInventory && <>
+        {/* Stock Summary Header */}
+        <div className="card-stock-header">
+          <span className="stock-header-title">
+            Stock Summary for <strong>{selectedTypesLabel}</strong>:
+          </span>
+        </div>
 
-      {/* 5 Component Summary Chips */}
-      <div className="card-components-grid">
+        {/* Component Summary Chips */}
+        <div className="card-components-grid">
         <div className="comp-chip">
           <span className="comp-name">PRBC</span>
           <span className={`comp-status ${componentSummary('prbc').status.toLowerCase()}`} title={componentSummary('prbc').title}>
@@ -117,13 +133,8 @@ export default function FacilityCard({
             {componentSummary('plasma').label}
           </span>
         </div>
-        <div className="comp-chip">
-          <span className="comp-name">Cryo</span>
-          <span className={`comp-status ${componentSummary('cryo').status.toLowerCase()}`} title={componentSummary('cryo').title}>
-            {componentSummary('cryo').label}
-          </span>
         </div>
-      </div>
+      </>}
 
       {/* Info & Actions Footer */}
       <div className="card-footer-row">
@@ -144,6 +155,10 @@ export default function FacilityCard({
         </div>
 
         <div className="card-action-buttons">
+          {isAdmin && <>
+            <button type="button" className="facility-admin-action" onClick={(event) => { event.stopPropagation(); onEdit?.(facility); }}>Edit</button>
+            <button type="button" className="facility-admin-action danger" onClick={(event) => { event.stopPropagation(); onDelete?.(facility); }}>Delete</button>
+          </>}
           <a
             href={googleMapsUrl}
             className="btn-card-details"

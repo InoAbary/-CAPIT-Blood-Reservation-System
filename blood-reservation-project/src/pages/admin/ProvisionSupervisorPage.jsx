@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { api, getErrorMessage } from '../lib/api.js';
-import { useAuth } from '../../context/AuthContext';
 
 function ProvisionSupervisorPage() {
-  const { staff, loading: authLoading } = useAuth();
+  const { admin } = useOutletContext();
 
   const [facilities, setFacilities] = useState([]);
   const [loadingFacilities, setLoadingFacilities] = useState(true);
@@ -11,7 +11,6 @@ function ProvisionSupervisorPage() {
     fullName: '',
     email: '',
     mobile: '',
-    staffId: '',
     facilityId: '',
   });
   const [message, setMessage] = useState('');
@@ -20,7 +19,7 @@ function ProvisionSupervisorPage() {
   const [createdAccount, setCreatedAccount] = useState(null);
 
   // Permissions come from the authenticated user, not localStorage.
-  const canManageAccounts = staff?.role === 'admin';
+  const canManageAccounts = admin?.canManageAccounts === true;
 
   useEffect(() => {
     let isCurrent = true;
@@ -70,7 +69,6 @@ function ProvisionSupervisorPage() {
           name: supervisor.fullName,
           email: supervisor.email,
           mobile: supervisor.mobile,
-          staffId: supervisor.staffId,
           facilityId: supervisor.facilityId,
         }),
       });
@@ -84,21 +82,12 @@ function ProvisionSupervisorPage() {
         generatedPassword: result.generatedPassword,
       });
       setMessage(result.message || 'Branch Admin account created.');
-      setSupervisor((current) => ({ ...current, fullName: '', email: '', mobile: '', staffId: '' }));
+      setSupervisor((current) => ({ ...current, fullName: '', email: '', mobile: '' }));
     } catch (requestError) {
       setError(getErrorMessage(requestError));
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (authLoading) {
-    return (
-      <section className="content-card" id="create-supervisor">
-        <h2 className="card-title">Create Account</h2>
-        <p className="card-subtitle">Loading your account…</p>
-      </section>
-    );
   }
 
   const submitDisabled =
@@ -216,18 +205,9 @@ function ProvisionSupervisorPage() {
             onChange={handleChange}
             placeholder="+63 917..."
             className="form-control"
-          />
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="staffId">Staff ID</label>
-          <input
-            id="staffId"
-            name="staffId"
-            value={supervisor.staffId}
-            onChange={handleChange}
-            placeholder="e.g. 103103 (leave blank to auto-generate)"
-            className="form-control"
+            type="tel"
+            autoComplete="tel"
+            required
           />
         </div>
 
@@ -236,7 +216,7 @@ function ProvisionSupervisorPage() {
             {submitting ? 'Creating account…' : 'Create Account'}
           </button>
           <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px' }}>
-            A unique temporary password is generated for each new account.
+            A unique Staff ID in SDYY#### format and temporary password are generated for each new account.
           </div>
         </div>
       </form>

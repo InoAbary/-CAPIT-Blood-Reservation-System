@@ -122,8 +122,8 @@ export default function BloodBankMap() {
     }
   };
 
-  const mapCenter = branches.length > 0 
-    ? [branches[0].latitude, branches[0].longitude] 
+  const mapCenter = branches.length > 0
+    ? [branches[0].latitude, branches[0].longitude]
     : [userCoords.lat, userCoords.lng];
 
   return (
