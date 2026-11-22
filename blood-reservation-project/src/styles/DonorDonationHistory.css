@@ -1,0 +1,18 @@
+.donor-donation-history { margin: 1.5rem 0; padding: 1rem; border: 1px solid #d7e5f5; border-radius: 14px; background: #fff; color: #102440; text-align: left; }
+.donor-donation-history h2 { margin: 0 0 .75rem; font-size: 1.125rem; font-weight: 700; }
+.donor-donation-history-scroll { overflow-x: auto; }
+.donor-donation-history table { width: 100%; border-collapse: collapse; }
+.donor-donation-history :is(th,td) { padding: .65rem .75rem; border-bottom: 1px solid #d7e5f5; vertical-align: middle; }
+.donor-donation-history th { background: #fff5f6; white-space: nowrap; }
+.donor-donation-history :is(th,td):last-child { text-align: center; }
+.donor-donation-history button { padding: .4rem .65rem; border: 1px solid #f0cdd4; border-radius: 7px; background: #fff5f6; color: #8f1d2c; font-weight: 650; cursor: pointer; }
+.donor-donation-history > button { display: block; margin: .75rem auto 0; }
+.donor-donation-history button svg { width: 1.1rem; height: 1.1rem; }
+.donor-donation-history dialog { position: fixed; inset: 0; margin: auto; width: min(34rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); padding: 1rem 1.25rem; overflow: auto; border: 1px solid #d7e5f5; border-radius: 14px; background: #fff; color: #102440; }
+.donor-donation-history dialog::backdrop { background: #10244080; }
+.donor-donation-history dialog header { display: flex; justify-content: space-between; align-items: center; gap: .75rem; }
+.donor-donation-history dialog h2 { margin: 0; color: #000; }
+.donor-donation-history dl { margin: .75rem 0 0; }
+.donor-donation-history dl div { display: grid; grid-template-columns: minmax(6.5rem, 1fr) minmax(0, 2fr); gap: .65rem; padding: .55rem 0; border-top: 1px solid #d7e5f5; }
+.donor-donation-history dt { color: #475569; }
+.donor-donation-history dd { margin: 0; overflow-wrap: anywhere; }

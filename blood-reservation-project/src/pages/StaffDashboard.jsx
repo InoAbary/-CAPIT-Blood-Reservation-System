@@ -8,7 +8,6 @@ import HospitalRequests from './branch-admin/HospitalRequests';
 import Inventory from './Inventory';
 import StaffAppointments from './StaffAppointments'
 import StaffDonations from './StaffDonations'
-import StaffDonorForms from './StaffDonorForms'
 import { useAuth } from '../context/AuthContext';
 import '../styles/BranchAdmin.css';
 import { useSidebarBadges } from '../hooks/useSidebarBadges';
@@ -51,7 +50,6 @@ const STAFF_TABS = [
   { key: 'utilization', label: 'Utilization Reports', icon: ChartBarIcon },
   { key: 'reservation', label: 'Request Form', icon: DocumentPlusIcon, facilityTypes: ['hospital'] },
   { key: 'my-requests', label: 'My Requests', icon: QueueListIcon, facilityTypes: ['hospital'] },
-  { key: 'donor-forms', label: 'Donor Forms Submitted', icon: ClipboardDocumentListIcon, facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'branch-requests', label: 'Incoming Requests', icon: ArrowDownTrayIcon, facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'inventory', label: 'Inventory', icon: ArchiveBoxIcon, facilityTypes: ['bsf', 'prc_chapter'] },
   { key: 'appointments', label: 'Appointments', icon: CalendarDaysIcon, facilityTypes: ['bsf', 'prc_chapter'] },
@@ -329,8 +327,6 @@ function StaffDashboard() {
           {activeTab === 'branch-requests' && ['bsf', 'prc_chapter'].includes(facilityType) && <BranchRequests />}
 
           {activeTab === 'my-requests' && facilityType === 'hospital' && <HospitalRequests />}
-
-          {activeTab === 'donor-forms' && ['bsf', 'prc_chapter'].includes(facilityType) && <StaffDonorForms />}
 
           {activeTab === 'appointments' && (
             <section

@@ -22,7 +22,7 @@
 .brf-brand-dot { color:#c3bdc7; padding:0 4px; }
 .brf-header-main { display:flex; align-items:center; justify-content:space-between; gap:25px; }
 .brf-eyebrow { font-size:11px; font-weight:800; color:var(--red); letter-spacing:.16em; margin-bottom:9px; }
-.brf h1 { font-size:clamp(30px,4.3vw,43px); line-height:1.15; font-weight:800; letter-spacing:-.045em; margin:0 0 12px; }
+.brf h1 { font-size:clamp(30px,4.3vw,43px); line-height:1.15; font-weight:800; letter-spacing:-.045em; margin:0 0 12px; color: var(--red); }
 .brf-title-dot { color:var(--red); }
 .brf-lead { color:var(--muted); margin:0; max-width:520px; font-size:14px; line-height:1.8; }
 .brf-header-art { width:105px; height:105px; border-radius:26px; flex:none; display:grid;place-items:center; background:linear-gradient(145deg,#fff,#ffe8ed); color:var(--red); box-shadow:0 15px 35px #b72e4911; }

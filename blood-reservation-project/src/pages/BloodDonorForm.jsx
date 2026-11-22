@@ -7,6 +7,7 @@ import '../styles/BloodDonorForm.css';
 import {useAuth} from '../context/AuthContext'
 import { useDonationCooldown } from '../hooks/useDonationCooldown';
 import '../styles/UI.css';
+import { EyeIcon } from '@heroicons/react/24/outline';
 
 const DATE_ONLY = [34, 37];
 const FEMALE_ONLY_QUESTIONS = new Set([33, 34, 35, 36, 37]);
@@ -173,6 +174,8 @@ const pageHeader = (
     }, [donor, loading]);
 
     const printRef = useRef(null);
+    const remarkDialogRef = useRef(null);
+    const [selectedRemark, setSelectedRemark] = useState('');
     const [questionsState, setQuestionsState] = useState(
         QUESTION_LIST.map(q => ({ ...q, answer: '', remark: '', date: '' }))
     );
@@ -452,14 +455,24 @@ const pageHeader = (
                                                         }}
                                                     />
     
-                                                    {answer.remarks && (
-                                                        <p className="submitted-remark">
-                                                            Remarks: {answer.remarks}
-                                                        </p>
-                                                    )}
+    
                                                 </div>
                                             </div>
-    
+                                            <div className="submitted-answer-controls">
+                                                       {answer.remarks?.trim() && (
+                                                            <button
+                                                                type="button"
+                                                                className="submitted-remark-button"
+                                                                aria-label={`${t('common.remarks', 'Remarks')} — ${index + 1}`}
+                                                                aria-haspopup="dialog"
+                                                                onClick={() => {
+                                                                    setSelectedRemark(answer.remarks);
+                                                                    remarkDialogRef.current?.showModal();
+                                                                }}
+                                                            >
+                                                                <EyeIcon aria-hidden="true" />
+                                                            </button>
+                                                        )}                  
                                             <div
                                                 className={`submitted-answer-value ${
                                                     displayAnswer === 'Yes'
@@ -470,11 +483,25 @@ const pageHeader = (
                                                 }`}
                                             >
                                                 {displayAnswer}
-                                            </div>
+                                            </div> </div>
                                         </div>
                                     );
                                 })}
                             </div>
+
+                            <dialog
+                                ref={remarkDialogRef}
+                                aria-labelledby="submitted-remark-title"
+                                className="submitted-remark-dialog"
+                            >
+                                <h2 id="submitted-remark-title">{t('common.remarks', 'Remarks')}</h2>
+                                <p className="submitted-remark">{selectedRemark}</p>
+                                <form method="dialog">
+                                    <button type="submit" className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-rose-900">
+                                        {t('common.close', 'Close')}
+                                    </button>
+                                </form>
+                            </dialog>
     
                             {returnTo && (
                                 <div className="submitted-form-actions">

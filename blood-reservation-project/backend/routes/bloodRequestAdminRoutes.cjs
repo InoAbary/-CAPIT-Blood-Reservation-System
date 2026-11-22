@@ -25,12 +25,13 @@ async function assignedFacility(req) {
 }
 
 function canSubmitRequest(staff, facility) {
+
     if (facility?.facilityType === 'hospital_bsf') {
         return ['staff', 'hospital', 'branch-admin'].includes(staff.role);
     }
 
     return facility?.facilityType === 'hospital' &&
-        ['hospital', 'branch-admin'].includes(staff.role);
+        ['staff', 'hospital', 'branch-admin'].includes(staff.role);
 }
 
 router.get('/context', async (req, res) => {
