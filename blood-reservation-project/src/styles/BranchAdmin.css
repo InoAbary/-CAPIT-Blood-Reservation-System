@@ -803,9 +803,10 @@
 .staff-prescreen-answer {
   justify-self: end;
   min-width: 75px;
+  max-width: 220px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end; /* Aligns both badge and remarks to the right */
   gap: 5px;
 }
 
@@ -897,18 +898,40 @@
   }
 
   .staff-prescreen-row {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 20px;
+    padding: 15px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #fff;
   }
 
   .staff-prescreen-answer {
-    justify-self: start;
-    align-items: flex-start;
-    margin-left: 40px;
+    justify-self: end;
+    min-width: 75px;
+    max-width: 220px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end; /* Aligns both badge and remarks to the right */
+    gap: 5px;
+  }
+
+  .staff-prescreen-answer strong {
+    min-width: 70px;
+    padding: 7px 12px;
+    border-radius: 20px;
+    text-align: center;
+    font-weight: 700;
   }
 
   .staff-prescreen-answer small {
-    text-align: left;
+    width: 100%;
+    color: #666;
+    font-weight: 400;
+    text-align: center;
+    overflow-wrap: anywhere;
   }
 
   .appt-actions {
