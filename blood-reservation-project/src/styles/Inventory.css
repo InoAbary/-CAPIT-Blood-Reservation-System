@@ -1,6 +1,6 @@
 /*page*/
 
-   .inv-page {
+.inv-page {
     --accent: #c9363f;
     --accent-dark: #b52d36;
 
@@ -531,11 +531,13 @@
 
 /* ---------- Summary cards ---------- */
 
+.inv-summary-heading { margin:0 0 10px; color:var(--ink); font-size:15px; font-weight:700; }
+
 .inv-summary-grid {
     display: grid;
 
     grid-template-columns:
-        repeat(4, minmax(0, 1fr));
+        repeat(3, minmax(0, 1fr));
 
     gap: 12px;
 
@@ -574,7 +576,8 @@
 
 /* Maya pink/red remains the main visual accent */
 
-.inv-summary-total::before {
+.inv-summary-total::before,
+.inv-summary-out::before {
     background: var(--accent);
 }
 
@@ -584,13 +587,9 @@
 }
 
 
+.inv-summary-allocated::before,
 .inv-summary-limited::before {
     background: #d7a340;
-}
-
-
-.inv-summary-out::before {
-    background: var(--accent);
 }
 
 
@@ -629,7 +628,8 @@
 
 .inv-matrix-heading {
     display: flex;
-    align-items: flex-end;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: space-between;
 
     gap: 16px;
@@ -656,6 +656,11 @@
 
     color: var(--muted);
 }
+
+
+.inv-stock-filter { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:var(--muted); font-size:13px; font-weight:600; }
+.inv-stock-filter select { max-width:100%; min-height:36px; padding:6px 10px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); font:inherit; }
+.inv-stock-filter select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
 
 
 /* inventory matrix */
@@ -745,7 +750,7 @@
 
 
 .inv-table td.inv-zero {
-    color: #c3b6b8;
+    color: var(--muted);
 }
 
 
@@ -1755,3 +1760,16 @@
         width: 100%;
     }
 }
+
+.inv-history-view { display: inline-grid; place-items: center; min-width: 34px; min-height: 34px; border: 1px solid var(--line); border-radius: 8px; background: var(--accent-faint); color: var(--accent-dark); cursor: pointer; }
+.inv-history-view svg { width: 18px; height: 18px; }
+.inv-history-view:hover { background: var(--accent-soft); }
+.inv-history-view:focus-visible, .inv-history-dialog button:focus-visible { outline: 2px solid var(--accent-dark); outline-offset: 2px; }
+.inv-history-dialog { position: fixed; inset: 0; margin: auto; width: min(520px, calc(100% - 32px)); max-width: none; max-height: calc(100dvh - 32px); box-sizing: border-box; overflow: auto; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); color: var(--ink); text-align: left; overflow-wrap: anywhere; }
+.inv-history-dialog::backdrop { background: rgb(42 42 53 / 50%); }
+.inv-history-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.inv-history-dialog-header h2 { margin: 0; font-size: 1.125rem; color: var(--ink); }
+.inv-history-dialog-header button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); cursor: pointer; }
+.inv-history-dialog-meta { margin: 10px 0 14px; font-size: 0.875rem; line-height: 1.55; color: var(--muted); }
+.inv-history-dialog .inv-history-change { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 0.875rem; }
+.inv-history-dialog .inv-history-change:last-child { border-bottom: 0; }
