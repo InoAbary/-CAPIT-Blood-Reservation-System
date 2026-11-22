@@ -9,7 +9,7 @@ const mongoose = require ('mongoose');
 const Inventories = require('../../db/models/inventories.cjs')
 const BloodReport = require('../../db/models/bloodReports.cjs')
 const BloodUnits = require('../../db/models/bloodUnits.cjs')
-const Counter = require('../../db/models/counters.cjs');
+const { recordUtilizationReport } = require('../services/utilizationReports.cjs');
 const router = express.Router();
 const { authenticateInventory, requireInventoryWrite, inventoryFilter, unitFilter } = require('../middleware/inventoryAccess.cjs');
 router.use(...authenticateInventory);
@@ -18,21 +18,6 @@ router.use((req, res, next) => {
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || (req.method === 'POST' && req.path === '/create-utilization-report')) return next();
     return requireInventoryWrite(req, res, next);
 });
-
-// Helper function for report IDs
-const nextReportID = async () => {
-    const counter = await Counter.findOneAndUpdate(
-        { _id: 'reportID' },
-        { $inc: { sequence: 1 } },
-        {
-            new: true,
-            upsert: true,
-            setDefaultsOnInsert: true
-        }
-    );
-
-    return `R${String(counter.sequence).padStart(8, '0')}`;
-};
 
 //
 
@@ -130,7 +115,7 @@ router.get('/reports', async(req, res)=>{
 
 router.post('/reports', async(req, res)=>{
     try {
-        const {bloodUnitID, status, description } = req.body
+        const {bloodUnitID, status, description, wastageReason, wastageReasonOther } = req.body
         if (!bloodUnitID || !status) {
             return res.status(500).json({
                 success: false,
@@ -140,18 +125,19 @@ router.post('/reports', async(req, res)=>{
 
         const ownedUnit = await BloodUnits.findOne({ _id: bloodUnitID, ...unitFilter(req) }).lean();
         if (!ownedUnit) return res.status(404).json({ success: false, message: 'Blood unit not found in your facility.' });
-        const reportID = await nextReportID();
-
-        const report = await BloodReport.create({
-            reportID,
-            bloodUnitID,
+        const report = await recordUtilizationReport(ownedUnit._id, {
             status,
             description,
-            dateCreated: new Date()
+            wastageReason,
+            wastageReasonOther,
+            requireWastageReason: false,
+            reportedBy: req.user.id,
         });
+        if (!report) return res.status(409).json({ success: false, message: 'A hospital utilization report already exists for this blood unit.' });
 
         res.status(201).json({success: true, report});
     } catch (err) {
+        if (err.status === 400) return res.status(400).json({ success: false, message: err.message });
         console.error('Error creating report:', err);
         res.status(500).json({success: false, message: 'Failed to create a report.'})
     }

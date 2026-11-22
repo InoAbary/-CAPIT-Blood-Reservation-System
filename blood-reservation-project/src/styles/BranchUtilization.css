@@ -1,0 +1,632 @@
+.branch-utilization .branch-utilization-views {
+    margin: 0 0 1rem;
+  }
+  
+  .branch-utilization > .branch-utilization-views {
+    margin: 0;
+  }
+  
+  .branch-utilization .segmented-btn {
+    font-size: 15px;
+  }
+  
+  .branch-utilization .branch-utilization-details-dialog {
+    width: min(920px, calc(100vw - 32px));
+    height: auto;
+    max-height: min(520px, calc(100dvh - 32px));
+  }
+  
+  .branch-utilization .utilization-reason-dialog {
+    width: min(500px, calc(100vw - 32px));
+    height: fit-content;
+    max-height: min(360px, calc(100dvh - 32px));
+  }
+  
+  .utilization-reason-dialog .hospital-my-request-dialog-header {
+    padding: 9px 14px;
+  }
+  
+  .branch-utilization {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    color: #26364b;
+    font-size: 16px;
+    line-height: 1.45;
+    text-align: left;
+  }
+  
+  .branch-utilization > :is(.content-card, .utilization-metrics) {
+    margin-bottom: 0;
+  }
+  
+  .branch-utilization > .content-card {
+    min-width: 0;
+    padding: clamp(14px, 2vw, 22px);
+    border: 1px solid #d3deeb;
+  }
+  
+  .branch-utilization .card-title {
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  
+  .branch-utilization-heading .card-title {
+    font-size: clamp(20px, 2vw, 25px);
+  }
+  
+  .branch-utilization .card-subtitle {
+    color: #526174;
+    font-size: 15px;
+  }
+  
+  .branch-utilization .custom-table :is(th, td) {
+    padding: 11px 10px;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  
+  .branch-utilization .custom-table th {
+    color: #334155;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: normal;
+  }
+  
+  .branch-utilization .custom-table th[scope="row"] {
+    background: transparent;
+    border-bottom-color: #f1f5f9;
+  }
+  
+  .utilization-card-heading,
+  .utilization-record-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+  }
+  
+  .utilization-card-heading {
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+
+  .utilization-export {
+    position: relative;
+  }
+  
+  .utilization-export-trigger {
+    width: 40px;
+    min-height: 40px;
+  }
+  
+  .utilization-export-trigger svg {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .utilization-export-options,
+  .utilization-export-error {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 6px);
+    inset-inline-end: 0;
+    border: 1px solid #d9e2ee;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 8px 20px rgb(15 23 42 / 13%);
+  }
+  
+  .utilization-export-options:not([hidden]) {
+    display: grid;
+    min-width: max-content;
+    padding: 4px;
+  }
+  
+  .utilization-export-options button {
+    padding: 7px 10px;
+    border-radius: 5px;
+    color: #174482;
+    text-align: left;
+    cursor: pointer;
+  }
+  
+  .utilization-export-options button:hover,
+  .utilization-export-options button:focus-visible {
+    background: #eef4ff;
+  }
+  
+  .utilization-export-error {
+    width: min(240px, 65vw);
+    padding: 8px 10px;
+    color: #9f1239;
+  }
+  
+  .utilization-analytics-heading {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    text-align: left;
+  }
+  
+  .utilization-analytics-controls {
+    display: grid;
+    justify-items: end;
+    gap: 8px;
+  }
+  
+  .branch-utilization .utilization-analytics-controls .utilization-dropdown {
+    grid-template-columns: auto 174px;
+  }
+  
+  .utilization-select {
+    position: relative;
+    display: block;
+  }
+  
+  .utilization-select select {
+    appearance: none;
+    padding-inline-end: 34px;
+  }
+  
+  .utilization-select svg {
+    position: absolute;
+    inset-inline-end: 12px;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    color: #526174;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  
+  .utilization-filter-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    margin-bottom: 14px;
+  }
+  
+  .branch-utilization .utilization-filter-top .form-control {
+    height: 40px;
+    padding-block: 7px;
+  }
+  
+  .utilization-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 244px), 1fr));
+    align-items: start;
+    gap: 12px;
+  }
+  
+  .utilization-filter-search {
+    min-width: 0;
+    flex: 1 1 330px;
+    max-width: 385px;
+  }
+  
+  .utilization-search-input {
+    display: block;
+    position: relative;
+  }
+  
+  .utilization-search-input svg {
+    position: absolute;
+    inset-inline-start: 12px;
+    top: 50%;
+    width: 17px;
+    height: 17px;
+    color: #64748b;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+  
+  .utilization-search-input .form-control {
+    padding-inline-start: 36px;
+  }
+  
+  .utilization-date-range {
+    flex: 1 1 475px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  
+  .utilization-date-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #334155;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  
+  .utilization-date-title svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+  
+  .utilization-date-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+  }
+  
+  .branch-utilization .utilization-date-fields .utilization-dropdown {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+  
+  .utilization-checkbox-filter {
+    min-width: 0;
+    margin: 0;
+    position: relative;
+    padding: 6px 10px 9px 110px;
+    border: 1px solid #d3deeb;
+    border-radius: 8px;
+    grid-column: 1 / -1;
+  }
+  
+  .utilization-checkbox-filter legend {
+    position: absolute;
+    inset-inline-start: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0;
+    white-space: nowrap;
+    color: #334155;
+    font-size: 15px;
+    font-weight: 650;
+  }
+  
+  .utilization-checkbox-options {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+  }
+  
+  .utilization-checkbox-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 26px;
+    cursor: pointer;
+  }
+  
+  .utilization-checkbox-options input {
+    margin: 0;
+    accent-color: #9f1239;
+  }
+  
+  .branch-utilization .form-control {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+    font-size: 15px;
+    color-scheme: light;
+  }
+  
+  .branch-utilization :is(.btn-action, .hospital-my-request-detail-button) {
+    font-size: 15px;
+  }
+  
+  .utilization-control,
+  .utilization-picker {
+    display: grid;
+    gap: 5px;
+    color: #334155;
+    font-size: 15px;
+    font-weight: 650;
+  }
+  
+  .branch-utilization .utilization-dropdown {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .utilization-picker {
+    position: relative;
+    grid-template-columns: 86px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .utilization-picker-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    text-align: left;
+    cursor: pointer;
+  }
+  
+  .utilization-picker-trigger span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .utilization-picker svg {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+  
+  .utilization-picker-panel {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 6px);
+    inset-inline: 0;
+    padding: 8px;
+    border: 1px solid #cbd7e6;
+    border-radius: 9px;
+    background: #fff;
+    box-shadow: 0 8px 20px rgb(15 23 42 / 13%);
+  }
+  
+  .utilization-picker-options {
+    display: grid;
+    gap: 2px;
+    max-height: 230px;
+    margin: 0;
+    padding: 0;
+    overflow: auto;
+    list-style: none;
+  }
+  
+  .utilization-picker-panel > input {
+    margin-bottom: 6px;
+  }
+  
+  .utilization-picker-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: #26364b;
+    font: inherit;
+    font-weight: 500;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+  
+  .utilization-picker-option svg {
+    margin-inline-start: auto;
+  }
+  
+  .utilization-picker-option:hover,
+  .utilization-picker-option[aria-pressed="true"] {
+    background: #f1f5f9;
+  }
+  
+  .utilization-picker-empty {
+    padding: 8px;
+    color: #526174;
+  }
+  
+  .branch-utilization .utilization-metrics {
+    grid-template-columns: repeat(var(--utilization-metric-columns, 4), minmax(0, 1fr));
+    gap: 12px;
+  }
+  
+  .utilization-metrics[data-view="coverage"] {
+    --utilization-metric-columns: 3;
+  }
+  
+  .utilization-metrics .metric-card {
+    box-sizing: border-box;
+    min-width: 0;
+    min-height: 112px;
+    padding: 16px 18px;
+    border-color: #d3deeb;
+    border-inline-start: 4px solid var(--utilization-accent, #2563eb);
+    background: #fff;
+  }
+  
+  .utilization-metrics [data-tone="green"] { --utilization-accent: #047857; }
+  .utilization-metrics [data-tone="red"] { --utilization-accent: #be123c; }
+  .utilization-metrics [data-tone="orange"] { --utilization-accent: #b45309; }
+  
+  .utilization-metrics .metric-header {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  
+  .utilization-metrics .metric-icon {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    color: var(--utilization-accent, #2563eb);
+  }
+  
+  .utilization-metrics .metric-label {
+    color: #334155;
+    font-size: 15px;
+    font-weight: 650;
+  }
+  
+  .utilization-metrics .metric-value {
+    margin: 0;
+    font-size: 30px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+  }
+  
+  @media (max-width: 1080px) {
+    .branch-utilization .utilization-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  
+  @media (max-width: 740px) {
+    .utilization-analytics-heading { grid-template-columns: minmax(0, 1fr); }
+    .utilization-analytics-controls { grid-row: 1; justify-items: start; }
+  }
+  
+  @media (max-width: 460px) {
+    .utilization-date-range { grid-template-columns: 52px minmax(0, 1fr); align-items: end; }
+    .utilization-date-title { min-height: 40px; line-height: 1.2; }
+    .utilization-date-title svg { display: none; }
+    .utilization-date-fields { gap: 6px; }
+    .branch-utilization .utilization-date-fields .utilization-dropdown { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+    .branch-utilization .utilization-date-fields .form-control { padding-inline: 5px; }
+    .utilization-metrics .metric-card { min-height: 92px; padding: 12px; }
+    .utilization-metrics .metric-icon { width: 28px; height: 28px; }
+    .utilization-metrics .metric-value { font-size: 26px; }
+  }
+  
+  .utilization-patterns-scroll {
+    max-height: 24rem;
+    overflow-y: auto;
+  }
+  
+  .utilization-patterns {
+    min-width: 600px;
+  }
+  
+  .utilization-reason-breakdown {
+    min-width: 350px;
+  }
+  
+  .utilization-hospital-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #174482;
+    font: inherit;
+    text-align: left;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  
+  .utilization-active-reason {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-bottom: 12px;
+  }
+  
+  .utilization-records {
+    scroll-margin-top: 16px;
+  }
+  
+  .utilization-chart {
+    position: relative;
+    min-width: 0;
+    margin: 0 0 16px;
+  }
+  
+  .branch-utilization [data-outcome="Used"] { --outcome-ink: #065f46; --outcome-bg: #ecfdf5; }
+  .branch-utilization [data-outcome="Wasted"] { --outcome-ink: #9f1239; --outcome-bg: #fff1f2; }
+  .branch-utilization [data-outcome="Expired"] { --outcome-ink: #9a3412; --outcome-bg: #fff7ed; }
+  .branch-utilization [data-outcome="Unused"] { --outcome-ink: #1e40af; --outcome-bg: #eff6ff; }
+  .branch-utilization [data-outcome="Assumed used"] { --outcome-ink: #854d0e; --outcome-bg: #fefce8; }
+  
+  .branch-utilization .utilization-outcome {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--outcome-ink, #475569);
+    background: var(--outcome-bg, #f1f5f9);
+    font-size: 14px;
+    white-space: nowrap;
+  }
+  
+  .utilization-source {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #ecfdf5;
+    color: #065f46;
+    font-size: 14px;
+    font-weight: 700;
+  }
+  
+  .utilization-source[data-source="System generated"] {
+    background: #fef3c7;
+    color: #854d0e;
+  }
+  
+  .utilization-outcome svg,
+  .utilization-view-button svg,
+  .utilization-metrics .metric-icon svg {
+    width: 16px;
+    height: 16px;
+    flex: none;
+  }
+  
+  .utilization-view-button {
+    gap: 6px;
+    white-space: nowrap;
+  }
+  
+  .utilization-reason-fields {
+    display: grid;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  .utilization-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 116px;
+    white-space: nowrap;
+  }
+  
+  .utilization-row-actions .utilization-view-button {
+    padding-inline: 7px;
+  }
+  
+  .utilization-reason-dialog .utilization-reason-form {
+    display: grid;
+    flex: 0 1 auto;
+    gap: 10px;
+    padding: 10px 14px 12px;
+  }
+  
+  .utilization-reason-actions {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  
+  .utilization-report-notes {
+    padding-top: 12px;
+    margin-top: 12px;
+    border-top: 1px solid #e2e8f0;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+  
+  .branch-utilization .hospital-my-request-detail-grid dt {
+    font-size: 14px;
+  }
+  
+  .branch-utilization .hospital-my-request-detail-grid dd {
+    font-size: 16px;
+  }
+  
+  .utilization-correction {
+    display: grid;
+    gap: 10px;
+    justify-items: start;
+  }
+  
+  .utilization-correction label {
+    width: 100%;
+  }
+  
+  .branch-utilization .hospital-my-request-detail-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  

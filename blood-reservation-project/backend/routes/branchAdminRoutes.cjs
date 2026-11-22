@@ -10,7 +10,8 @@ const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const FulfillmentOperation = require('../../db/models/fulfillmentOperation.cjs');
 const { ensureIndexes } = require('../services/fulfillRequest.cjs');
 const BloodReport = require('../../db/models/bloodReports.cjs');
-const Counter = require('../../db/models/counters.cjs');
+const { recordUtilizationReport, WASTAGE_REASONS } = require('../services/utilizationReports.cjs');
+const { createUtilizationExport, matchesExportView } = require('../services/utilizationExport.cjs');
 
 const router = express.Router();
 const managedRoles = ['staff', 'hospital'];
@@ -68,11 +69,10 @@ function isValidUserId(id) {
   return mongoose.Types.ObjectId.isValid(id);
 }
 
-async function getLatestHospitalReports(unitIds) {
+async function getUtilizationReports(unitIds) {
   const reports = await BloodReport.find({
     bloodUnitID: { $in: unitIds },
-    reportSource: 'Hospital',
-  }).populate('reportedBy', 'firstName lastName').sort({ dateCreated: -1 }).lean();
+  }).populate('reportedBy', 'firstName lastName').sort({ reportSource: 1, dateCreated: -1, _id: -1 }).lean();
 
   const latestByUnit = new Map();
   reports.forEach((report) => {
@@ -82,10 +82,15 @@ async function getLatestHospitalReports(unitIds) {
         ? `${report.reportedBy.firstName || ''} ${report.reportedBy.lastName || ''}`.trim()
         : '';
       latestByUnit.set(unitId, {
+        reportID: report.reportID,
         status: report.status,
         description: report.description || '',
         dateCreated: report.dateCreated,
         reportedByName: reporterName,
+        source: report.reportSource || 'Hospital',
+        isAssumed: report.isAssumed === true,
+        wastageReason: report.wastageReason || '',
+        wastageReasonOther: report.wastageReasonOther || '',
       });
     }
   });
@@ -293,8 +298,7 @@ router.get('/my-requests', async (req, res) => {
       requests: requests.map((request) => ({
         ...request,
         requestedBy: request.requestedBy?._id ?? null,
-        requesterName: [request.requestedBy?.firstName, request.requestedBy?.lastName].filter(Boolean).join(' '),
-        requesterStaffId: request.requestedBy?.staffId || '',
+            requesterStaffId: request.requestedBy?.staffId || '',
         id: String(request._id),
         requestedFacilityName: request.receivingFacilityID?.facilityName || 'Branch unavailable',
         reviewerName: request.reviewedBy
@@ -476,6 +480,44 @@ router.patch('/my-requests/:id/cancel', async (req, res) => {
   }
 });
 
+function utilizationRequestDetails(request, supplierName = request?.receivingFacilityID?.facilityName) {
+  if (!request) return null;
+  return {
+    reference: request.requestID || String(request._id).slice(-8).toUpperCase(),
+    supplierName,
+    submittedAt: request.createdAt,
+    fulfillmentMethod: request.confirmedFulfillmentMethod || request.fulfillmentMethod,
+    fulfillmentStatus: request.fulfillmentStatus,
+  };
+}
+
+async function getProviderUtilizationUnits(facility, unitIds) {
+  const units = await BloodUnits.find({
+    facilityID: facility._id,
+    status: 'Released',
+    ...(unitIds ? { _id: { $in: unitIds } } : {}),
+  }).select('bloodUnitID bloodType component collectionDate expiryDate releasedAt requestID').populate({
+    path: 'requestID',
+    match: { receivingFacilityID: facility._id },
+    select: 'requestID hospitalFacilityID createdAt fulfillmentMethod confirmedFulfillmentMethod fulfillmentStatus',
+    populate: { path: 'hospitalFacilityID', select: 'facilityName' },
+  }).sort({ releasedAt: -1 }).lean();
+  const reportsByUnit = await getUtilizationReports(units.map(unit => unit._id));
+
+  return units.map(unit => ({
+    id: String(unit._id),
+    bloodUnitID: unit.bloodUnitID,
+    bloodType: unit.bloodType,
+    component: unit.component,
+    collectionDate: unit.collectionDate,
+    expiryDate: unit.expiryDate,
+    releasedAt: unit.releasedAt,
+    hospitalName: unit.requestID?.hospitalFacilityID?.facilityName || 'Hospital not linked',
+    request: utilizationRequestDetails(unit.requestID, facility.facilityName),
+    report: reportsByUnit.get(String(unit._id)) || null,
+  }));
+}
+
 router.get('/utilization', async (req, res) => {
   try {
     const context = await getBranchContext(req, res);
@@ -496,52 +538,43 @@ router.get('/utilization', async (req, res) => {
 
       if (workspace === 'hospital') {
       const requests = await BloodRequest.find({ hospitalFacilityID: context.facility._id })
-        .select('_id').lean();
+        .select('requestID receivingFacilityID createdAt fulfillmentMethod confirmedFulfillmentMethod fulfillmentStatus')
+        .populate('receivingFacilityID', 'facilityName')
+        .lean();
+      const requestDetailsById = new Map(requests.map(request => [
+        String(request._id), utilizationRequestDetails(request),
+      ]));
       const units = requests.length
         ? await BloodUnits.find({
           requestID: { $in: requests.map((request) => request._id) },
           status: 'Released',
-        }).select('bloodUnitID bloodType component releasedAt requestID').sort({ releasedAt: -1 }).lean()
+        }).select('bloodUnitID bloodType component collectionDate expiryDate releasedAt requestID').sort({ releasedAt: -1 }).lean()
         : [];
-      const reportsByUnit = await getLatestHospitalReports(units.map((unit) => unit._id));
+      const reportsByUnit = await getUtilizationReports(units.map((unit) => unit._id));
 
       return res.json({
         mode: 'hospital',
         facilityName: context.facility.facilityName,
+        wastageReasons: WASTAGE_REASONS,
         units: units.map((unit) => ({
           id: String(unit._id),
           bloodUnitID: unit.bloodUnitID,
           bloodType: unit.bloodType,
           component: unit.component,
+          collectionDate: unit.collectionDate,
+          expiryDate: unit.expiryDate,
           releasedAt: unit.releasedAt,
+          request: requestDetailsById.get(String(unit.requestID)) || null,
           report: reportsByUnit.get(String(unit._id)) || null,
         })),
       });
     }
 
-    const units = await BloodUnits.find({
-      facilityID: context.facility._id,
-      status: 'Released',
-    }).select('bloodUnitID bloodType component releasedAt requestID').populate({
-      path: 'requestID',
-      select: 'hospitalFacilityID',
-      populate: { path: 'hospitalFacilityID', select: 'facilityName' },
-    }).sort({ releasedAt: -1 }).lean();
-    const reportsByUnit = await getLatestHospitalReports(units.map((unit) => unit._id));
-   
-    
     return res.json({
       mode: 'provider',
       facilityName: context.facility.facilityName,
-      units: units.map((unit) => ({
-        id: String(unit._id),
-        bloodUnitID: unit.bloodUnitID,
-        bloodType: unit.bloodType,
-        component: unit.component,
-        releasedAt: unit.releasedAt,
-        hospitalName: unit.requestID?.hospitalFacilityID?.facilityName || 'Hospital not linked',
-        report: reportsByUnit.get(String(unit._id)) || null,
-      })),
+      wastageReasons: WASTAGE_REASONS,
+      units: await getProviderUtilizationUnits(context.facility),
     });
 
     
@@ -551,8 +584,42 @@ router.get('/utilization', async (req, res) => {
   }
 });
 
+router.post('/utilization/export', async (req, res) => {
+  const { format, view, unitIds } = req.body || {};
+  if (!['pdf', 'xlsx'].includes(format) || !['reports', 'coverage', 'wastage'].includes(view)) {
+    return res.status(400).json({ error: 'Choose PDF or Excel for a utilization report.' });
+  }
+  if (!Array.isArray(unitIds) || !unitIds.length || !unitIds.every(id =>
+    typeof id === 'string' && mongoose.isObjectIdOrHexString(id))) {
+    return res.status(400).json({ error: 'Choose valid blood units to export.' });
+  }
+
+  try {
+    const context = await getBranchContext(req, res);
+    if (!context) return;
+    if (!canReceiveBranchRequests(context)) {
+      return res.status(403).json({ error: 'Only blood service facilities can export these reports.' });
+    }
+
+    const selectedIds = [...new Set(unitIds.map(id => id.toLowerCase()))];
+    const units = await getProviderUtilizationUnits(context.facility, selectedIds);
+    const byId = new Map(units.filter(unit => matchesExportView(unit, view)).map(unit => [unit.id, unit]));
+    if (byId.size !== selectedIds.length) {
+      return res.status(409).json({ error: 'The selected records are no longer available in this view. Refresh the page and try again.' });
+    }
+
+    const { buffer, filename, contentType } = await createUtilizationExport({
+      units: selectedIds.map(id => byId.get(id)), view, format, facilityName: context.facility.facilityName,
+    });
+    return res.set('Cache-Control', 'no-store').type(contentType).attachment(filename).send(buffer);
+  } catch (error) {
+    console.error('Utilization export failed:', error.message);
+    return res.status(500).json({ error: 'Could not download the utilization report.' });
+  }
+});
+
 router.post('/utilization/reports', async (req, res) => {
-  const { bloodUnitId, status } = req.body || {};
+  const { bloodUnitId, status, wastageReason, wastageReasonOther } = req.body || {};
   const description = String(req.body?.description || '').trim();
   const allowedStatuses = ['Used', 'Wasted', 'Expired', 'Unused'];
 
@@ -581,33 +648,20 @@ router.post('/utilization/reports', async (req, res) => {
       return res.status(404).json({ error: 'That released blood unit is not assigned to this hospital.' });
     }
 
-    const existingReport = await BloodReport.exists({
-      bloodUnitID: unit._id,
-      reportSource: 'Hospital',
-    });
-    if (existingReport) {
-      return res.status(409).json({ error: 'A utilization report already exists for this blood unit.' });
-    }
-
-    const counter = await Counter.findOneAndUpdate(
-      { _id: 'reportID' },
-      { $inc: { sequence: 1 } },
-      { new: true, upsert: true, setDefaultsOnInsert: true },
-    );
-    const report = await BloodReport.create({
-      reportID: `R${String(counter.sequence).padStart(8, '0')}`,
-      bloodUnitID: unit._id,
+    const report = await recordUtilizationReport(unit._id, {
       status,
       description,
-      reportSource: 'Hospital',
+      wastageReason,
+      wastageReasonOther,
       reportedBy: req.user.id,
     });
+    if (!report) {
+      return res.status(409).json({ error: 'A hospital utilization report already exists for this blood unit.' });
+    }
 
     return res.status(201).json({ success: true, report });
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(409).json({ error: 'A utilization report already exists for this blood unit.' });
-    }
+    if (error.status === 400) return res.status(400).json({ error: error.message });
     console.error('Hospital utilization report failed:', error);
     return res.status(500).json({ error: 'Failed to submit the utilization report.' });
   }

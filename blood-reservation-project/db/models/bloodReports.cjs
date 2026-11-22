@@ -40,6 +40,15 @@ const bloodReportSchema = new mongoose.Schema({
     },
     description: {
         type: String
+    },
+    wastageReason: {
+        type: String,
+        trim: true
+    },
+    wastageReasonOther: {
+        type: String,
+        trim: true,
+        maxlength: 240
     }
     
 
