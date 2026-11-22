@@ -9,17 +9,16 @@ import '../../styles/HospitalRequests.css';
 import '../../styles/BranchUtilization.css';
 import UtilizationAnalytics, {
   COVERAGE_OUTCOMES, EMPTY_UTILIZATION_FILTERS, filterUtilizationUnits,
-  REPORT_OUTCOMES, reportSourceLabel, reportWastageReason, utilizationOutcome, UtilizationFilters, WASTAGE_OUTCOMES,
+  REPORT_OUTCOMES, reportSourceLabel, reportWastageReason, utilizationCoverageOutcome, utilizationOutcome, UtilizationFilters, WASTAGE_OUTCOMES,
 } from './UtilizationAnalytics';
 
 const EMPTY_REPORT = { status: '', description: '', wastageReason: '', wastageReasonOther: '' };
 const OUTCOME_ICONS = {
   Used: CheckCircleIcon, Wasted: TrashIcon, Expired: CalendarDaysIcon, Unused: ArchiveBoxIcon,
-  'Awaiting report': ClockIcon, 'Assumed used': InformationCircleIcon,
+  'Awaiting report': ClockIcon,
 };
 const METRIC_APPEARANCE = {
   'Units released': ['blue', ArchiveBoxIcon],
-  'Hospital reports': ['blue', ClipboardDocumentListIcon],
   'Total reports': ['blue', ClipboardDocumentListIcon],
   Used: ['green', CheckCircleIcon],
   Wastage: ['red', TrashIcon],
@@ -348,28 +347,28 @@ export default function BranchUtilization({
       (Date.parse(second.report.dateCreated) || 0) - (Date.parse(first.report.dateCreated) || 0))
     : awaitingReports;
   const filteredUnits = isHospital ? [] : filterUtilizationUnits(units, filters);
-  const confirmedReports = filteredUnits.filter(unit => REPORT_OUTCOMES.includes(utilizationOutcome(unit)));
-  const followUpUnits = filteredUnits.filter(unit => COVERAGE_OUTCOMES.includes(utilizationOutcome(unit)));
+  const utilizationReports = filteredUnits.filter(unit => REPORT_OUTCOMES.includes(utilizationOutcome(unit)));
+  const followUpUnits = filteredUnits.filter(unit => COVERAGE_OUTCOMES.includes(utilizationCoverageOutcome(unit)));
   const isCoverage = providerView === 'coverage';
-  const providerRecords = isCoverage ? followUpUnits : confirmedReports;
+  const providerRecords = isCoverage ? followUpUnits : utilizationReports;
   const isWastageReport = !isCoverage && (filters.outcome === 'Wastage' || WASTAGE_OUTCOMES.includes(filters.outcome));
   const visibleRecords = providerRecords.filter(unit => {
     if (filters.reason && filters.reason !== reportWastageReason(unit)) return false;
-    const outcome = utilizationOutcome(unit);
+    const outcome = isCoverage ? utilizationCoverageOutcome(unit) : utilizationOutcome(unit);
     if (filters.outcome === 'Wastage') return WASTAGE_OUTCOMES.includes(outcome);
     return !filters.outcome || outcome === filters.outcome;
   });
-  const wastageCount = confirmedReports.filter(unit => WASTAGE_OUTCOMES.includes(unit.report.status)).length;
+  const wastageCount = utilizationReports.filter(unit => WASTAGE_OUTCOMES.includes(utilizationOutcome(unit))).length;
   const awaitingCount = followUpUnits.filter(unit => utilizationOutcome(unit) === 'Awaiting report').length;
   const summary = isCoverage ? [
     ['Units released', filteredUnits.length],
     ['Total reports', filteredUnits.length - awaitingCount],
     ['Awaiting report', awaitingCount],
   ] : [
-    ['Hospital reports', confirmedReports.length],
-    ['Used', confirmedReports.filter(unit => unit.report.status === 'Used').length],
+    ['Total reports', utilizationReports.length],
+    ['Used', utilizationReports.filter(unit => utilizationOutcome(unit) === 'Used').length],
     ['Wastage', wastageCount],
-    ['Wastage rate', confirmedReports.length ? `${(wastageCount / confirmedReports.length * 100).toFixed(0)}%` : '—'],
+    ['Wastage rate', utilizationReports.length ? `${(wastageCount / utilizationReports.length * 100).toFixed(0)}%` : '—'],
   ];
   const selectedDraft = drafts[selectedUnit?.id] || EMPTY_REPORT;
 
@@ -387,7 +386,7 @@ export default function BranchUtilization({
           <h2 className="card-title">{isHospital ? 'Hospital Utilization Reports' : 'Blood Utilization Dashboard'}</h2>
           <p className="card-subtitle">
             {isHospital
-              ? 'Report what happened to each released blood bag. After seven days from recorded pickup or delivery, an unreported bag may be marked Assumed used.'
+              ? 'Report what happened to each released blood bag. After seven days from recorded pickup or delivery, the system may record an unreported bag as Used.'
               : 'Monitor outcomes for released blood bags and see where usage, wastage, and reporting differ.'}
           </p>
         </div>
@@ -508,7 +507,7 @@ export default function BranchUtilization({
           </div>
 
           <UtilizationAnalytics
-            units={isCoverage ? filteredUnits : confirmedReports}
+            units={isCoverage ? filteredUnits : utilizationReports}
             coverage={isCoverage}
             reasons={wastageReasons}
             onShowReason={showWastageReason}
@@ -517,7 +516,7 @@ export default function BranchUtilization({
           <section className="content-card utilization-records" ref={recordsRef} tabIndex={-1} aria-labelledby="utilization-records-title">
             <div className="utilization-card-heading">
               <div>
-                <h3 className="card-title" id="utilization-records-title">{isCoverage ? 'Bags without a hospital report' : isWastageReport ? 'Wastage report' : 'Hospital report records'}</h3>
+                <h3 className="card-title" id="utilization-records-title">{isCoverage ? 'Bags without a hospital report' : isWastageReport ? 'Wastage report' : 'Utilization report records'}</h3>
                 <p className="card-subtitle">
                   {visibleRecords.length} {isCoverage
                     ? (visibleRecords.length === 1 ? 'bag' : 'bags')
@@ -526,7 +525,7 @@ export default function BranchUtilization({
               </div>
               <div className="utilization-record-actions">
                 <label className="utilization-control utilization-dropdown">
-                  <span>Outcome</span>
+                  <span>{isCoverage ? 'Reporting status' : 'Outcome'}</span>
                   <select className="form-control" value={filters.outcome}
                     onChange={event => setFilters(current => ({ ...current, outcome: event.target.value, reason: '' }))}>
                     <option value="">All outcomes</option>
@@ -552,7 +551,7 @@ export default function BranchUtilization({
                   <tr>
                     <th>Report ID</th><th>Hospital</th><th>Blood Type</th><th>Component</th>
                     <th>Release date</th><th>Outcome</th>
-                    {isCoverage && <th>Source</th>}
+                    <th>Source</th>
                     <th>Action</th>
                   </tr>
                 </thead>
@@ -565,11 +564,11 @@ export default function BranchUtilization({
                       <td>{unit.component}</td>
                       <td>{formatDate(unit.releasedAt)}</td>
                       <td><OutcomeBadge unit={unit} /></td>
-                      {isCoverage && <td><SourceBadge report={unit.report} /></td>}
+                      <td><SourceBadge report={unit.report} /></td>
                       <td><UnitDetailsButton unit={unit} onOpen={showUnitDetails} /></td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={isCoverage ? 8 : 7} className="empty-table">{isCoverage ? 'No bags without a hospital report match these filters.' : 'No hospital reports match these filters.'}</td></tr>
+                    <tr><td colSpan={8} className="empty-table">{isCoverage ? 'No bags without a hospital report match these filters.' : 'No utilization reports match these filters.'}</td></tr>
                   )}
                 </tbody>
               </table>
