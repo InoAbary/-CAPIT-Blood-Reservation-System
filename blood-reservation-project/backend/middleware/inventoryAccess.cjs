@@ -24,8 +24,8 @@ async function loadAccess(req, res, next) {
             }
 
             const allowedFacilityTypes = account.role === 'hospital'
-                ? ['bsf_hospital']
-                : ['bsf', 'prc_chapter', 'bsf_hospital'];
+                ? ['hospital_bsf']
+                : ['bsf', 'prc_chapter', 'hospital_bsf'];
 
             facility = await Facility.findOne({
                 _id: account.facilityID,

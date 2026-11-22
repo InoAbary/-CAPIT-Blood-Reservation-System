@@ -23,8 +23,8 @@ router.get('/dashboard', async (req, res) => {
     if (!ctx) return;
     const { facility, user } = ctx;
 
-    const isProvider = ['bsf', 'prc_chapter', 'bsf_hospital'].includes(facility.facilityType);
-    const isHospital = ['hospital', 'bsf_hospital'].includes(facility.facilityType);
+    const isProvider = ['bsf', 'prc_chapter', 'hospital_bsf'].includes(facility.facilityType);
+    const isHospital = ['hospital', 'hospital_bsf'].includes(facility.facilityType);
 
     const [pendingBloodRequests, totalBloodRequests] = isProvider
       ? await Promise.all([
@@ -100,8 +100,8 @@ router.get('/pending-counts', async (req, res) => {
 
     const { user, facility } = ctx;
 
-    const isHybridFacility = facility.facilityType === 'bsf_hospital';
-    const isProvider = ['bsf', 'prc_chapter', 'bsf_hospital'].includes(facility.facilityType);
+    const isHybridFacility = facility.facilityType === 'hospital_bsf';
+    const isProvider = ['bsf', 'prc_chapter', 'hospital_bsf'].includes(facility.facilityType);
     const canViewPendingCounts =
       ['staff', 'branch-admin'].includes(user.role) ||
       (isHybridFacility && user.role === 'hospital');

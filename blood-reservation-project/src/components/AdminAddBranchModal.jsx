@@ -429,7 +429,7 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
                       bsf: 'Blood Service Facility',
                       hospital: 'Hospital',
                       prc_chapter: 'Philippine Red Cross Chapter',
-                      bsf_hospital: 'Hospital + Blood Service Facility',
+                      hospital_bsf: 'Hospital + Blood Service Facility',
                     };
 
                     setFormData(current => ({
@@ -442,7 +442,7 @@ export default function AdminAddBranchModal({ onClose, onBranchAdded }) {
                   <option value="bsf">BSF (Blood Service Facility)</option>
                   <option value="hospital">Hospital</option>
                   <option value="prc_chapter">Philippine Red Cross Chapter</option>
-                  <option value="bsf_hospital">Hospital + Blood Service Facility</option>
+                  <option value="hospital_bsf">Hospital + Blood Service Facility</option>
                 </select>
                 
               </div>

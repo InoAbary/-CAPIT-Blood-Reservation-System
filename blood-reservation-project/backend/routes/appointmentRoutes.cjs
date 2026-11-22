@@ -22,7 +22,7 @@ const { checkDonationCooldown } = require('../utils/donationCooldown.cjs');
 const { isObjectIdOrHexString } = require('mongoose');
 
 const bookableFacilityFilter = {
-  facilityType: { $in: ['bsf', 'prc_chapter', 'bsf_hospital'] },
+  facilityType: { $in: ['bsf', 'prc_chapter', 'hospital_bsf'] },
   isActive: true,
 };
 
