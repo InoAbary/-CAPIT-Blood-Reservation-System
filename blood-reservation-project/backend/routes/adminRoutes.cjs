@@ -93,6 +93,7 @@ router.get('/summary', async (req, res, next) => {
     ]);
     const counts = Object.fromEntries(staffByRole.map(({ _id, count }) => [_id, count]));
     const totalStaff = Object.values(counts).reduce((sum, count) => sum + count, 0);
+
     res.json({
       systemAdmins: counts.admin || 0,
       bsfAdmins: counts['branch-admin'] || 0,

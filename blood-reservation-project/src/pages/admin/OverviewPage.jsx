@@ -3,11 +3,10 @@ import { api, getErrorMessage } from '../lib/api.js';
 
 const metrics = [
   { key: 'systemAdmins', label: 'System Admins', detail: 'System-wide administrator accounts', icon: '🛡️', color: 'purple' },
-  { key: 'bsfAdmins', label: 'BSF Admins', detail: 'Participating blood service facilities', icon: '🩸', color: 'red' },
-  { key: 'prcAdmins', label: 'PRC Admins', detail: 'Philippine Red Cross facilities', icon: '🏥', color: 'pink' },
-  { key: 'donors', label: 'Donors', detail: 'Self-registered donors', icon: '❤️', color: 'orange' },
-  { key: 'hospitalStaff', label: 'Hospital Staff', detail: 'Staff accounts authorized by supervisors', icon: '🩺', color: 'blue' },
-  { key: 'bsfStaff', label: 'BSF Staff', detail: 'Staff accounts authorized by supervisors', icon: '🔬', color: 'purple' },
+  { key: 'bsfAdmins', label: 'Total Branch Admins', detail: 'Branch Admins of their assigned facilities', icon: '🩸', color: 'red' },
+  { key: 'donors', label: 'Donors', detail: 'Registered donors', icon: '❤️', color: 'orange' },
+  { key: 'hospitalStaff', label: 'Hospital Staff', detail: 'Staff accounts authorized by supervisors designated to hospital facilities.', icon: '🩺', color: 'blue' },
+  { key: 'bsfStaff', label: 'BSF Staff', detail: 'Staff accounts authorized by supervisors. Also includes Hospital BSF staff.', icon: '🔬', color: 'purple' },
 ];
 
 function OverviewPage() {
