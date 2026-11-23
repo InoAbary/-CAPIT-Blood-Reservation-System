@@ -31,10 +31,7 @@ async function getStockBalances(facilityIDs, { bloodType, components } = {}) {
         BloodRequest.find({
             receivingFacilityID: { $in: facilityIDs },
             ...products,
-            $or: [
-                { requestStatus: 'Allocated' },
-                { requestStatus: 'Partially Fulfilled', usesStockAllocation: true },
-            ],
+            requestStatus: 'Allocated',
         }).select('receivingFacilityID bloodType component units fulfilledUnits').lean(),
     ]);
 

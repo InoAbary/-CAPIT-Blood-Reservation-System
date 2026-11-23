@@ -4,7 +4,7 @@ const Inventory = require('../../db/models/inventories.cjs');
 const History = require('../../db/models/bloodUnitsHistory.cjs');
 const Operation = require('../../db/models/fulfillmentOperation.cjs');
 const { notifyBloodRelease } = require('./bloodReleaseNotifications.cjs');
-const ALLOWED_STATUSES = ['Allocated','Approved', 'Partially Fulfilled'];
+const ALLOWED_STATUSES = ['Allocated', 'Approved'];
 const COMPONENTS = ['Packed RBC', 'Plasma', 'Platelets', 'Whole Blood'];
 const fail = (status, message) => Object.assign(new Error(message), { status });
 function expiryCutoff(now = new Date()) {
@@ -34,7 +34,7 @@ async function readRequest(requestID, facilityID) {
 }
 function validateRequest(request) {
     if (!request) throw fail(404, 'Request not found in your facility.');
-    if (!ALLOWED_STATUSES.includes(request.requestStatus)) throw fail(409, 'Only allocated, approved, or partially fulfilled requests can be fulfilled.');
+    if (!ALLOWED_STATUSES.includes(request.requestStatus)) throw fail(409, 'Only allocated or approved requests can release blood bags.');
     if (!Number.isSafeInteger(request.units) || request.units < 1 || !COMPONENTS.includes(request.component)) throw fail(409, 'Invalid request product details.');
 }
 // Idempotent completion: no stock allocation happens here. Also used by recovery
@@ -69,9 +69,12 @@ async function finishOperation(operation) {
     if (fulfilledUnits > request.units) throw fail(409, 'Release totals exceed this request. Manual reconciliation is required.');
     const complete = fulfilledUnits === request.units;
     const now = new Date();
-    const updatedRequest = await BloodRequest.findOneAndUpdate({ _id: request._id, receivingFacilityID: operation.facilityID }, {
-        $set: { fulfilledUnits, requestStatus: complete ? 'Fulfilled' : 'Partially Fulfilled',
-            fulfilledAt: complete ? (request.fulfilledAt || now) : null }
+    const updatedRequest = await BloodRequest.findOneAndUpdate({ _id: request._id, receivingFacilityID: operation.facilityID, requestStatus: request.requestStatus }, {
+        $set: { fulfilledUnits,
+            ...(request.requestStatus !== 'Cancelled' && {
+                requestStatus: complete ? 'Fulfilled' : 'Partially Fulfilled',
+                fulfilledAt: complete ? (request.fulfilledAt || now) : null,
+            }) }
     }, { returnDocument: 'after', runValidators: true }).lean();
     if (!updatedRequest) throw fail(409, 'The request was changed or removed during release. Recovery is required.');
     const available = await BloodUnits.countDocuments({ ...eligibleStock(operation.facilityID), bloodType: operation.bloodType, component: operation.component });

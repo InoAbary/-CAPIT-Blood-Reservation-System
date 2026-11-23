@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useState, useRef } from 'react';
 import '../../styles/BranchAdmin.css';
 import '../../styles/BloodRequestStatus.css';
+import ResultModal from '../../components/ResultModal';
 
 const FULFILLMENT_STATUSES = ['Allocated', 'Approved', 'Partially Fulfilled', 'Fulfilled'];
 
@@ -37,14 +38,17 @@ function formatTime(value) {
 
 const CLOSED_REQUEST_STATUSES = new Set(['Cancelled', 'Rejected']);
 const COMPLETED_HANDOFFS = new Set(['Picked Up', 'Delivered']);
+const PICKUP_DEADLINE_FORMAT = new Intl.DateTimeFormat('en-PH', {
+  dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Manila',
+});
 
 function isInHistory(request) {
   return CLOSED_REQUEST_STATUSES.has(request.requestStatus) ||
-    (request.requestStatus === 'Fulfilled' &&
+    (['Partially Fulfilled', 'Fulfilled'].includes(request.requestStatus) &&
       (!request.fulfillmentStatus || COMPLETED_HANDOFFS.has(request.fulfillmentStatus)));
 }
 
-export default function BranchRequests() {
+export default function BranchRequests({ onReleaseUnits }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -64,20 +68,35 @@ export default function BranchRequests() {
   const [fulfillmentDetails, setFulfillmentDetails] = useState({ pickupLocation: '', staffContactName: '' });
   const [savingDetails, setSavingDetails] = useState(false);
   const pickupNoticeRef = useRef(null);
+  const cancelDialogRef = useRef(null);
+  const cancelDialogId = useId();
+  const [requestToCancel, setRequestToCancel] = useState(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [result, setResult] = useState(null);
+  const requestVersion = useRef(0);
 
   const loadRequests = useCallback(async () => {
+    const version = ++requestVersion.current;
     try {
-      setData(await request('/api/branch-admin/requests'));
+      const requests = await request('/api/branch-admin/requests');
+      if (version !== requestVersion.current) return;
+      setData(requests);
       setError('');
     } catch (loadError) {
-      setError(loadError.message);
+      if (version === requestVersion.current) setError(loadError.message);
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     loadRequests();
+    const timer = window.setInterval(loadRequests, 30_000);
+    return () => {
+      window.clearInterval(timer);
+      requestVersion.current++;
+    };
   }, [loadRequests]);
 
   const requests = useMemo(() => data?.requests ?? [], [data]);
@@ -144,8 +163,10 @@ const filteredRequests = useMemo(() => {
     setApprovalMethod(selected?.fulfillmentMethod || 'Pickup');
     setMethodNote('');
   }, [selected?.id, selected?.fulfillmentMethod]);
-  const requestsNeedingAction = requests.filter(({ requestStatus }) =>
-    ['Allocated', 'Partially Fulfilled',].includes(requestStatus)
+  const requestsNeedingAction = requests.filter(({ requestStatus, fulfillmentStatus }) =>
+    requestStatus === 'Allocated' ||
+    (['Partially Fulfilled', 'Fulfilled'].includes(requestStatus) &&
+      ['Preparing', 'Ready for Pickup', 'On the Way'].includes(fulfillmentStatus))
   );
   const urgentCount = requestsNeedingAction.filter(
     ({ urgency }) => urgency?.toLowerCase() === 'stat'
@@ -180,7 +201,8 @@ const filteredRequests = useMemo(() => {
 
   const deliverySteps = ['Preparing', 'On the Way', 'Delivered'];
   const pickupSteps = ['Preparing', 'Ready for Pickup', 'Picked Up'];
-  const progressSteps = selected?.confirmedFulfillmentMethod === 'Delivery' ? deliverySteps : pickupSteps;
+  const fulfillmentMethod = selected?.confirmedFulfillmentMethod || selected?.fulfillmentMethod;
+  const progressSteps = fulfillmentMethod === 'Delivery' ? deliverySteps : pickupSteps;
   const currentProgressIndex = progressSteps.indexOf(selected?.fulfillmentStatus || 'Preparing');
   const availableProgress = progressSteps[currentProgressIndex + 1] || '';
   useEffect(() => {
@@ -188,9 +210,11 @@ const filteredRequests = useMemo(() => {
     setProgressNote('');
   }, [selected?.id, availableProgress]);
 
+  const pickupLocation = selected?.fulfillmentDetails?.pickupLocation || '';
+  const staffContactName = selected?.fulfillmentDetails?.staffContactName || '';
   useEffect(() => {
-    setFulfillmentDetails({ pickupLocation: selected?.fulfillmentDetails?.pickupLocation || '', staffContactName: selected?.fulfillmentDetails?.staffContactName || '' });
-  }, [selected?.id, selected?.fulfillmentDetails]);
+    setFulfillmentDetails({ pickupLocation, staffContactName });
+  }, [selected?.id, pickupLocation, staffContactName]);
 
   async function updateProgress() {
     if (!nextProgress) return;
@@ -203,9 +227,60 @@ const filteredRequests = useMemo(() => {
       });
       const result = await readResponse(response);
       if (!response.ok) throw new Error(result.error || 'Could not update fulfillment progress.');
+      setResult({
+        type: 'success',
+        title: 'Progress updated',
+        message: nextProgress === 'Ready for Pickup'
+          ? 'The hospital has six hours to pick up the blood bags.'
+          : `The request is now marked ${nextProgress}.`,
+      });
+      window.dispatchEvent(new Event('pending-counts-changed'));
       await loadRequests();
-    } catch (progressError) { setError(progressError.message); }
+    } catch (progressError) {
+      setResult({ type: 'error', title: 'Could not update progress', message: progressError.message });
+      await loadRequests();
+    }
     finally { setSavingProgress(false); }
+  }
+
+  const cancellation = selected?.fulfillmentEvents?.findLast(event => event.status === 'Cancelled');
+
+  function openCancellation(item) {
+    setRequestToCancel(item);
+    setCancelReason('');
+    cancelDialogRef.current?.showModal();
+  }
+
+  async function cancelRequest(event) {
+    event.preventDefault();
+    const reason = cancelReason.trim();
+    if (cancelling || !requestToCancel || !reason) return;
+
+    setCancelling(true);
+    try {
+      const response = await fetch(`/api/branch-admin/requests/${encodeURIComponent(requestToCancel.id)}/cancel`, {
+        method: 'PATCH', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      const result = await readResponse(response);
+      if (!response.ok) throw new Error(result.error || 'Could not cancel the request.');
+      cancelDialogRef.current?.close();
+      changeView('history');
+      setSelectedId(requestToCancel.id);
+      setResult({
+        type: 'success',
+        title: 'Request cancelled',
+        message: 'The hospital can see your reason. The reserved stock is available again.',
+      });
+      window.dispatchEvent(new Event('pending-counts-changed'));
+      await loadRequests();
+    } catch (requestError) {
+      cancelDialogRef.current?.close();
+      setResult({ type: 'error', title: 'Could not cancel request', message: requestError.message });
+      await loadRequests();
+    } finally {
+      setCancelling(false);
+    }
   }
 
   async function saveFulfillmentDetails() {
@@ -252,6 +327,44 @@ const filteredRequests = useMemo(() => {
         </form>
       </dialog>
 
+      <dialog
+        ref={cancelDialogRef}
+        className="branch-pickup-dialog branch-cancel-dialog"
+        aria-labelledby={`${cancelDialogId}-title`}
+        aria-describedby={`${cancelDialogId}-description`}
+        onCancel={(event) => { if (cancelling) event.preventDefault(); }}
+      >
+        <h3 className="card-title" id={`${cancelDialogId}-title`}>Cancel blood request?</h3>
+        <p id={`${cancelDialogId}-description`}>
+          {requestToCancel?.requestID && <><strong>{requestToCancel.requestID}</strong>{' · '}</>}
+          {requestToCancel?.component}
+        </p>
+        <p>The hospital will see your reason, and the reserved stock will become available again.</p>
+        <form className="branch-cancel-form" onSubmit={cancelRequest}>
+          <label htmlFor={`${cancelDialogId}-reason`}>Cancellation reason</label>
+          <textarea
+            id={`${cancelDialogId}-reason`}
+            className="form-control"
+            rows={4}
+            maxLength={1000}
+            required
+            autoFocus
+            disabled={cancelling}
+            value={cancelReason}
+            onChange={(event) => setCancelReason(event.target.value)}
+            placeholder="Explain why your branch cannot fulfill this request."
+          />
+          <div className="modal-actions">
+            <button type="button" className="btn-action" disabled={cancelling} onClick={() => cancelDialogRef.current?.close()}>
+              Keep request
+            </button>
+            <button type="submit" className="btn-action branch-cancel-confirm" disabled={cancelling || !cancelReason.trim()}>
+              {cancelling ? 'Cancelling…' : 'Confirm cancellation'}
+            </button>
+          </div>
+        </form>
+      </dialog>
+      {result && <ResultModal {...result} onClose={() => setResult(null)} />}
       {error && <p className="form-message error-message" role="alert">{error}</p>}
 
       <div className="metrics-grid branch-metrics">
@@ -400,9 +513,13 @@ const filteredRequests = useMemo(() => {
                 {selected.confirmedFulfillmentMethod && selected.confirmedFulfillmentMethod !== selected.fulfillmentMethod && selected.fulfillmentMethodNote && <><dt>Method change note</dt><dd>{selected.fulfillmentMethodNote}</dd></>}
                 {FULFILLMENT_STATUSES.includes(selected.requestStatus)}
                 {selected.fulfillmentStatus && <><dt>Fulfillment progress</dt><dd>{selected.fulfillmentStatus}</dd></>}
+                {selected.fulfillmentStatus === 'Ready for Pickup' && selected.pickupExpiresAt && (
+                  <><dt>Pick up by (Manila time)</dt><dd>{PICKUP_DEADLINE_FORMAT.format(new Date(selected.pickupExpiresAt))}</dd></>
+                )}
                 {selected.reviewedAt && <><dt>Reviewed</dt><dd>{formatDate(selected.reviewedAt)}</dd></>}
                 {selected.reviewedBy && <><dt>Reviewed by</dt><dd>{`${selected.reviewedBy.firstName || ''} ${selected.reviewedBy.lastName || ''}`.trim()}</dd></>}
                 {selected.requestStatus === 'Rejected' && selected.decisionReason && <><dt>Decline reason</dt><dd>{selected.decisionReason}</dd></>}
+                {selected.requestStatus === 'Cancelled' && cancellation?.note && <><dt>Cancellation reason</dt><dd>{cancellation.note}</dd></>}
               </dl>
               {selected.requestStatus === 'Pending' && (
                 <div className="branch-request-decision">
@@ -431,7 +548,7 @@ const filteredRequests = useMemo(() => {
               {selected.requestStatus === 'Awaiting Hospital Confirmation' && <p className="form-message" role="status">Alternative offered. Waiting for the hospital to respond.</p>}
               {FULFILLMENT_STATUSES.includes(selected.requestStatus) && availableProgress && (
                 <div className="branch-request-decision">
-                  <strong>Update {selected.confirmedFulfillmentMethod?.toLowerCase()} progress</strong>
+                  <strong>Update {fulfillmentMethod?.toLowerCase()} progress</strong>
                   <label htmlFor="branch-progress-next">Next step</label>
                   <select id="branch-progress-next" className="form-control" value={nextProgress} onChange={(event) => setNextProgress(event.target.value)}><option value={availableProgress}>{availableProgress}</option></select>
                   <label htmlFor="branch-progress-note">Update note (optional)</label>
@@ -448,6 +565,20 @@ const filteredRequests = useMemo(() => {
                   <label htmlFor="branch-staff-contact">Who to find</label>
                   <input id="branch-staff-contact" className="form-control" maxLength={150} value={fulfillmentDetails.staffContactName} onChange={(event) => setFulfillmentDetails((current) => ({ ...current, staffContactName: event.target.value }))} placeholder="Branch staff member" />
                   <button className="btn-action" type="button" disabled={savingDetails} onClick={saveFulfillmentDetails}>{savingDetails ? 'Saving…' : 'Save coordination details'}</button>
+                </div>
+              )}
+              {['Allocated', 'Approved'].includes(selected.requestStatus) && (
+                <div className="branch-cancel-actions">
+                  {selected.requestStatus === 'Allocated' && !selected.fulfilledUnits && (
+                    <button type="button" className="btn-action branch-delete-button" onClick={() => openCancellation(selected)}>
+                      Cancel request
+                    </button>
+                  )}
+                  {onReleaseUnits && (
+                    <button type="button" className="btn-action branch-release-shortcut" onClick={() => onReleaseUnits(selected.id)}>
+                      Release units
+                    </button>
+                  )}
                 </div>
               )}
             </aside>

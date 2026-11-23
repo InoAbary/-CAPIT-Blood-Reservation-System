@@ -1064,6 +1064,16 @@
 .branch-pickup-dialog::backdrop { background: rgba(15, 23, 42, .45); }
 .branch-pickup-dialog p { margin: 8px 0 16px; line-height: 1.5; }
 
+.branch-cancel-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
+.branch-cancel-dialog { width: min(480px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; }
+.branch-cancel-form { display: grid; gap: 0.5rem; }
+.branch-cancel-form label { font-weight: 700; }
+.branch-cancel-form textarea { width: 100%; resize: vertical; }
+.branch-cancel-form .modal-actions { flex-wrap: wrap; margin-top: 0.5rem; }
+.branch-cancel-dialog .branch-cancel-confirm { background: #9f1834; border-color: #9f1834; color: #fff; }
+.branch-cancel-dialog .branch-cancel-confirm:hover:not(:disabled) { background: #81142b; }
+.branch-cancel-dialog .branch-cancel-confirm:disabled { opacity: 0.55; }
+
 .staff-appointment-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1.25rem; margin: 1rem 0; padding: 0.75rem 1rem; border: 1px solid #efdae0; border-radius: 10px; background: #fff7f9; }
 .staff-appointment-filters .form-group { display: flex; flex-direction: row; align-items: center; gap: 0.625rem; min-width: 0; }
 .staff-appointment-filters .form-group label { color: #4b2633; font-size: 0.875rem; font-weight: 650; white-space: nowrap; }
@@ -1072,3 +1082,5 @@
 .staff-appointment-filters select.form-control:focus-visible { outline: 2px solid #8c1940; outline-offset: 2px; }
 .appt-table.staff-appt-table :is(th, td) { text-align: center !important; vertical-align: middle; }
 .staff-appt-table .appt-actions { justify-content: center; }
+.branch-release-shortcut { background: #9f1834; border-color: #9f1834; color: #fff; }
+.branch-release-shortcut:hover { background: #81142b; color: #fff; }

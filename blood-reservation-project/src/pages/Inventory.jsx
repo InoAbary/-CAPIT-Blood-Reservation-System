@@ -21,16 +21,25 @@ const TABS = [
 { id: 'fulfillment', label: 'Release to Requests' },
 ];
 
-function Inventory({ fixedFacilityId = '', initialBloodUnit = null, onBloodUnitOpened }) {
+function Inventory({
+    fixedFacilityId = '', initialBloodUnit = null, onBloodUnitOpened,
+    initialFulfillmentRequestId = null, onFulfillmentOpened,
+}) {
+    const [fulfillmentRequestId] = useState(initialFulfillmentRequestId);
+    const initialTab = fulfillmentRequestId ? 'fulfillment' : initialBloodUnit ? 'update' : 'overview';
     const [facilities, setFacilities] = useState([]);
     const [selectedId, setSelectedId] = useState(fixedFacilityId);
     const [facility, setFacility] = useState(null);
     const [inventory, setInventory] = useState(null);
-    const [activeTab, setActiveTab] = useState(initialBloodUnit ? 'update' : 'overview');
+    const [activeTab, setActiveTab] = useState(initialTab);
     const [loadingList, setLoadingList] = useState(true);
     const [loadingDetails, setLoadingDetails] = useState(false);
     const [error, setError] = useState('');
     const [labelUnit, setLabelUnit] = useState(null);
+
+    useEffect(() => {
+        if (initialFulfillmentRequestId) onFulfillmentOpened?.();
+    }, [initialFulfillmentRequestId, onFulfillmentOpened]);
 
     async function loadFacilityInventory(id) {
         if (!id) return;
@@ -46,7 +55,7 @@ function Inventory({ fixedFacilityId = '', initialBloodUnit = null, onBloodUnitO
             if (!invRes.ok) throw new Error(invBody.message || 'Could not load inventory.');
             setFacility(facBody);
             setInventory(invBody);
-            setActiveTab(initialBloodUnit ? 'update' : 'overview');
+            setActiveTab(initialTab);
         } catch (err) { setError(err.message); }
         finally { setLoadingDetails(false); }
     }
@@ -304,7 +313,7 @@ function Inventory({ fixedFacilityId = '', initialBloodUnit = null, onBloodUnitO
 
 
             {activeTab === 'fulfillment' && (
-                <FulfillRequestsTab key={selectedId} facilityID={selectedId} onFulfilled={refreshInventory} />
+                <FulfillRequestsTab key={selectedId} facilityID={selectedId} initialRequestId={fulfillmentRequestId} onFulfilled={refreshInventory} />
             )}
 
             {activeTab === 'history' && (

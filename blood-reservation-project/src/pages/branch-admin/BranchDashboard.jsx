@@ -35,6 +35,12 @@ function BranchDashboard() {
     facilityType: workspaceFacilityType,
   } = useOutletContext();
   const [pendingBloodUnit, setPendingBloodUnit] = useState(null);
+  const [releaseRequestId, setReleaseRequestId] = useState(null);
+
+  function openRequestRelease(id) {
+    setReleaseRequestId(id);
+    setActiveTab('inventory');
+  }
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -442,6 +448,8 @@ function BranchDashboard() {
         <section id="branch-panel-inventory" className="branch-tab-panel" role="tabpanel" aria-labelledby="branch-tab-inventory" tabIndex="0">
           <Inventory fixedFacilityId={facility?.id}
                 initialBloodUnit={pendingBloodUnit}
+                initialFulfillmentRequestId={releaseRequestId}
+                onFulfillmentOpened={() => setReleaseRequestId(null)}
                 onBloodUnitOpened={() => setPendingBloodUnit(null)} />
         </section>
       )}
@@ -471,7 +479,7 @@ function BranchDashboard() {
           )}
 
       {activeTab === 'branch-requests' &&
-        ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <BranchRequests />}
+        ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <BranchRequests onReleaseUnits={openRequestRelease} />}
       {activeTab === 'my-requests' &&
         workspaceFacilityType === 'hospital' && <HospitalRequests />}
       {activeTab === 'donations' && ['bsf', 'prc_chapter'].includes(workspaceFacilityType) && <StaffDonations onDonationRecorded={unit => {

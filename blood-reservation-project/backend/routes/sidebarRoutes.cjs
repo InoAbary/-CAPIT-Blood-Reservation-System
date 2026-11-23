@@ -8,7 +8,7 @@ const Facility = require('../../db/models/facilities.cjs');
 const SidebarSeen = require('../../db/models/sidebarSeen.cjs');
 const Appointment = require('../../db/models/appointmentSchedules.cjs');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
-const { OPEN_BLOOD_REQUEST_STATUSES } = require('../utils/openBloodRequestStatuses.cjs');
+const { OPEN_BLOOD_REQUEST_STATUSES, REQUESTS_NEEDING_ACTION } = require('../utils/openBloodRequestStatuses.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const BloodReport = require('../../db/models/bloodReports.cjs');
 
@@ -68,7 +68,10 @@ async function countNewReports(facility, newer) {
 }
 
 async function countAwaitingReports(facility) {
-  const requestIds = await BloodRequest.distinct('_id', { hospitalFacilityID: facility });
+  const requestIds = await BloodRequest.distinct('_id', {
+    hospitalFacilityID: facility,
+    $nor: [{ requestStatus: 'Cancelled', pickupExpiresAt: { $type: 'date' } }],
+  });
   if (!requestIds.length) return 0;
   const [result] = await BloodUnits.aggregate([
     { $match: { requestID: { $in: requestIds }, status: 'Released' } },
@@ -84,12 +87,12 @@ async function countAwaitingReports(facility) {
 }
 
 
-async function countWorkAndCancellations(model, facilityFilter, statusField, openStatuses, cancelledStatus, newer) {
+async function countWorkAndCancellations(model, facilityFilter, statusField, workFilter, cancelledStatus, newer) {
   const [counts] = await model.aggregate([
     { $match: {
       ...facilityFilter,
       $or: [
-        { [statusField]: { $in: openStatuses } },
+        workFilter,
         { [statusField]: cancelledStatus, updatedAt: newer },
       ],
     } },
@@ -112,7 +115,7 @@ function countUnreadUpdates(scope, tab, newer) {
   if (tab === 'utilization') return countNewReports(scope.facility, newer);
   return BloodRequest.countDocuments({
     hospitalFacilityID: scope.facility, updatedAt: newer,
-    requestStatus: { $in: [...OPEN_BLOOD_REQUEST_STATUSES, 'Fulfilled', 'Cancelled'] },
+    requestStatus: { $in: [...OPEN_BLOOD_REQUEST_STATUSES, 'Partially Fulfilled', 'Fulfilled', 'Cancelled'] },
     $expr: { $gt: ['$updatedAt', '$createdAt'] },
   });
 }
@@ -123,13 +126,13 @@ async function countTab(scope, tab, newer) {
   }
   if (scope.workspace === 'bsf' && tab === 'appointments') {
     return countWorkAndCancellations(
-      Appointment, { venue: scope.facility }, 'status', ['pending'], 'cancelled', newer,
+      Appointment, { venue: scope.facility }, 'status', { status: 'pending' }, 'cancelled', newer,
     );
   }
   if (scope.workspace === 'bsf' && tab === 'branch-requests') {
     return countWorkAndCancellations(
       BloodRequest, { receivingFacilityID: scope.facility }, 'requestStatus',
-      OPEN_BLOOD_REQUEST_STATUSES,
+      REQUESTS_NEEDING_ACTION,
       'Cancelled', newer,
     );
   }

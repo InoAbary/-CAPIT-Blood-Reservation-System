@@ -6,7 +6,8 @@ const Donor = require('../../db/models/donor.cjs');
 const Facility = require('../../db/models/facilities.cjs');
 const Staff = require('../../db/models/staff.cjs');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
-const { OPEN_BLOOD_REQUEST_STATUSES } = require('../utils/openBloodRequestStatuses.cjs');
+const { OPEN_BLOOD_REQUEST_STATUSES, REQUESTS_NEEDING_ACTION } = require('../utils/openBloodRequestStatuses.cjs');
+const { PICKUP_WINDOW_MS, pickupDeadline, expireReadyPickups } = require('../services/bloodRequestPickupExpiry.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const FulfillmentOperation = require('../../db/models/fulfillmentOperation.cjs');
 const { ensureIndexes } = require('../services/fulfillRequest.cjs');
@@ -109,7 +110,7 @@ router.get('/dashboard', requireRole('branch-admin'), async (req, res) => {
     }).select('firstName lastName email staffId role isActive createdAt').sort({ firstName: 1, lastName: 1 }).lean();
     
     const pendingBloodRequests = canReceiveBranchRequests(context)
-      ? await BloodRequest.countDocuments({ receivingFacilityID: context.facility._id, requestStatus: { $in: OPEN_BLOOD_REQUEST_STATUSES } })
+      ? await BloodRequest.countDocuments({ receivingFacilityID: context.facility._id, ...REQUESTS_NEEDING_ACTION })
       : 0;
     const totalBloodRequests = canReceiveBranchRequests(context)
       ? await BloodRequest.countDocuments({ receivingFacilityID: context.facility._id })
@@ -357,22 +358,38 @@ router.patch('/requests/:id/progress', async (req, res) => {
         error: 'Release at least one blood bag before posting a pickup or delivery update.',
       });
     }
+    const now = new Date();
+    const deadline = status === 'Picked Up' && pickupDeadline(current);
+    if (deadline && deadline <= now) {
+      await expireReadyPickups(now);
+      return res.status(409).json({ error: 'The six-hour pickup window has expired. Refresh the request list.' });
+    }
     const deliverySteps = ['Preparing', 'On the Way', 'Delivered'];
     const pickupSteps = ['Preparing', 'Ready for Pickup', 'Picked Up'];
-    const steps = current.confirmedFulfillmentMethod === 'Delivery' ? deliverySteps : pickupSteps;
+    const method = current.confirmedFulfillmentMethod || current.fulfillmentMethod;
+    const steps = method === 'Delivery' ? deliverySteps : pickupSteps;
     const previous = current.fulfillmentStatus || 'Preparing';
     if (!steps.includes(status) || steps.indexOf(status) !== steps.indexOf(previous) + 1) {
       return res.status(400).json({ error: `Next valid progress update: ${steps[steps.indexOf(previous) + 1] || 'none'}.` });
     }
     const isComplete = ['Delivered', 'Picked Up'].includes(status);
     const updated = await BloodRequest.findOneAndUpdate(
-      { _id: id, receivingFacilityID: context.facility._id, requestStatus: current.requestStatus, fulfillmentStatus: current.fulfillmentStatus ?? null },
+      {
+        _id: id,
+        receivingFacilityID: context.facility._id,
+        requestStatus: current.requestStatus,
+        fulfillmentStatus: current.fulfillmentStatus ?? null,
+        ...(status === 'Picked Up' && {
+          $or: [{ pickupExpiresAt: null }, { pickupExpiresAt: { $gt: now } }],
+        }),
+      },
       {
         $set: {
           fulfillmentStatus: status,
+          ...(status === 'Ready for Pickup' && { pickupExpiresAt: new Date(now.getTime() + PICKUP_WINDOW_MS) }),
           ...(isComplete && Number(current.fulfilledUnits || 0) >= Number(current.units || 0) ? { requestStatus: 'Fulfilled', fulfilledAt: current.fulfilledAt || new Date() } : {}),
         },
-        $push: { fulfillmentEvents: { status, note, updatedBy: req.user.id, updatedAt: new Date() } },
+        $push: { fulfillmentEvents: { status, note, updatedBy: req.user.id, updatedAt: now } },
       },
       { new: true, runValidators: true },
     );
@@ -412,6 +429,79 @@ router.patch('/requests/:id/fulfillment-details', async (req, res) => {
   }
 });
 
+async function cancelUnreleasedRequest(scope, request, actorID, reason) {
+  let lock;
+  if (request.requestStatus === 'Allocated') {
+    await ensureIndexes();
+    // Share the durable lock with bag release and hospital cancellation.
+    lock = await FulfillmentOperation.create({
+      requestID: request._id,
+      facilityID: request.receivingFacilityID,
+      actorID,
+      receivingHospitalID: request.hospitalFacilityID,
+      bloodType: request.bloodType,
+      component: request.component,
+      units: request.units,
+      expectedFulfilledUnits: 0,
+    });
+  }
+
+  try {
+    if (lock && await BloodUnits.exists({ requestID: request._id, status: 'Released' })) {
+      return null;
+    }
+
+    return await BloodRequest.findOneAndUpdate(
+      { ...scope, requestStatus: request.requestStatus },
+      {
+        $set: { requestStatus: 'Cancelled', fulfillmentStatus: null },
+        ...(reason && {
+          $push: { fulfillmentEvents: { status: 'Cancelled', note: reason, updatedBy: actorID } },
+        }),
+      },
+      { returnDocument: 'after', runValidators: true },
+    );
+  } finally {
+    if (lock) await FulfillmentOperation.deleteOne({ _id: lock._id });
+  }
+}
+
+router.patch('/requests/:id/cancel', async (req, res) => {
+  const { id } = req.params;
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+  if (!isValidUserId(id)) return res.status(400).json({ error: 'Invalid request id.' });
+  if (!reason || reason.length > 1000) {
+    return res.status(400).json({ error: 'Enter a cancellation reason of 1–1,000 characters.' });
+  }
+
+  const unavailable = 'Only allocated requests with no released blood bags can be cancelled.';
+
+  try {
+    const context = await getBranchContext(req, res);
+    if (!context) return;
+    if (!canReceiveBranchRequests(context) || context.facility.isActive === false) {
+      return res.status(403).json({ error: 'Only active BSF and PRC facilities can cancel incoming requests.' });
+    }
+
+    const scope = { _id: id, receivingFacilityID: context.facility._id };
+    const request = await BloodRequest.findOne(scope).lean();
+    if (!request) return res.status(404).json({ error: 'Request not found for this branch.' });
+    if (request.requestStatus !== 'Allocated' || request.fulfilledUnits > 0) {
+      return res.status(409).json({ error: unavailable });
+    }
+
+    const updated = await cancelUnreleasedRequest(scope, request, context.staff._id, reason);
+    if (!updated) return res.status(409).json({ error: unavailable });
+    return res.json({ success: true, request: updated });
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({ error: 'A release or cancellation is already being processed. Refresh and try again.' });
+    }
+    console.error('Incoming request cancellation failed:', error);
+    return res.status(500).json({ error: 'Failed to cancel the request.' });
+  }
+});
+
 router.patch('/my-requests/:id/cancel', async (req, res) => {
   if (!isValidUserId(req.params.id)) {
     return res.status(400).json({ error: 'Invalid request id.' });
@@ -434,39 +524,7 @@ router.patch('/my-requests/:id/cancel', async (req, res) => {
 
     if (!request) return res.status(409).json({ error: unavailable });
 
-    let lock;
-    if (request.requestStatus === 'Allocated') {
-      await ensureIndexes();
-      // Use the same per-request lock that BSF staff acquire before releasing bags.
-      lock = await FulfillmentOperation.create({
-        requestID: request._id,
-        facilityID: request.receivingFacilityID,
-        actorID: context.staff._id,
-        receivingHospitalID: context.facility._id,
-        bloodType: request.bloodType,
-        component: request.component,
-        units: request.units,
-        expectedFulfilledUnits: 0,
-      });
-    }
-
-    let updated;
-    try {
-      const hasReleasedUnits = lock && await BloodUnits.exists({
-        requestID: request._id,
-        status: 'Released',
-      });
-
-      if (!hasReleasedUnits) {
-        updated = await BloodRequest.findOneAndUpdate(
-          { ...scope, requestStatus: request.requestStatus },
-          { $set: { requestStatus: 'Cancelled', fulfillmentStatus: null } },
-          { returnDocument: 'after', runValidators: true },
-        );
-      }
-    } finally {
-      if (lock) await FulfillmentOperation.deleteOne({ _id: lock._id });
-    }
+    const updated = await cancelUnreleasedRequest(scope, request, context.staff._id);
 
     if (!updated) return res.status(409).json({ error: unavailable });
     return res.json({ success: true, request: updated });
@@ -500,12 +558,13 @@ async function getProviderUtilizationUnits(facility, unitIds) {
   }).select('bloodUnitID bloodType component collectionDate expiryDate releasedAt requestID').populate({
     path: 'requestID',
     match: { receivingFacilityID: facility._id },
-    select: 'requestID hospitalFacilityID createdAt fulfillmentMethod confirmedFulfillmentMethod fulfillmentStatus',
+    select: 'requestID hospitalFacilityID createdAt fulfillmentMethod confirmedFulfillmentMethod fulfillmentStatus requestStatus pickupExpiresAt',
     populate: { path: 'hospitalFacilityID', select: 'facilityName' },
   }).sort({ releasedAt: -1 }).lean();
   const reportsByUnit = await getUtilizationReports(units.map(unit => unit._id));
 
-  return units.map(unit => ({
+  return units.filter(unit => reportsByUnit.has(String(unit._id)) ||
+    !(unit.requestID?.requestStatus === 'Cancelled' && unit.requestID.pickupExpiresAt)).map(unit => ({
     id: String(unit._id),
     bloodUnitID: unit.bloodUnitID,
     bloodType: unit.bloodType,
@@ -539,7 +598,7 @@ router.get('/utilization', async (req, res) => {
 
       if (workspace === 'hospital') {
       const requests = await BloodRequest.find({ hospitalFacilityID: context.facility._id })
-        .select('requestID receivingFacilityID createdAt fulfillmentMethod confirmedFulfillmentMethod fulfillmentStatus')
+        .select('requestID receivingFacilityID createdAt fulfillmentMethod confirmedFulfillmentMethod fulfillmentStatus requestStatus pickupExpiresAt')
         .populate('receivingFacilityID', 'facilityName')
         .lean();
       const requestDetailsById = new Map(requests.map(request => [
@@ -552,12 +611,16 @@ router.get('/utilization', async (req, res) => {
         }).select('bloodUnitID bloodType component collectionDate expiryDate releasedAt requestID').sort({ releasedAt: -1 }).lean()
         : [];
       const reportsByUnit = await getUtilizationReports(units.map((unit) => unit._id));
+      const expiredIds = new Set(requests.filter(request =>
+        request.requestStatus === 'Cancelled' && request.pickupExpiresAt
+      ).map(request => String(request._id)));
 
       return res.json({
         mode: 'hospital',
         facilityName: context.facility.facilityName,
         wastageReasons: WASTAGE_REASONS,
-        units: units.map((unit) => ({
+        units: units.filter(unit => reportsByUnit.has(String(unit._id)) ||
+          !expiredIds.has(String(unit.requestID))).map((unit) => ({
           id: String(unit._id),
           bloodUnitID: unit.bloodUnitID,
           bloodType: unit.bloodType,
@@ -638,8 +701,10 @@ router.post('/utilization/reports', async (req, res) => {
       return res.status(403).json({ error: 'Only hospital facilities can submit utilization reports.' });
     }
 
-    const requests = await BloodRequest.find({ hospitalFacilityID: context.facility._id })
-      .select('_id').lean();
+    const requests = await BloodRequest.find({
+      hospitalFacilityID: context.facility._id,
+      $nor: [{ requestStatus: 'Cancelled', pickupExpiresAt: { $type: 'date' } }],
+    }).select('_id').lean();
     const unit = await BloodUnits.findOne({
       _id: bloodUnitId,
       requestID: { $in: requests.map((request) => request._id) },
@@ -810,5 +875,4 @@ router.delete('/users/:id', requireRole('branch-admin'), async (req, res) => {
 });
 
 module.exports = router;
-
 

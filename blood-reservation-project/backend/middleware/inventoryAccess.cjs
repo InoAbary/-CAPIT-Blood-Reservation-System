@@ -10,15 +10,16 @@ async function loadAccess(req, res, next) {
         if (!mongoose.isObjectIdOrHexString(req.user?.id)) return deny(res, 401, 'Invalid staff session.');
         const account = await Staff.findById(req.user.id).select('_id role isActive facilityID').lean();
         if (!account || account.isActive !== true) return deny(res, 401, 'Staff account is unavailable.');
-        if (!['staff', 'branch-admin', 'admin'].includes(account.role)) return deny(res, 403, 'Inventory access is limited to branch staff and administrators.');
+        const canEdit = ['staff', 'branch-admin', 'hospital'].includes(account.role);
+        if (!canEdit && account.role !== 'admin') return deny(res, 403, 'Inventory access is limited to branch staff and administrators.');
         let facility = null;
-        if (['staff', 'branch-admin'].includes(account.role)) {
+        if (canEdit) {
             if (!mongoose.isObjectIdOrHexString(account.facilityID)) return deny(res, 403, 'Your account has no assigned facility.');
-            facility = await Facility.findOne({ _id: account.facilityID, isActive: true, facilityType: { $in: BLOOD_SERVICE_FACILITY_TYPES } }).lean();
+            facility = await Facility.findOne({ _id: account.facilityID, isActive: true, facilityType: { $in: account.role === 'hospital' ? ['hospital_bsf'] : BLOOD_SERVICE_FACILITY_TYPES } }).lean();
             if (!facility) return deny(res, 403, 'Your account needs an active BSF or PRC facility assignment.');
         }
         // Role and facility are taken from the CURRENT account, not client input.
-        req.inventoryAccess = { account, facility, canEdit: ['staff', 'branch-admin'].includes(account.role) };
+        req.inventoryAccess = { account, facility, canEdit };
         req.user = { ...req.user, id: String(account._id), role: account.role };
         res.set('Cache-Control', 'no-store');
         return next();
