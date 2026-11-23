@@ -681,6 +681,7 @@
   box-sizing: border-box;
   outline: none;
   font-family: inherit;
+  height: 42px;
 }
 
 .form-control:focus {
