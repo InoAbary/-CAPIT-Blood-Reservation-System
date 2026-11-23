@@ -81,6 +81,41 @@
   gap: 24px;
 }
 
+.branch-hours-dashboard-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  border: 1px solid #f2d5a3;
+  border-radius: 12px;
+  background: #fffaf0;
+}
+.branch-hours-dashboard-notice.confirmed { border-color: #cfe5d6; background: #f3faf5; }
+.branch-hours-notice-copy { display: grid; gap: 4px; }
+.branch-hours-notice-copy strong { color: #334155; font-size: 14px; }
+.branch-hours-notice-copy span { color: #64748b; font-size: 12px; line-height: 1.5; }
+.branch-hours-dashboard-notice button { flex: 0 0 auto; border: 0; border-radius: 8px; padding: 10px 13px; background: #a91f35; color: #fff; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.branch-hours-dashboard-notice button:hover { background: #8f1b2d; }
+.branch-hours-panel { display: grid; gap: 18px; }
+.branch-hours-placeholder { margin: 0; padding: 13px 15px; border: 1px solid #f1dfb8; border-radius: 10px; background: #fffaf0; color: #725c30; font-size: 13px; }
+.branch-hours-placeholder span { display: block; margin-top: 4px; color: #8e7b53; font-size: 12px; }
+.branch-hours-form { display: grid; gap: 20px; max-width: 760px; }
+.branch-hours-days { margin: 0; padding: 16px; border: 1px solid #e2e8f0; border-radius: 12px; }
+.branch-hours-days legend { padding: 0 6px; color: #334155; font-size: 13px; font-weight: 700; }
+.branch-hours-days > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
+.branch-hours-days label, .branch-hours-24 { display: flex; align-items: center; gap: 8px; color: #475569; font-size: 13px; }
+.branch-hours-days input, .branch-hours-24 input { accent-color: #b52b3a; width: 16px; height: 16px; }
+.branch-hours-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; max-width: 480px; }
+.branch-hours-times label { display: grid; gap: 7px; color: #475569; font-size: 13px; font-weight: 600; }
+.branch-hours-times input { min-height: 42px; }
+.branch-hours-help { color: #8a6570; font-size: 12px; }
+@media (max-width: 640px) {
+  .branch-hours-dashboard-notice { align-items: flex-start; flex-direction: column; }
+  .branch-hours-days > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .branch-hours-times { grid-template-columns: 1fr; }
+}
+
 .branch-eyebrow {
   display: block;
   margin-bottom: 8px;

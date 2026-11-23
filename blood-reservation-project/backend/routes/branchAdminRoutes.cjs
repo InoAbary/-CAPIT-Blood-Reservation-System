@@ -20,6 +20,13 @@ const managedRoles = ['staff', 'hospital'];
 const requireRole = require('../middleware/requireRole.cjs');
 
 const STAFF_ROLES = ['staff', 'hospital', 'branch-admin']
+const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+function displayTime(value) {
+  const [hour, minute] = value.split(':').map(Number);
+  const suffix = hour >= 12 ? 'PM' : 'AM';
+  return `${hour % 12 || 12}:${String(minute).padStart(2, '0')} ${suffix}`;
+}
 
 async function getBranchContext(req, res) {
   const staff = await Staff.findOne({
@@ -135,6 +142,8 @@ router.get('/dashboard', requireRole('branch-admin'), async (req, res) => {
         facilityType: context.facility.facilityType,
         typeLabel: context.facility.typeLabel,
         address: context.facility.address,
+        hours: context.facility.hours,
+        operatingHours: context.facility.operatingHours,
         isActive: context.facility.isActive !== false,
       },
       summary: {
@@ -151,6 +160,40 @@ router.get('/dashboard', requireRole('branch-admin'), async (req, res) => {
   } catch (error) {
     console.error('Branch-admin dashboard failed:', error);
     return res.status(500).json({ error: 'Failed to load your branch dashboard.' });
+  }
+});
+
+router.patch('/facility/operating-hours', requireRole('branch-admin'), async (req, res) => {
+  try {
+    const context = await getBranchContext(req, res);
+    if (!context) return;
+    const { daysOpen, is24Hours, opensAt, closesAt } = req.body || {};
+    if (!Array.isArray(daysOpen) || !daysOpen.length || daysOpen.some((day) => !WEEKDAYS.includes(day))) {
+      return res.status(400).json({ error: 'Choose at least one valid opening day.' });
+    }
+    if (typeof is24Hours !== 'boolean') {
+      return res.status(400).json({ error: 'Choose whether the branch operates 24 hours.' });
+    }
+    if (!is24Hours && (!/^([01]\d|2[0-3]):[0-5]\d$/.test(opensAt || '') || !/^([01]\d|2[0-3]):[0-5]\d$/.test(closesAt || ''))) {
+      return res.status(400).json({ error: 'Enter a valid opening and closing time.' });
+    }
+
+    const sortedDays = WEEKDAYS.filter((day) => daysOpen.includes(day));
+    const timeLabel = is24Hours ? 'Open 24 hours' : `${displayTime(opensAt)}–${displayTime(closesAt)}`;
+    const hours = `${sortedDays.join(', ')} · ${timeLabel}`;
+    const operatingHours = {
+      daysOpen: sortedDays,
+      is24Hours,
+      opensAt: is24Hours ? '' : opensAt,
+      closesAt: is24Hours ? '' : closesAt,
+      source: 'branch_admin',
+      updatedAt: new Date(),
+    };
+    await Facility.updateOne({ _id: context.facility._id }, { $set: { hours, operatingHours } }, { runValidators: true });
+    return res.json({ success: true, hours, operatingHours, message: 'Opening days and hours saved.' });
+  } catch (error) {
+    console.error('Branch operating hours update failed:', error);
+    return res.status(500).json({ error: 'Could not save the branch operating hours.' });
   }
 });
 

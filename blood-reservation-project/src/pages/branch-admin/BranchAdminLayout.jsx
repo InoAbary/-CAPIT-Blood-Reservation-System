@@ -10,6 +10,7 @@ const workspaceTabs = [
   { id: 'create-user', label: 'Create user', icon: '＋' },
   { id: 'users', label: 'User view', icon: '👥' },
   { id: 'blood-locator', label: 'Blood locator', icon: '📍' },
+  { id: 'facility-hours', label: 'Opening hours', icon: '🕒' },
 ];
 
 export default function BranchAdminLayout() {
