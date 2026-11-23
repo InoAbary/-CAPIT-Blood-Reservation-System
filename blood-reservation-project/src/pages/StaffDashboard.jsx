@@ -66,6 +66,12 @@ function StaffDashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [workspace, setWorkspace] = useState(null);
   const [pendingBloodUnit, setPendingBloodUnit] = useState(null);
+  const [releaseRequestId, setReleaseRequestId] = useState(null);
+
+  function openRequestRelease(id) {
+    setReleaseRequestId(id);
+    setActiveTab('inventory');
+  }
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -312,6 +318,8 @@ function StaffDashboard() {
             >
               <Inventory fixedFacilityId={facility?.id}
                 initialBloodUnit={pendingBloodUnit}
+                initialFulfillmentRequestId={releaseRequestId}
+                onFulfillmentOpened={() => setReleaseRequestId(null)}
                 onBloodUnitOpened={() => setPendingBloodUnit(null)} />
             </section>
           )}
@@ -328,7 +336,7 @@ function StaffDashboard() {
             </section>
           )}
 
-          {activeTab === 'branch-requests' && ['bsf', 'prc_chapter'].includes(facilityType) && <BranchRequests />}
+          {activeTab === 'branch-requests' && ['bsf', 'prc_chapter'].includes(facilityType) && <BranchRequests onReleaseUnits={openRequestRelease} />}
 
           {activeTab === 'my-requests' && facilityType === 'hospital' && <HospitalRequests />}
 

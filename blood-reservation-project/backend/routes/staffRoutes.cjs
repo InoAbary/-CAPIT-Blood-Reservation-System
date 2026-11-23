@@ -4,7 +4,7 @@ const Facility = require('../../db/models/facilities.cjs');
 const BloodRequest = require('../../db/models/BloodRequest.cjs');
 const BloodUnits = require('../../db/models/bloodUnits.cjs');
 const Appointment = require('../../db/models/appointmentSchedules.cjs');
-const { OPEN_BLOOD_REQUEST_STATUSES } = require('../utils/openBloodRequestStatuses.cjs');
+const { OPEN_BLOOD_REQUEST_STATUSES, REQUESTS_NEEDING_ACTION } = require('../utils/openBloodRequestStatuses.cjs');
 const { BLOOD_SERVICE_FACILITY_TYPES } = require('../utils/facilityTypes.cjs');
 
 const router = express.Router();
@@ -29,7 +29,7 @@ router.get('/dashboard', async (req, res) => {
 
     const [pendingBloodRequests, totalBloodRequests] = isProvider
       ? await Promise.all([
-          BloodRequest.countDocuments({ receivingFacilityID: facility._id, requestStatus: { $in: OPEN_BLOOD_REQUEST_STATUSES } }),
+          BloodRequest.countDocuments({ receivingFacilityID: facility._id, ...REQUESTS_NEEDING_ACTION }),
           BloodRequest.countDocuments({ receivingFacilityID: facility._id }),
         ])
       : [0, 0];
@@ -104,7 +104,7 @@ router.get('/pending-counts', async (req, res) => {
     const [bloodRequests, appointments] = await Promise.all([
       BloodRequest.countDocuments({
         receivingFacilityID: facility._id,
-        requestStatus: { $in: OPEN_BLOOD_REQUEST_STATUSES },
+        ...REQUESTS_NEEDING_ACTION,
       }),
       Appointment.countDocuments({
         venue: facility._id,

@@ -34,7 +34,7 @@ function requestReference(request) {
 
 function isInHistory(request) {
   return CLOSED_STATUSES.has(request.requestStatus) ||
-    (request.requestStatus === 'Fulfilled' &&
+    (['Partially Fulfilled', 'Fulfilled'].includes(request.requestStatus) &&
       (!request.fulfillmentStatus || COMPLETED_HANDOFFS.has(request.fulfillmentStatus)));
 }
 
@@ -135,6 +135,7 @@ function RequestHistory({ item }) {
       updatedAt: item.createdAt,
     }] : []),
     ...releaseEvents,
+    ...(item.fulfillmentEvents ?? []).filter(event => event.status === 'Cancelled'),
   ];
   // Older requests may have a recorded completion date without a release operation.
   if (item.requestStatus === 'Fulfilled' && item.fulfilledAt && !releaseEvents.some(event => event.status === 'Fulfilled')) {
@@ -144,13 +145,14 @@ function RequestHistory({ item }) {
   return (
     <section className="hospital-my-request-histories" aria-label="Update history">
       <HistoryList title="Request status" events={statusEvents} />
-      <HistoryList title="Pickup / delivery" events={item.fulfillmentEvents ?? []} />
+      <HistoryList title="Pickup / delivery" events={(item.fulfillmentEvents ?? []).filter(event => event.status !== 'Cancelled')} />
     </section>
   );
 }
 
 function RequestDetails({ item, busy, onUpdate }) {
   const latest = item.fulfillmentEvents?.at(-1);
+  const branchCancellation = item.requestStatus === 'Cancelled' && latest?.status === 'Cancelled' ? latest : null;
   const method = item.confirmedFulfillmentMethod || item.fulfillmentMethod;
   const { pickupLocation, staffContactName } = item.fulfillmentDetails || {};
 
@@ -167,12 +169,20 @@ function RequestDetails({ item, busy, onUpdate }) {
         {item.requestStatus === 'Rejected' && item.decisionReason && (
           <p className="hospital-request-reason"><strong>Decline reason</strong> {item.decisionReason}</p>
         )}
+        {branchCancellation?.note && (
+          <p className="hospital-request-reason"><strong>{item.pickupExpiresAt ? 'Pickup expired' : 'Branch cancellation reason'}</strong> {branchCancellation.note}</p>
+        )}
       </section>
 
       <section className="hospital-my-request-detail-section">
         <h4>Pickup or delivery</h4>
         <dl className="hospital-my-request-detail-grid">
           <div><dt>Current progress</dt><dd>{item.fulfillmentStatus || '—'}</dd></div>
+          {item.fulfillmentStatus === 'Ready for Pickup' && item.pickupExpiresAt && (
+            <div><dt>Pick up by (Manila time)</dt><dd>
+              {formatTimestamp(item.pickupExpiresAt, dateFormatter)} · {formatTimestamp(item.pickupExpiresAt, timeFormatter)}
+            </dd></div>
+          )}
           {item.confirmedFulfillmentMethod && (
             <div>
               <dt>{item.requestStatus === 'Awaiting Hospital Confirmation' ? 'Offered method' : 'Agreed method'}</dt>
@@ -184,7 +194,7 @@ function RequestDetails({ item, busy, onUpdate }) {
           )}
           {method === 'Pickup' && pickupLocation && <div><dt>Pickup location</dt><dd>{pickupLocation}</dd></div>}
           {method === 'Pickup' && staffContactName && <div><dt>Staff contact</dt><dd>{staffContactName}</dd></div>}
-          {latest?.note && <div className="hospital-my-request-wide"><dt>Latest note</dt><dd>{latest.note}</dd></div>}
+          {!branchCancellation && latest?.note && <div className="hospital-my-request-wide"><dt>Latest note</dt><dd>{latest.note}</dd></div>}
         </dl>
       </section>
 
@@ -385,7 +395,7 @@ export default function HospitalRequests() {
   const history = requests.filter(isInHistory);
   const visible = view === 'ongoing' ? ongoing : history;
   const openRequests = requests.filter(item =>
-    ['Allocated', 'Partially Fulfilled'].includes(item.requestStatus)
+    item.requestStatus === 'Allocated'
   ).length;
 
   return (

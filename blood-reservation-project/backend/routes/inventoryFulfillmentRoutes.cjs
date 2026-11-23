@@ -66,7 +66,7 @@ router.get('/:id/eligible-units', async (req, res) => {
         const request = await BloodRequest.findOne({
             _id: req.params.id,
             receivingFacilityID: facilityID,
-            requestStatus: { $in: ['Allocated', 'Approved', 'Partially Fulfilled'] },
+            requestStatus: { $in: ['Allocated', 'Approved'] },
         }).select('bloodType component').lean();
 
         if (!request) {

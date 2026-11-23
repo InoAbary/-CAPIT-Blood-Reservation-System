@@ -49,6 +49,7 @@ const bloodRequestSchema = new mongoose.Schema(
         confirmedFulfillmentMethod: { type: String, enum: ['Pickup', 'Delivery'], default: null },
         fulfillmentMethodNote: { type: String, trim: true, maxlength: 1000, default: '' },
         fulfillmentStatus: { type: String, enum: ['Preparing', 'On the Way', 'Delivered', 'Ready for Pickup', 'Picked Up'], default: null },
+        pickupExpiresAt: { type: Date, default: null, index: true },
         fulfillmentDetails: {
             pickupLocation: { type: String, trim: true, maxlength: 300, default: '' },
             staffContactName: { type: String, trim: true, maxlength: 150, default: '' },

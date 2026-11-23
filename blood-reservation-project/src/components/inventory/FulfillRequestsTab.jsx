@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import ResultModal from '../ResultModal';
 import { apiFetch } from '../../utils/api';
 import { EyeIcon } from '@heroicons/react/24/outline';
 
@@ -31,7 +32,7 @@ const formatTime = value => value
     return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}><path d={paths[name] || paths.info} /></svg>;
 }
 
-const RELEASE_STATUSES = ['Allocated', 'Approved', 'Partially Fulfilled'];
+const RELEASE_STATUSES = ['Allocated', 'Approved'];
 const QUEUE_STATUSES = ['Allocated', 'Partially Fulfilled', 'Fulfilled'];
 
 const requiresBagCodes = row =>
@@ -169,7 +170,9 @@ function BagPicker({ requestID, quantity, selectedCodes, onChange }) {
     );
 }
 
-export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
+export default function FulfillRequestsTab({ facilityID, initialRequestId, onFulfilled }) {
+    const targetRowRef = useRef(null);
+    const [highlightRequestId, setHighlightRequestId] = useState(initialRequestId);
     const [detailID, setDetailID] = useState(null);
     const detailDialogRef = useRef(null);
     const [confirmation, setConfirmation] = useState(null);
@@ -180,7 +183,7 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
     const [loading, setLoading] = useState(true);
     const [busyID, setBusyID] = useState(null);
     const [error, setError] = useState('');
-    const [message, setMessage] = useState('');
+    const [result, setResult] = useState(null);
     const [needsRefresh, setNeedsRefresh] = useState(true);
     const [statusFilter, setStatusFilter] = useState('open');
     const inFlight = useRef(false);
@@ -225,7 +228,7 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
             const maximum = Math.min(row.remainingUnits, row.availableUnits);
             if (!RELEASE_STATUSES.includes(row.requestStatus) || !Number.isSafeInteger(units) || units < 1 || units > maximum) return;
             dialogRef.current?.close(); setConfirmation(null);
-            inFlight.current = true; setBusyID(row._id); setError(''); setMessage('');
+            inFlight.current = true; setBusyID(row._id); setError('');
             try {
                 const response = await apiFetch(`${ENDPOINT}/${row._id}/fulfill`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -237,14 +240,23 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
                 });
                 const body = await response.json().catch(() => { throw new Error('The server returned an unreadable response. Refresh to check request progress.'); });
                 if (!response.ok) throw new Error(body.message || 'Could not confirm fulfillment.');
-                setMessage(`Released ${body.releasedCount} unit${body.releasedCount === 1 ? '' : 's'}: ${body.releasedUnits.map(unit => unit.bloodUnitID).join(', ')}. Request ${body.request.requestStatus.toLowerCase()}.`);
+                setResult({
+                    type: 'success',
+                    title: 'Blood bags released',
+                    message: `Released ${body.releasedCount} of ${body.request.units} requested units. Request ${body.request.requestStatus.toLowerCase()}.`,
+                });
+                window.dispatchEvent(new Event('pending-counts-changed'));
                 setRequests(previous => previous.map(item => item._id === row._id ? {
                     ...item, ...body.request, remainingUnits: body.request.units - body.request.fulfilledUnits,
                     availableUnits: body.availableAfter
                 } : item));
                 try { await onFulfilled?.(); } catch { setError('Release succeeded, but the inventory summary could not refresh. Refresh the inventory page.'); }
             } catch (err) {
-                setError(err.message || 'Could not confirm fulfillment. Refresh before trying again.');
+                setResult({
+                    type: 'error',
+                    title: 'Could not confirm release',
+                    message: err.message || 'Refresh to check the request before trying again.',
+                });
             } finally {
                 // Never automatically retry a release. Read back server progress even after
                 // a lost response; expectedFulfilledUnits rejects stale resubmissions.
@@ -268,17 +280,24 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
         const validReleaseUnits = Number.isSafeInteger(releaseUnits) &&
             releaseUnits >= 1 && releaseUnits <= releaseMaximum;
             
+        useEffect(() => {
+            if (!loading && highlightRequestId) targetRowRef.current?.scrollIntoView({ block: 'nearest' });
+        }, [loading, highlightRequestId]);
+
         const visible = requests.filter(({ requestStatus }) => {
             if (statusFilter === 'all') return true;
-            if (statusFilter === 'open') return requestStatus !== 'Fulfilled';
+            if (statusFilter === 'open') return RELEASE_STATUSES.includes(requestStatus);
             return requestStatus === statusFilter;
         });
         const readyCount = requests.filter(row => RELEASE_STATUSES.includes(row.requestStatus) && Math.min(row.remainingUnits, row.availableUnits) > 0).length;
         const partialCount = requests.filter(row => row.requestStatus === 'Partially Fulfilled').length;
-        const outstanding = requests.reduce((total, row) => total + (row.requestStatus === 'Fulfilled' ? 0 : Math.max(0, Number(row.remainingUnits) || 0)), 0);
+        const outstanding = requests.reduce((total, row) => total + (RELEASE_STATUSES.includes(row.requestStatus) ? Math.max(0, Number(row.remainingUnits) || 0) : 0), 0);
         return (
         <section className="fr" aria-label="Release blood units to requests" aria-busy={loading}>
         <style>{STYLES}</style>
+        {highlightRequestId && !loading && !needsRefresh && !visible.some(row => row._id === highlightRequestId) && (
+            <p className="fr-alert fr-alert--warning" role="status">This request is no longer open for release.</p>
+        )}
         <header className="fr-header">
         <div className="fr-title-group">
         <span className="fr-title-icon"><Icon name="drop" /></span>
@@ -291,11 +310,11 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
 
         <div className="fr-stats">
         <div className="fr-stat"><div><span className="fr-stat-label">Ready to release</span><strong>{loading || needsRefresh ? '—' : readyCount}</strong><small>Requests with eligible stock</small></div><span className="fr-stat-icon fr-stat-icon--green"><Icon name="check" /></span></div>
-        <div className="fr-stat"><div><span className="fr-stat-label">Partially fulfilled</span><strong>{loading || needsRefresh ? '—' : partialCount}</strong><small>Requests with units still to release</small></div><span className="fr-stat-icon fr-stat-icon--amber"><Icon name="clock" /></span></div>
+        <div className="fr-stat"><div><span className="fr-stat-label">Partially fulfilled</span><strong>{loading || needsRefresh ? '—' : partialCount}</strong><small>Closed with fewer units than requested</small></div><span className="fr-stat-icon fr-stat-icon--amber"><Icon name="clock" /></span></div>
         <div className="fr-stat"><div><span className="fr-stat-label">Units outstanding</span><strong>{loading || needsRefresh ? '—' : outstanding}</strong><small>Units remaining across open requests</small></div><span className="fr-stat-icon fr-stat-icon--red"><Icon name="drop" /></span></div>
         </div>
 
-        {message && <div role="status" className="fr-alert fr-alert--success"><Icon name="check" /><span>{message}</span></div>}
+        {result && <ResultModal {...result} onClose={() => setResult(null)} />}
         {error && <div role="alert" className="fr-alert fr-alert--error"><Icon name="info" /><span>{error}</span></div>}
         {!loading && needsRefresh && <div className="fr-alert fr-alert--warning"><Icon name="info" /><span>Refresh successfully before releasing any units.</span></div>}
 
@@ -304,7 +323,7 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
         <div className="fr-queue-heading"><h3>Request queue <span className="fr-count">{visible.length}</span></h3><p>Patient requests assigned to this facility</p></div>
         <label className="fr-status-filter">
             <span>Request status</span>
-            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)}>
+            <select value={statusFilter} onChange={event => { setStatusFilter(event.target.value); setHighlightRequestId(null); }}>
                 <option value="open">Open requests</option>
                 <option value="all">All requests</option>
                 {QUEUE_STATUSES.map(status => <option key={status} value={status}>{status}</option>)}
@@ -335,7 +354,10 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
                         .filter(Boolean).join(' ') || 'Unnamed patient';
 
                     return (
-                        <tr key={row._id}>
+                        <tr key={row._id}
+                            ref={row._id === highlightRequestId ? targetRowRef : null}
+                            data-highlighted={row._id === highlightRequestId || undefined}
+                        >
                             <td data-label="Patient name"><strong>{name}</strong></td>
                             <td data-label="Submitted date">{formatDate(row.createdAt)}</td>
                             <td data-label="Submitted time">{formatTime(row.createdAt)}</td>
@@ -430,7 +452,7 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
                                 <dl className="fr-progress-counts">
                                     <div><dt>Requested</dt><dd>{detailRow.units}</dd></div>
                                     <div><dt>Released</dt><dd>{detailRow.fulfilledUnits}</dd></div>
-                                    <div><dt>Remaining</dt><dd>{detailRow.remainingUnits}</dd></div>
+                                    <div><dt>Unfilled quantity</dt><dd>{detailRow.remainingUnits}</dd></div>
                                 </dl>
                             </section>
 
@@ -505,7 +527,7 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
                                 </div>
                                 <div><dt>Hospital</dt><dd>{confirmation.row.hospital || '—'}</dd></div>
                                 <div>
-                                    <dt>Remaining after release</dt>
+                                    <dt>Unfilled after release</dt>
                                     <dd>{validReleaseUnits ? confirmation.row.remainingUnits - releaseUnits : '—'}</dd>
                                 </div>
                             </dl>
@@ -548,6 +570,11 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
                                     <p>The oldest eligible units will be assigned to this request and marked <strong>Released</strong>.</p>
                                 </div>
                             )}
+                            {validReleaseUnits && releaseUnits < confirmation.row.remainingUnits && (
+                                <p className="fr-alert fr-alert--warning">
+                                    This will close the request as Partially Fulfilled. Any unassigned stock can be requested again.
+                                </p>
+                            )}
                         </div>
 
                         <div className="fr-dialog-actions">
@@ -576,6 +603,7 @@ export default function FulfillRequestsTab({ facilityID, onFulfilled }) {
 }
 
 const STYLES = `
+.fr-table tr[data-highlighted] > td { background: #fff1f4; }
 .fr { --fr-red:#a51f36; --fr-ink:#202b3c; --fr-muted:#697587; --fr-line:#e8ecf1; color:var(--fr-ink); font-family:inherit; padding:8px 0; }
 .fr *, .fr *::before, .fr *::after { box-sizing:border-box; }
 .fr svg { width:20px; height:20px; flex-shrink:0; }
